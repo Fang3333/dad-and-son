@@ -493,6 +493,7 @@ function dismissRestore() {
 function exportJSON() {
   const out = {
     product: DATA.product.name,
+    version: DATA.version,
     generatedAt: new Date().toLocaleString("zh-CN"),
     question: state.scene.question,
     settings: state.settings,
@@ -594,6 +595,8 @@ function exportPNG() {
 
   x.fillStyle = "#8b80b5"; x.font = "12px sans-serif";
   x.fillText(DATA.product.disclaimer, pad, H - 24);
+  const vTag = "v" + DATA.version;
+  x.fillText(vTag, W - pad - x.measureText(vTag).width, H - 24);
 
   const a = document.createElement("a");
   a.download = "平行人生_" + Date.now() + ".png";
@@ -631,6 +634,33 @@ function wrapText(ctx, text, x, y, maxW, lh) {
   out.forEach(function (ln, i) { ctx.fillText(ln, x, y + i * lh); });
 }
 
+/* ---------- 更新日志弹窗 ---------- */
+function showChangelog() {
+  const old = document.getElementById("clMask");
+  if (old) old.remove();
+  const mask = document.createElement("div");
+  mask.id = "clMask";
+  mask.className = "mask";
+  const entries = (DATA.changelog || []).map(function (c, i) {
+    const current = c.version === DATA.version;
+    return '<div class="cl-entry' + (current ? '' : ' old') + '">' +
+      '<span class="cl-dot"></span>' +
+      '<div><span class="cl-ver">v' + esc(c.version) + '</span>' +
+      '<span class="cl-date">' + esc(c.date) + '</span>' +
+      '<span class="cl-tag cl-tag-' + esc(c.tag) + '">' + esc(c.tag) + '</span>' +
+      (current ? ' <span class="cl-cur">当前版本</span>' : '') + '</div>' +
+      '<ul class="cl-items">' + c.items.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join("") + '</ul>' +
+    '</div>';
+  }).join("");
+  mask.innerHTML = '<div class="modal"><div class="cl-head"><h3>✦ 更新日志</h3></div>' +
+    '<p class="cl-sub">版本遵循 semver · 完整记录见仓库 CHANGELOG.md</p>' +
+    '<div class="cl-list">' + entries + '</div>' +
+    '<p class="hint">' + esc(DATA.product.disclaimer) + '</p>' +
+    '<button class="btn primary" onclick="document.getElementById(\'clMask\').remove()">知道了</button></div>';
+  mask.onclick = function (e) { if (e.target === mask) mask.remove(); };
+  document.body.appendChild(mask);
+}
+
 /* ---------- 说明弹窗 ---------- */
 function showHelp() {
   const old = document.getElementById("helpMask");
@@ -654,7 +684,7 @@ function showHelp() {
 }
 document.addEventListener("keydown", function (e) {
   if (e.key === "Escape") {
-    const m = document.getElementById("helpMask");
+    const m = document.getElementById("helpMask") || document.getElementById("clMask");
     if (m) m.remove();
   }
 });
@@ -739,4 +769,8 @@ function initStars() {
 
 /* ---------- 启动 ---------- */
 initStars();
+(function () {
+  const v = document.getElementById("verLabel");
+  if (v) v.textContent = "v" + DATA.version;
+})();
 renderInput();
