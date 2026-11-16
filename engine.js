@@ -10,14 +10,13 @@
 
 let state = {
   scene: null,
-  settings: { interest: "科研", goal: "保研深造", time: 3 },
+  settings: { interest: "学术", goal: "保研深造", time: 3 },
   branches: [],
-  event: null,
-  eventAt: 1
+  events: []
 };
 
 let branchSeq = 0;
-const MAX_BRANCHES = 4;
+const MAX_BRANCHES = 6;
 const SAVE_KEY = "multiverse_last";
 const TIME_LABELS = ["1 · 偶尔想想", "2 · 课余投入", "3 · 认真平衡", "4 · 大量投入", "5 · 全力冲刺"];
 
@@ -64,9 +63,9 @@ function setStep(n) {
 function adjustRate(base, routeKey, stageIndex) {
   let r = base;
   const interest = state.settings.interest;
-  // A 路线偏学术（科研/出国/绩点），B 路线偏实践（实习/保研/项目）
-  if (interest === "科研" && routeKey === "A") r += 5;
-  if (interest === "就业" && routeKey === "B") r += 5;
+  // 场景自带 match 表：兴趣偏向命中哪条路线，哪条 +5
+  const match = state.scene.match && state.scene.match[interest];
+  if (match === routeKey) r += 5;
   if (interest === "都行") r += 2;
   r += (state.settings.time - 3) * 2;   // 时间投入 1~5，3 是中等
   r += stageIndex * 1;                  // 越往后越明朗
@@ -84,13 +83,34 @@ function calcScore(attrs) {
 }
 
 /* ---------- 技术组可改 ③：随机事件怎么挑 ---------- */
-function makeEvent() {
-  const list = DATA.events;
-  return list[Math.floor(Math.random() * list.length)];
+function makeEvent(at) {
+  const list = DATA.events.filter(function (e) {
+    const from = typeof e.from === "number" ? e.from : 0;
+    const to = typeof e.to === "number" ? e.to : DATA.stages.length - 1;
+    return at >= from && at <= to;
+  });
+  const pool = list.length ? list : DATA.events;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+// 每局抽 2 个事件，落在不同阶段，且不重复
+function drawEvents() {
+  const n = DATA.stages.length;
+  const ats = [];
+  while (ats.length < 2) {
+    const a = Math.floor(Math.random() * n);
+    if (ats.indexOf(a) < 0) ats.push(a);
+  }
+  const used = [];
+  return ats.map(function (at) {
+    let ev = makeEvent(at), guard = 0;
+    while (used.indexOf(ev) >= 0 && guard++ < 12) ev = makeEvent(at);
+    used.push(ev);
+    return { ev: ev, at: at };
+  });
 }
 
 /* ---------- 生成一条路线 ---------- */
-function makeBranch(plan, forkFrom) {
+function makeBranch(plan, forkFrom, origin) {
   const scene = state.scene;
   const attrs = Object.assign({}, DATA.start);
   const nodes = [];
@@ -103,39 +123,42 @@ function makeBranch(plan, forkFrom) {
     for (const k in st.delta) {
       delta[k] = k === "skill" ? Math.round(st.delta[k] * timeFactor) : st.delta[k];
     }
-    let hasEvent = false;
-    if (state.event && i === state.eventAt) {
-      for (const k in state.event.delta) delta[k] = (delta[k] || 0) + state.event.delta[k];
-      hasEvent = true;
-    }
+    const eventTexts = [];
+    state.events.forEach(function (e) {
+      if (e.at !== i) return;
+      for (const k in e.ev.delta) delta[k] = (delta[k] || 0) + e.ev.delta[k];
+      eventTexts.push(e.ev.text);
+    });
     for (const k in attrs) attrs[k] = clamp(attrs[k] + (delta[k] || 0), 0, 100);
     nodes.push({
       stageIndex: i, routeKey: routeKey,
       title: st.title, text: st.text, type: st.type,
       delta: delta, rate: adjustRate(st.rate, routeKey, i),
-      attrs: Object.assign({}, attrs), hasEvent: hasEvent
+      attrs: Object.assign({}, attrs),
+      hasEvent: eventTexts.length > 0, eventTexts: eventTexts
     });
   }
 
   branchSeq++;
   const allA = plan.every(function (p) { return p === "A"; });
   const allB = plan.every(function (p) { return p === "B"; });
+  const org = origin || "base";
   const name = allA ? "路线 A · " + scene.A.short
     : allB ? "路线 B · " + scene.B.short
+    : org === "random" ? "随机人生 " + branchSeq
     : "平行分支 " + branchSeq;
   const endingKey = plan[plan.length - 1];
   return {
     id: branchSeq, name: name, plan: plan, nodes: nodes,
     attrs: attrs, score: calcScore(attrs),
     ending: scene.endings[endingKey],
-    forkFrom: forkFrom || null
+    forkFrom: forkFrom || null, origin: org
   };
 }
 
 function generate(sceneId) {
   state.scene = DATA.scenes.find(function (s) { return s.id === sceneId; }) || DATA.scenes[0];
-  state.event = makeEvent();
-  state.eventAt = 1 + Math.floor(Math.random() * (DATA.stages.length - 2));
+  state.events = drawEvents();
   branchSeq = 0;
   const n = DATA.stages.length;
   state.branches = [makeBranch(Array(n).fill("A")), makeBranch(Array(n).fill("B"))];
@@ -145,36 +168,53 @@ function generate(sceneId) {
 
 function changeDecision(branchId, stageIndex) {
   if (state.branches.length >= MAX_BRANCHES) {
-    toast("最多 4 条平行分支，先删一条或点「新决定」重开");
+    toast("最多 " + MAX_BRANCHES + " 条平行分支，先删一条或点「新决定」重开");
     return;
   }
   const b = state.branches.find(function (x) { return x.id === branchId; });
   if (!b) return;
   const plan = b.plan.slice();
   for (let i = stageIndex; i < plan.length; i++) plan[i] = plan[i] === "A" ? "B" : "A";
-  state.branches.push(makeBranch(plan, { branchId: branchId, stageIndex: stageIndex }));
+  state.branches.push(makeBranch(plan, { branchId: branchId, stageIndex: stageIndex }, "fork"));
   renderTree();
   const area = document.getElementById("treeArea");
   if (area) area.scrollTo({ left: area.scrollWidth, behavior: "smooth" });
   toast("已生成一条新的平行人生分支 ✦");
 }
 
+function randomBranch() {
+  if (state.branches.length >= MAX_BRANCHES) {
+    toast("最多 " + MAX_BRANCHES + " 条平行分支，先删一条或点「新决定」重开");
+    return;
+  }
+  const n = DATA.stages.length;
+  let plan, tries = 0;
+  do {
+    plan = Array.from({ length: n }, function () { return Math.random() < 0.5 ? "A" : "B"; });
+    tries++;
+  } while (tries < 10 && state.branches.some(function (b) { return b.plan.join("") === plan.join(""); }));
+  state.branches.push(makeBranch(plan, null, "random"));
+  renderTree();
+  const area = document.getElementById("treeArea");
+  if (area) area.scrollTo({ left: area.scrollWidth, behavior: "smooth" });
+  toast("掷骰子掷出一条随机人生 🌱");
+}
+
 function removeBranch(branchId) {
   const i = state.branches.findIndex(function (x) { return x.id === branchId; });
-  if (i < 0 || !state.branches[i].forkFrom) return;
+  if (i < 0 || state.branches[i].origin === "base") return;
   state.branches.splice(i, 1);
   renderTree();
   toast("这条平行人生已收回");
 }
 
 function rerollEvent() {
-  state.event = makeEvent();
-  state.eventAt = 1 + Math.floor(Math.random() * (DATA.stages.length - 2));
-  const old = state.branches.map(function (b) { return { plan: b.plan, forkFrom: b.forkFrom }; });
+  state.events = drawEvents();
+  const old = state.branches.map(function (b) { return { plan: b.plan, forkFrom: b.forkFrom, origin: b.origin }; });
   branchSeq = 0;
-  state.branches = old.map(function (o) { return makeBranch(o.plan, o.forkFrom); });
+  state.branches = old.map(function (o) { return makeBranch(o.plan, o.forkFrom, o.origin); });
   renderTree();
-  toast("命运重新洗牌：「" + state.event.title + "」");
+  toast("命运重新洗牌：" + state.events.map(function (e) { return e.ev.title; }).join(" / "));
 }
 
 /* ---------- 设定控件 ---------- */
@@ -267,7 +307,8 @@ function renderTree() {
   const toolbar =
     '<div class="toolbar anim">' +
       '<button class="btn" onclick="renderInput()">← 新决定</button>' +
-      '<button class="btn" onclick="rerollEvent()" title="重新抽一个随机事件，所有分支重算">🎲 换个运气</button>' +
+      '<button class="btn" onclick="rerollEvent()" title="重新抽两个随机事件，所有分支重算">🎲 换个运气</button>' +
+      '<button class="btn" onclick="randomBranch()" title="每个阶段随机选 A/B，掷出一条全新人生">🌱 随机人生</button>' +
       '<button class="btn green" onclick="saveTree()">💾 保存路线</button>' +
       '<button class="btn" onclick="exportJSON()">导出 JSON</button>' +
       '<button class="btn primary" onclick="exportPNG()">导出图片</button>' +
@@ -283,7 +324,9 @@ function renderTree() {
         '<span>兴趣：' + esc(state.settings.interest) + '</span>' +
         '<span>目标：' + esc(state.settings.goal) + '</span>' +
         '<span>时间投入：' + state.settings.time + '/5</span>' +
-        '<span class="event-chip">✦ 随机事件：' + esc(state.event.title) + '</span>' +
+        state.events.map(function (e) {
+          return '<span class="event-chip">✦ ' + esc(DATA.stages[e.at]) + ' · ' + esc(e.ev.title) + '</span>';
+        }).join("") +
       '</div>' +
     '</div>';
 
@@ -319,7 +362,7 @@ function renderTree() {
           '<span class="node-type">' + typeName(n.type) + '</span>' +
           '<span class="node-stage">' + esc(DATA.stages[n.stageIndex]) + '</span></div>' +
           '<div class="node-title">' + esc(n.title) + '</div>' +
-          '<div class="node-text">' + esc(n.text) + (n.hasEvent ? '<br><span class="event-inline">✦ ' + esc(state.event.text) + '</span>' : '') + '</div>' +
+          '<div class="node-text">' + esc(n.text) + n.eventTexts.map(function (t) { return '<br><span class="event-inline">✦ ' + esc(t) + '</span>'; }).join("") + '</div>' +
           '<div class="node-deltas">' + dText + '</div>' +
           '<div class="node-bottom">' +
             '<span class="rate">成功率 <b>' + n.rate + '%</b></span>' +
@@ -335,10 +378,15 @@ function renderTree() {
         '</div><b>' + b.attrs[at.key] + '</b></div>';
     }).join("");
 
+    const dots = b.plan.map(function (p, i) {
+      return '<span class="pd pd-' + p.toLowerCase() + '" title="' + esc(DATA.stages[i]) + '：' + (p === "A" ? esc(s.A.short) : esc(s.B.short)) + '"></span>';
+    }).join("");
+
     return '<div class="branch">' +
         '<div class="branch-head ' + (isBest ? "winner" : "") + ' anim" style="animation-delay:' + (0.1 + bi * 0.07) + 's" id="head-' + b.id + '">' +
-          (b.forkFrom ? '<button class="branch-del" title="删除这条分支" onclick="removeBranch(' + b.id + ')">✕</button>' : '') +
+          (b.origin !== "base" ? '<button class="branch-del" title="删除这条分支" onclick="removeBranch(' + b.id + ')">✕</button>' : '') +
           '<div class="branch-name">' + esc(b.name) + (isBest ? ' <span class="crown">AI 推荐</span>' : '') + '</div>' +
+          '<div class="plan-dots" aria-label="各阶段选择">' + dots + '</div>' +
           '<div class="branch-score">结局评分<b>' + b.score + '</b></div>' +
           '<div class="bars">' + bars + '</div>' +
         '</div>' +
@@ -419,9 +467,8 @@ function saveTree() {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
       sceneId: state.scene.id,
       settings: state.settings,
-      event: state.event,
-      eventAt: state.eventAt,
-      plans: state.branches.map(function (b) { return { plan: b.plan, forkFrom: b.forkFrom }; })
+      events: state.events,
+      plans: state.branches.map(function (b) { return { plan: b.plan, forkFrom: b.forkFrom, origin: b.origin }; })
     }));
     toast("已保存到本机浏览器，下次打开可继续");
   } catch (e) { toast("保存失败：浏览器不允许本地存储"); }
@@ -430,11 +477,10 @@ function restoreSaved() {
   const d = readSave();
   if (!d) { toast("没有找到存档"); renderInput(); return; }
   state.scene = DATA.scenes.find(function (s) { return s.id === d.sceneId; });
-  state.settings = Object.assign({ interest: "科研", goal: "保研深造", time: 3 }, d.settings);
-  state.event = d.event || makeEvent();
-  state.eventAt = typeof d.eventAt === "number" ? d.eventAt : 1;
+  state.settings = Object.assign({ interest: "学术", goal: "保研深造", time: 3 }, d.settings);
+  state.events = Array.isArray(d.events) && d.events.length ? d.events : drawEvents();
   branchSeq = 0;
-  state.branches = d.plans.map(function (p) { return makeBranch(p.plan, p.forkFrom); });
+  state.branches = d.plans.map(function (p) { return makeBranch(p.plan, p.forkFrom, p.origin || "fork"); });
   renderTree();
   toast("已恢复上次的推演 ✦");
 }
@@ -450,11 +496,11 @@ function exportJSON() {
     generatedAt: new Date().toLocaleString("zh-CN"),
     question: state.scene.question,
     settings: state.settings,
-    event: state.event.title,
+    events: state.events.map(function (e) { return { stage: DATA.stages[e.at], title: e.ev.title }; }),
     disclaimer: DATA.product.disclaimer,
     branches: state.branches.map(function (b) {
       return {
-        name: b.name, score: b.score, forkFrom: b.forkFrom,
+        name: b.name, score: b.score, forkFrom: b.forkFrom, origin: b.origin,
         nodes: b.nodes.map(function (n) {
           return { stage: DATA.stages[n.stageIndex], title: n.title, type: typeName(n.type), rate: n.rate, delta: n.delta, attributes: n.attrs };
         }),
@@ -486,7 +532,7 @@ function exportPNG() {
   x.fillStyle = "#b9aee6"; x.font = "17px sans-serif";
   wrapText(x, state.scene.question, pad, 90, W - 2 * pad, 26);
   x.fillStyle = "#fbbf24"; x.font = "13px sans-serif";
-  x.fillText("兴趣 " + state.settings.interest + " · 目标 " + state.settings.goal + " · 时间 " + state.settings.time + "/5 · 随机事件：" + state.event.title, pad, 132);
+  x.fillText("兴趣 " + state.settings.interest + " · 目标 " + state.settings.goal + " · 时间 " + state.settings.time + "/5 · 事件：" + state.events.map(function (e) { return DATA.stages[e.at] + "·" + e.ev.title; }).join(" / "), pad, 132);
 
   const best = Math.max.apply(null, state.branches.map(function (b) { return b.score; }));
   const startX = (W - (cols * colW + (cols - 1) * gap)) / 2;
@@ -566,12 +612,23 @@ function roundRect(ctx, x, y, w, h, r) {
 }
 function cut(s, n) { return s.length > n ? s.slice(0, n) + "…" : s; }
 function wrapText(ctx, text, x, y, maxW, lh) {
+  const lines = [];
   let line = "";
   for (const ch of text) {
-    if (ctx.measureText(line + ch).width > maxW) { ctx.fillText(line, x, y); line = ch; y += lh; }
+    if (ctx.measureText(line + ch).width > maxW && line) { lines.push(line); line = ch; }
     else line += ch;
   }
-  if (line) ctx.fillText(line, x, y);
+  if (line) lines.push(line);
+  // 行首不落标点：把孤标点挂回上一行末
+  const noStart = "，。、；！？：…）】」』%,.;!?:)]";
+  for (let i = 1; i < lines.length; i++) {
+    while (lines[i] && noStart.indexOf(lines[i][0]) >= 0) {
+      lines[i - 1] += lines[i][0];
+      lines[i] = lines[i].slice(1);
+    }
+  }
+  const out = lines.filter(function (ln) { return ln; });
+  out.forEach(function (ln, i) { ctx.fillText(ln, x, y + i * lh); });
 }
 
 /* ---------- 说明弹窗 ---------- */
@@ -586,7 +643,8 @@ function showHelp() {
     '<li>系统生成两条人生路线，每条 ' + DATA.stages.length + ' 个阶段，三项属性一路累加。</li>' +
     '<li><b>点任意节点的「在这里改决定」</b>：从这一步改走另一条路，生成一条平行分支（最多 ' + MAX_BRANCHES + ' 条），粉色虚线标出它从哪里分叉。</li>' +
     '<li>分支右上角 <b>✕</b> 可以删掉不想要的平行人生。</li>' +
-    '<li><b>🎲 换个运气</b>：重抽随机事件，所有分支重新推演，同一问题每次玩都不一样。</li>' +
+    '<li><b>🎲 换个运气</b>：重抽两个随机事件（落在不同人生阶段），所有分支重新推演，同一问题每次玩都不一样。</li>' +
+    '<li><b>🌱 随机人生</b>：每个阶段掷硬币选 A/B，一键掷出一条完全随机的人生。</li>' +
     '<li>顶部评分按你的目标加权，带「AI 推荐」的是当前最高分；改设定会改变推荐。</li>' +
     '<li>💾 保存后下次打开能继续；导出 JSON / 图片可直接贴进答辩 PPT。</li></ol>' +
     '<p class="hint">' + esc(DATA.product.disclaimer) + '</p>' +
