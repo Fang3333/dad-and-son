@@ -82,6 +82,27 @@ function calcScore(attrs) {
   return Math.round(s);
 }
 
+/* ---------- AI 推荐的可解释理由（给横幅用） ---------- */
+function recommendReason(winner) {
+  const weights = {
+    "保研深造": { skill: 1.5, mood: 0.5, wealth: 0.3 },
+    "高薪就业": { wealth: 1.5, skill: 0.8, mood: 0.2 },
+    "开心就好": { mood: 2, skill: 0.4, wealth: 0.2 }
+  }[state.settings.goal] || { skill: 1, mood: 1, wealth: 1 };
+  const second = state.branches.filter(function (b) { return b.id !== winner.id; })
+    .sort(function (a, b) { return b.score - a.score; })[0];
+  if (!second) return "按你的目标「" + state.settings.goal + "」加权评分";
+  const diffs = DATA.attributes.map(function (at) {
+    return { name: at.name, d: (winner.attrs[at.key] || 0) - (second.attrs[at.key] || 0), w: weights[at.key] || 0 };
+  }).filter(function (x) { return x.d !== 0; })
+    .sort(function (a, b) { return Math.abs(b.d * b.w) - Math.abs(a.d * a.w); });
+  const top = diffs[0];
+  const gap = Math.max(0, winner.score - second.score);
+  let out = "按你的目标「" + state.settings.goal + "」加权评分";
+  if (top) out += "，关键在" + top.name + (top.d > 0 ? "高" : "低") + Math.abs(top.d) + "（权重 ×" + top.w + "）";
+  return out + "，比第二名领先 " + gap + " 分";
+}
+
 /* ---------- 技术组可改 ③：随机事件怎么挑 ---------- */
 function makeEvent(at) {
   const list = DATA.events.filter(function (e) {
@@ -164,6 +185,47 @@ function generate(sceneId) {
   state.branches = [makeBranch(Array(n).fill("A")), makeBranch(Array(n).fill("B"))];
   renderTree();
   window.scrollTo({ top: 0 });
+}
+
+/* ---------- 自定义问题：按关键词匹配最接近的剧本模板 ---------- */
+function matchSceneByText(text) {
+  const q = String(text || "");
+  let best = null, bestScore = 0;
+  DATA.scenes.forEach(function (s) {
+    let score = 0;
+    (s.keywords || []).forEach(function (k) {
+      if (k && q.indexOf(k) >= 0) score++;
+    });
+    if (score > bestScore) { bestScore = score; best = s; }
+  });
+  return { scene: best || DATA.scenes[1] || DATA.scenes[0], score: bestScore };
+}
+
+function generateCustom() {
+  const el = document.getElementById("customQ");
+  if (!el) return;
+  const q = (el.value || "").trim();
+  if (q.length < 5) {
+    toast("再多写几个字吧，比如「大学四年科研还是实习」");
+    el.focus();
+    return;
+  }
+  const m = matchSceneByText(q);
+  const scene = JSON.parse(JSON.stringify(m.scene));
+  scene.custom = true;
+  scene.id = "custom";
+  scene.baseId = m.scene.id;
+  scene.question = q;
+  state.scene = scene;
+  state.events = drawEvents();
+  branchSeq = 0;
+  const n = DATA.stages.length;
+  state.branches = [makeBranch(Array(n).fill("A")), makeBranch(Array(n).fill("B"))];
+  renderTree();
+  window.scrollTo({ top: 0 });
+  toast(m.score > 0
+    ? "已匹配到剧本模板：" + m.scene.tag + "（" + m.scene.A.short + " vs " + m.scene.B.short + "）"
+    : "没匹配到关键词，先用「" + m.scene.tag + "」模板推演");
 }
 
 function changeDecision(branchId, stageIndex) {
@@ -277,6 +339,12 @@ function renderInput() {
     '<section class="panel anim" style="animation-delay:.2s">' +
       '<div class="panel-title"><span class="num">1</span>选一个你正在纠结的问题 <small>点卡片立即开始推演</small></div>' +
       '<div class="scene-grid">' + scenesHTML + '</div>' +
+      '<div class="custom-box">' +
+        '<span class="cq-label">没找到你的问题？直接写一个：</span>' +
+        '<input id="customQ" type="text" maxlength="80" placeholder="例如：大学四年，进实验室做科研，还是早点去实习？" onkeydown="if(event.key===\'Enter\'){generateCustom()}">' +
+        '<button class="btn primary" onclick="generateCustom()">用我的问题推演 →</button>' +
+        '<span class="cq-hint">系统会按关键词匹配最接近的剧本模板（共 ' + DATA.scenes.length + ' 个），结果页会标明匹配到哪一个；人生阶段仍按「高一 → 五年后」推演。</span>' +
+      '</div>' +
     '</section>' +
     '<section class="panel anim" style="animation-delay:.28s">' +
       '<div class="panel-title"><span class="num">2</span>设定你自己 <small>影响每条路的成功率与评分</small></div>' +
@@ -327,6 +395,7 @@ function renderTree() {
         state.events.map(function (e) {
           return '<span class="event-chip">✦ ' + esc(DATA.stages[e.at]) + ' · ' + esc(e.ev.title) + '</span>';
         }).join("") +
+        (s.custom ? '<span>✦ 匹配模板：' + esc(s.tag) + '</span>' : '') +
       '</div>' +
     '</div>';
 
@@ -334,7 +403,7 @@ function renderTree() {
     '<div class="ai-banner anim" style="animation-delay:.1s">' +
       '<span class="trophy">🏆</span>' +
       '<span>AI 推荐：<b>' + esc(winner.name) + '</b> —— ' + esc(winner.ending.title) + '（评分 <b>' + winner.score + '</b>）</span>' +
-      '<span class="why">按你的目标「' + esc(state.settings.goal) + '」加权评分，改设定会改变推荐</span>' +
+      '<span class="why">' + esc(recommendReason(winner)) + '</span>' +
     '</div>';
 
   const legend =
@@ -456,19 +525,35 @@ function readSave() {
     if (!raw) return null;
     const d = JSON.parse(raw);
     if (!d || !d.sceneId || !Array.isArray(d.plans)) return null;
-    const sc = DATA.scenes.find(function (s) { return s.id === d.sceneId; });
+    let sc = DATA.scenes.find(function (s) { return s.id === d.sceneId; });
+    if (!sc && d.custom) sc = DATA.scenes.find(function (s) { return s.id === d.baseSceneId; });
     if (!sc) return null;
-    d.question = sc.question;
+    d.question = d.custom && d.sceneQuestion ? d.sceneQuestion : sc.question;
     return d;
   } catch (e) { return null; }
 }
 function saveTree() {
   try {
+    const plans = state.branches.map(function (b) {
+      let parentIndex = -1;
+      if (b.forkFrom) {
+        for (let i = 0; i < state.branches.length; i++) {
+          if (state.branches[i].id === b.forkFrom.branchId) { parentIndex = i; break; }
+        }
+      }
+      return {
+        plan: b.plan, origin: b.origin,
+        forkFrom: b.forkFrom ? { parentIndex: parentIndex, stageIndex: b.forkFrom.stageIndex } : null
+      };
+    });
     localStorage.setItem(SAVE_KEY, JSON.stringify({
       sceneId: state.scene.id,
+      baseSceneId: state.scene.baseId || state.scene.id,
+      custom: !!state.scene.custom,
+      sceneQuestion: state.scene.question,
       settings: state.settings,
       events: state.events,
-      plans: state.branches.map(function (b) { return { plan: b.plan, forkFrom: b.forkFrom, origin: b.origin }; })
+      plans: plans
     }));
     toast("已保存到本机浏览器，下次打开可继续");
   } catch (e) { toast("保存失败：浏览器不允许本地存储"); }
@@ -476,11 +561,28 @@ function saveTree() {
 function restoreSaved() {
   const d = readSave();
   if (!d) { toast("没有找到存档"); renderInput(); return; }
-  state.scene = DATA.scenes.find(function (s) { return s.id === d.sceneId; });
+  let sc = DATA.scenes.find(function (s) { return s.id === d.sceneId; }) ||
+           DATA.scenes.find(function (s) { return s.id === d.baseSceneId; }) ||
+           DATA.scenes[0];
+  if (d.custom) {
+    sc = JSON.parse(JSON.stringify(sc));
+    sc.custom = true;
+    sc.id = "custom";
+    sc.baseId = d.baseSceneId;
+    sc.question = d.sceneQuestion || sc.question;
+  }
+  state.scene = sc;
   state.settings = Object.assign({ interest: "学术", goal: "保研深造", time: 3 }, d.settings);
   state.events = Array.isArray(d.events) && d.events.length ? d.events : drawEvents();
   branchSeq = 0;
-  state.branches = d.plans.map(function (p) { return makeBranch(p.plan, p.forkFrom, p.origin || "fork"); });
+  state.branches = d.plans.map(function (p) {
+    return makeBranch(p.plan, null, p.origin || "fork");
+  });
+  d.plans.forEach(function (p, i) {
+    if (!p.forkFrom || typeof p.forkFrom.parentIndex !== "number") return;
+    const parent = state.branches[p.forkFrom.parentIndex];
+    if (parent) state.branches[i].forkFrom = { branchId: parent.id, stageIndex: p.forkFrom.stageIndex };
+  });
   renderTree();
   toast("已恢复上次的推演 ✦");
 }

@@ -54,6 +54,7 @@ body::before {
 }
 .btn:hover { border-color: var(--violet); background: #231b47; }
 .btn.small { padding: 6px 12px; font-size: 12px; border-radius: 10px; }
+a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 .ver-chip { color: var(--green); border-color: rgba(52,211,153,.4); background: rgba(52,211,153,.08); font-weight: 700; letter-spacing: .5px; display: inline-flex; align-items: center; gap: 7px; }
 .ver-chip:hover { border-color: var(--green); background: rgba(52,211,153,.16); }
 .ver-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); animation: verpulse 2.4s infinite; }
@@ -176,6 +177,11 @@ body::before {
   .ver-dot { animation: none !important; }
   .lf-choice, .lf-btn { transition: none !important; }
 }
+@media (max-width: 420px) {
+  .topbar { gap: 6px; padding: 10px 12px; }
+  .logo { font-size: 14px; white-space: nowrap; }
+  .btn.small { padding: 6px 9px; white-space: nowrap; }
+}
 </style>
 </head>
 <body>
@@ -185,6 +191,7 @@ body::before {
     <span class="logo-mark">∞</span>人生：无限分岔 <em>LIFE · INFINITE FORKS</em>
   </button>
   <span class="spacer"></span>
+  <a class="btn small" href="index.html" title="另一个玩法：平行人生模拟器">✦ 平行人生</a>
   <button class="btn small" onclick="L.help()">引擎规范</button>
   <button class="btn small ver-chip" onclick="L.changelog()" title="查看更新日志">
     <span class="ver-dot"></span><span id="verLabel">v2.0.0</span>
