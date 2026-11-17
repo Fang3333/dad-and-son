@@ -10,7 +10,7 @@
 
 let state = {
   scene: null,
-  settings: { interest: "学术", goal: "保研深造", time: 3 },
+  settings: { tier: "985", interest: "学术", goal: "保研深造", time: 3 },
   branches: [],
   events: []
 };
@@ -69,6 +69,7 @@ function adjustRate(base, routeKey, stageIndex) {
   if (interest === "都行") r += 2;
   r += (state.settings.time - 3) * 2;   // 时间投入 1~5，3 是中等
   r += stageIndex * 1;                  // 越往后越明朗
+  r += (state.scene.mod || 0);          // 层次修正：专科 +4 / 985 -2
   return clamp(Math.round(r), 8, 96);
 }
 
@@ -190,15 +191,16 @@ function generate(sceneId) {
 /* ---------- 自定义问题：按关键词匹配最接近的剧本模板 ---------- */
 function matchSceneByText(text) {
   const q = String(text || "");
+  const pool = DATA.scenes.filter(function (s) { return !s.tier || s.tier === state.settings.tier; });
   let best = null, bestScore = 0;
-  DATA.scenes.forEach(function (s) {
+  pool.forEach(function (s) {
     let score = 0;
     (s.keywords || []).forEach(function (k) {
       if (k && q.indexOf(k) >= 0) score++;
     });
     if (score > bestScore) { bestScore = score; best = s; }
   });
-  return { scene: best || DATA.scenes[1] || DATA.scenes[0], score: bestScore };
+  return { scene: best || pool[0] || DATA.scenes[0], score: bestScore };
 }
 
 function generateCustom() {
@@ -305,7 +307,8 @@ function renderInput() {
       '</span>' +
     '</div>' : "";
 
-  const scenesHTML = DATA.scenes.map(function (s, i) {
+  const tierScenes = DATA.scenes.filter(function (s) { return !s.tier || s.tier === state.settings.tier; });
+  const scenesHTML = tierScenes.map(function (s, i) {
     return '<button class="scene-card anim" style="animation-delay:' + (0.12 + i * 0.08) + 's" onclick="generate(\'' + s.id + '\')">' +
       '<span class="scene-tag">' + esc(s.tag) + '</span>' +
       '<span class="scene-q">' + esc(s.question) + '</span>' +
@@ -329,7 +332,7 @@ function renderInput() {
       '<h1 class="anim" style="animation-delay:.06s">' + nameHTML + '</h1>' +
       '<p class="hero-sub anim" style="animation-delay:.12s">' + esc(DATA.product.slogan) + '</p>' +
       '<div class="hero-chips anim" style="animation-delay:.18s">' +
-        '<span><b>' + DATA.scenes.length + '</b> 个人生剧本</span>' +
+        '<span><b>' + tierScenes.length + '</b> 个人生剧本</span>' +
         '<span><b>' + DATA.stages.length + '</b> 段时光推演</span>' +
         '<span><b>' + DATA.events.length + '</b> 种随机际遇</span>' +
         '<span>完全离线 · 无需 API</span>' +
@@ -337,13 +340,15 @@ function renderInput() {
     '</section>' +
     restoreHTML +
     '<section class="panel anim" style="animation-delay:.2s">' +
-      '<div class="panel-title"><span class="num">1</span>选一个你正在纠结的问题 <small>点卡片立即开始推演</small></div>' +
+      '<div class="panel-title"><span class="num">1</span>先选层次，再选一个你正在纠结的问题 <small>点卡片立即开始推演</small></div>' +
+      '<div class="tier-row"><span class="set-label">我的大学层次</span>' + seg("tier", DATA.settings.tiers) +
+        '<span class="tier-note">' + (state.settings.tier === "专科" ? "赛道人少，成功率 +4" : "同侪更卷，成功率 -2") + '</span></div>' +
       '<div class="scene-grid">' + scenesHTML + '</div>' +
       '<div class="custom-box">' +
         '<span class="cq-label">没找到你的问题？直接写一个：</span>' +
         '<input id="customQ" type="text" maxlength="80" placeholder="例如：大学四年，进实验室做科研，还是早点去实习？" onkeydown="if(event.key===\'Enter\'){generateCustom()}">' +
         '<button class="btn primary" onclick="generateCustom()">用我的问题推演 →</button>' +
-        '<span class="cq-hint">系统会按关键词匹配最接近的剧本模板（共 ' + DATA.scenes.length + ' 个），结果页会标明匹配到哪一个；人生阶段仍按「高一 → 五年后」推演。</span>' +
+        '<span class="cq-hint">系统会按关键词在当前层次（' + esc(state.settings.tier) + '）的 ' + tierScenes.length + ' 个剧本里匹配模板，结果页会标明匹配到哪一个；人生阶段按「入学 → 五年后」推演。</span>' +
       '</div>' +
     '</section>' +
     '<section class="panel anim" style="animation-delay:.28s">' +
@@ -389,6 +394,7 @@ function renderTree() {
       '<div class="result-tag">你的问题 · YOUR QUESTION</div>' +
       '<h2>' + esc(s.question) + '</h2>' +
       '<div class="result-meta">' +
+        '<span>层次：' + esc(state.settings.tier) + '</span>' +
         '<span>兴趣：' + esc(state.settings.interest) + '</span>' +
         '<span>目标：' + esc(state.settings.goal) + '</span>' +
         '<span>时间投入：' + state.settings.time + '/5</span>' +
@@ -572,7 +578,8 @@ function restoreSaved() {
     sc.question = d.sceneQuestion || sc.question;
   }
   state.scene = sc;
-  state.settings = Object.assign({ interest: "学术", goal: "保研深造", time: 3 }, d.settings);
+  state.settings = Object.assign({ tier: "985", interest: "学术", goal: "保研深造", time: 3 }, d.settings);
+  if (sc.tier) state.settings.tier = sc.tier;
   state.events = Array.isArray(d.events) && d.events.length ? d.events : drawEvents();
   branchSeq = 0;
   state.branches = d.plans.map(function (p) {
@@ -635,7 +642,7 @@ function exportPNG() {
   x.fillStyle = "#b9aee6"; x.font = "17px sans-serif";
   wrapText(x, state.scene.question, pad, 90, W - 2 * pad, 26);
   x.fillStyle = "#fbbf24"; x.font = "13px sans-serif";
-  x.fillText("兴趣 " + state.settings.interest + " · 目标 " + state.settings.goal + " · 时间 " + state.settings.time + "/5 · 事件：" + state.events.map(function (e) { return DATA.stages[e.at] + "·" + e.ev.title; }).join(" / "), pad, 132);
+  x.fillText("层次 " + state.settings.tier + " · 兴趣 " + state.settings.interest + " · 目标 " + state.settings.goal + " · 时间 " + state.settings.time + "/5 · 事件：" + state.events.map(function (e) { return DATA.stages[e.at] + "·" + e.ev.title; }).join(" / "), pad, 132);
 
   const best = Math.max.apply(null, state.branches.map(function (b) { return b.score; }));
   const startX = (W - (cols * colW + (cols - 1) * gap)) / 2;
@@ -771,7 +778,7 @@ function showHelp() {
   mask.id = "helpMask";
   mask.className = "mask";
   mask.innerHTML = '<div class="modal"><h3>✦ 怎么玩</h3>' +
-    '<ol><li>选一个问题 + 设定<b>兴趣 / 目标 / 时间</b>，点问题卡开始推演。</li>' +
+    '<ol><li>先选<b>大学层次（专科 / 985）</b>，再选一个两难问题 + 设定<b>兴趣 / 目标 / 时间</b>，点问题卡开始推演。</li>' +
     '<li>系统生成两条人生路线，每条 ' + DATA.stages.length + ' 个阶段，三项属性一路累加。</li>' +
     '<li><b>点任意节点的「在这里改决定」</b>：从这一步改走另一条路，生成一条平行分支（最多 ' + MAX_BRANCHES + ' 条），粉色虚线标出它从哪里分叉。</li>' +
     '<li>分支右上角 <b>✕</b> 可以删掉不想要的平行人生。</li>' +

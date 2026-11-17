@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>时光胶囊 · 平行人生模拟器</title>
-<meta name="description" content="输入一个两难选择，看看不同人生会怎么走。交互式平行人生推演，零依赖、完全离线。">
+<meta name="description" content="从大学入学的一次选择出发（专科 / 985 自己选），看看不同人生会怎么走。交互式平行人生推演，零依赖、完全离线。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%8F%B3%3C/text%3E%3C/svg%3E">
 <!--
   index.html —— 呈现组负责
@@ -160,6 +160,11 @@ body {
 .scene-routes .rt-b { color: var(--sky); background: rgba(56,189,248,.12); }
 .scene-routes .vs { color: var(--dim); font-size: 11px; }
 .scene-go { color: var(--green); font-size: 13px; font-weight: 600; }
+
+/* ---------- 层次选择 ---------- */
+.tier-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.tier-row .seg button { padding: 8px 22px; font-size: 14px; }
+.tier-note { font-size: 12px; color: var(--amber); }
 
 /* ---------- 设定区 ---------- */
 .settings-card { background: var(--bg2); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 24px; }
@@ -404,9 +409,8 @@ a.btn { text-decoration: none; }
   </button>
   <div class="top-right">
     <div class="step-pill" id="stepPill"><b class="on">① 选问题</b><span>→</span><b>② 看人生</b></div>
-    <a class="btn small" href="life.html" title="另一个玩法：人生：无限分岔"><span class="topbar-long">∞ 人生线</span><span class="topbar-short">∞</span></a>
     <button class="btn small ver-chip" onclick="showChangelog()" title="查看更新日志">
-      <span class="ver-dot"></span><span id="verLabel">v1.0.0</span>
+      <span class="ver-dot"></span><span id="verLabel">v3.0.0</span>
     </button>
     <button class="btn small" onclick="showHelp()">？<span class="topbar-long"> 使用说明</span></button>
   </div>
