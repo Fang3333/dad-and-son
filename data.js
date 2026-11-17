@@ -11,11 +11,17 @@
 
 const DATA = {
   // 版本号遵循 semver：新功能/新剧本 +次版本，文案数值微调 +修订，大改版 +主版本
-  version: "1.0.0",
+  version: "1.0.1",
 
   // 更新日志：每次更新在最前面追加一条 { version, date, tag, items }
   // tag 只能填：首发 / 新增 / 优化 / 修复 / 变更
   changelog: [
+    {
+      version: "1.0.1", date: "2026-11-17", tag: "修复",
+      items: [
+        "补上网站图标（内联 SVG，不新增文件），消除浏览器标签与线上控制台的 favicon 404"
+      ]
+    },
     {
       version: "1.0.0", date: "2026-11-17", tag: "首发",
       items: [
