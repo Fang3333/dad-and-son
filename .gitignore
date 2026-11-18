@@ -9,3 +9,10 @@ vibe_images/
 # 测试残留
 .test_*
 node_modules/
+
+# Qoder Sites 公开输出目录（源文件的部署副本）
+dist/
+
+# 大赛提交材料（内部）
+作品介绍.md
+submission/
