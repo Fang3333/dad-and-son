@@ -1,20 +1,22 @@
-/* 主交互：状态 + 选规则 / 调参数 / 生成世界 / 双世界对比 / 报告 / 海报 / AI 开关。
+/* 主交互：八版报纸翻页状态机 + 选规则 / 调参数 / 生成 / 对比 / 报告 / 海报 / AI / 热点。
    只消费 WRM_DATA / WRM_ENGINE，不改数据结构；所有数据文本走 textContent。 */
 (function (global) {
   "use strict";
 
   const $ = (id) => document.getElementById(id);
-  const APP_VERSION = "1.0.0";
+  const APP_VERSION = "1.1.0";
   const APP_UPDATED = "2026-11-18";
   const LS_STATE = "wrm.state";
   const LS_HOT = "wrm.hotPicks";
   const HOT_CATS = ["财经", "科技", "社会", "教育", "娱乐", "生活"];
   const DIM_ORDER = ["education", "economy", "society", "individual"];
   const DIM_LABELS = { education: "教育", economy: "经济", society: "社会", individual: "个人" };
+  const PAGE_COUNT = 8;
+  const PAGE_NAMES = ["头版", "教育", "经济", "社会·个人", "因果", "热点", "对比", "档案"];
 
   const state = {
     ruleId: null, paramsA: null, paramsB: null, resultA: null, resultB: null,
-    hotFilter: "all", hotPicks: []
+    page: 1, hotFilter: "all", hotWindow: 0, hotPicks: [], causalExpanded: false
   };
   let narrativeSeq = 0;
 
@@ -35,6 +37,8 @@
     const e = $("appError");
     e.textContent = msg;
     e.hidden = false;
+    const desk = $("editDesk");
+    if (desk) desk.open = true;
   }
 
   function readState() {
@@ -52,21 +56,77 @@
     } catch (e) { /* 忽略存储不可用 */ }
   }
 
-  /* ---------- 静态区 ---------- */
+  /* ---------- 翻页状态机 ---------- */
 
-  function renderFooterMeta() {
-    const meta = data().meta;
-    $("metaScale").textContent = meta.scaleNote;
-    $("metaPreset").textContent = meta.presetNote;
-    const dl = $("certaintyLegend");
-    dl.replaceChildren();
-    for (const key of Object.keys(meta.certaintyLegend)) {
-      dl.appendChild(node("dt", null, key));
-      dl.appendChild(node("dd", null, meta.certaintyLegend[key]));
+  function updatePager() {
+    $("pageLabel").textContent = "第 " + state.page + " / " + PAGE_COUNT + " 版 · " + PAGE_NAMES[state.page - 1];
+    $("progressFill").style.width = (state.page / PAGE_COUNT * 100) + "%";
+    $("prevBtn").disabled = state.page === 1;
+    $("nextBtn").disabled = state.page === PAGE_COUNT;
+    const dots = $("pageDots");
+    dots.replaceChildren();
+    for (let i = 1; i <= PAGE_COUNT; i++) {
+      const d = node("span", "dot" + (i === state.page ? " is-on" : "") + (i < state.page ? " is-done" : ""));
+      dots.appendChild(d);
     }
-    $("disclaimer").textContent = meta.disclaimer;
-    $("metaVersion").textContent =
-      "v" + APP_VERSION + " · " + APP_UPDATED + " · 数据 v" + meta.version;
+  }
+
+  function goToPage(n, focus) {
+    const next = Math.max(1, Math.min(PAGE_COUNT, n));
+    state.page = next;
+    for (let i = 1; i <= PAGE_COUNT; i++) {
+      const sec = $("page-" + i);
+      const active = i === next;
+      sec.hidden = !active;
+      sec.classList.toggle("is-active", active);
+      if (active) {
+        sec.classList.remove("turn");
+        void sec.offsetWidth;
+        sec.classList.add("turn");
+      }
+    }
+    updatePager();
+    global.scrollTo(0, 0);
+    if (focus !== false) {
+      const title = $("title-" + next);
+      if (title) title.focus({ preventScroll: true });
+    }
+  }
+
+  function bindPager() {
+    $("prevBtn").addEventListener("click", () => goToPage(state.page - 1));
+    $("nextBtn").addEventListener("click", () => goToPage(state.page + 1));
+    document.addEventListener("keydown", (e) => {
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      const t = e.target;
+      const tag = t && t.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (t && t.isContentEditable)) return;
+      if (e.key === "ArrowRight") { e.preventDefault(); goToPage(state.page + 1); }
+      else if (e.key === "ArrowLeft") { e.preventDefault(); goToPage(state.page - 1); }
+    });
+  }
+
+  /* ---------- 页头规则条 / 编辑台 ---------- */
+
+  function matchText(r) {
+    return r.match === "exact" ? "示例世界 " + r.presetKey : "近似推演 · 基于示例 " + r.basePresetKey;
+  }
+
+  function renderStrip() {
+    const r = state.resultA;
+    $("stripRule").textContent = rule().title;
+    const badge = $("stripBadge");
+    badge.textContent = matchText(r);
+    badge.className = "badge mono" + (r.match === "nearest" ? " is-nearest" : "");
+    const wrap = $("stripParams");
+    wrap.replaceChildren();
+    rule().params.forEach((p) => {
+      const on = Boolean(r.params[p.id]);
+      const chip = node("span", "strip-chip" + (on ? " is-on" : ""));
+      chip.appendChild(node("i", "chip-dot"));
+      chip.appendChild(document.createTextNode(p.label + (on ? " 开" : " 关")));
+      wrap.appendChild(chip);
+    });
   }
 
   function renderRuleList() {
@@ -83,22 +143,11 @@
         if (state.ruleId === r.id) return;
         selectRule(r.id);
         generate(false);
-        runCompare();
       });
       li.appendChild(btn);
       list.appendChild(li);
     }
   }
-
-  function renderHero() {
-    const r = rule();
-    $("heroKicker").textContent = "规则实验 / " + r.category;
-    $("heroTitle").textContent = "如果" + r.title;
-    $("heroDek").textContent = r.premise;
-    $("paramsNote").textContent = r.question;
-  }
-
-  /* ---------- 参数 ---------- */
 
   function effectText(p) {
     const parts = engine().METRICS
@@ -107,7 +156,7 @@
     return "权重示意 " + (parts.length ? parts.join(" · ") : "不影响指标");
   }
 
-  function renderParams(grid, params) {
+  function renderParams(grid, params, onChange) {
     grid.replaceChildren();
     for (const p of rule().params) {
       const cell = node("div", "param");
@@ -115,7 +164,10 @@
       const input = document.createElement("input");
       input.type = "checkbox";
       input.checked = Boolean(params[p.id]);
-      input.addEventListener("change", () => { params[p.id] = input.checked; });
+      input.addEventListener("change", () => {
+        params[p.id] = input.checked;
+        if (onChange) onChange();
+      });
       label.appendChild(input);
       label.appendChild(document.createTextNode(p.label));
       cell.appendChild(label);
@@ -133,7 +185,7 @@
       btn.type = "button";
       btn.addEventListener("click", () => {
         state.paramsB = clone(preset.params);
-        renderParams($("paramGridB"), state.paramsB);
+        renderParams($("paramGridB"), state.paramsB, runCompare);
         runCompare();
       });
       wrap.appendChild(btn);
@@ -143,17 +195,19 @@
   function selectRule(id) {
     state.ruleId = id;
     state.hotFilter = "all";
+    state.hotWindow = 0;
+    state.causalExpanded = false;
     const r = rule();
     state.paramsA = engine().defaultParams(r);
     state.paramsB = clone(r.presets.B.params);
+    $("paramsNote").textContent = r.question;
     renderRuleList();
-    renderHero();
-    renderParams($("paramGrid"), state.paramsA);
-    renderParams($("paramGridB"), state.paramsB);
+    renderParams($("paramGrid"), state.paramsA, () => generate(false));
+    renderParams($("paramGridB"), state.paramsB, runCompare);
     renderPresetBtns();
   }
 
-  /* ---------- 世界 ---------- */
+  /* ---------- 指标 ---------- */
 
   function metricRow(m, value, deltaText) {
     const box = node("div", "metric");
@@ -170,87 +224,214 @@
     return box;
   }
 
-  function matchText(r) {
-    return r.match === "exact" ? "示例世界 " + r.presetKey : "近似推演 · 基于示例 " + r.basePresetKey;
-  }
+  /* ---------- 第 1 版 头版 ---------- */
 
-  function renderWorld() {
+  function renderPage1() {
     const r = state.resultA;
+    $("title-1").textContent = r.report.title;
     const baseMetrics = rule().presets[r.basePresetKey].metrics;
-    const maxYear = r.events.reduce((n, e) => Math.max(n, e.year), 0);
-    $("worldTitle").textContent = r.report.title + " · 第 " + maxYear + " 年";
-    $("worldMeta").textContent = rule().title + " ｜ " +
-      rule().params.map((p) => p.label + (r.params[p.id] ? "开" : "关")).join(" ");
-    const badge = $("matchBadge");
-    badge.textContent = matchText(r);
-    badge.className = "badge mono" + (r.match === "nearest" ? " is-nearest" : "");
-
-    const metrics = $("worldMetrics");
+    const metrics = $("p1Metrics");
     metrics.replaceChildren();
     for (const m of engine().METRICS) {
       const delta = r.metrics[m] - baseMetrics[m];
       const deltaText = r.match === "nearest" && delta !== 0 ? "较示例 " + fmt(delta) : "";
       metrics.appendChild(metricRow(m, r.metrics[m], deltaText));
     }
+    $("p1Lead").textContent = r.report.summary;
+    $("p1Match").textContent = matchText(r) + "。" +
+      (r.match === "nearest"
+        ? "指标按参数权重近似修正，事件与因果跟随最近预设。"
+        : "参数与示例预设完全一致。");
+  }
 
-    const grid = $("worldGrid");
-    grid.replaceChildren();
-    for (const key of DIM_ORDER) {
-      const dim = node("div", "dim");
-      const head = node("div", "dim-head");
-      head.appendChild(node("h4", null, DIM_LABELS[key]));
-      dim.appendChild(head);
-      for (const item of r.dimensions[key]) {
-        const box = node("div", "item");
-        const ihead = node("div", "dim-head");
-        ihead.appendChild(node("h5", null, item.title));
-        const cert = node("span", "certainty mono", item.certainty);
-        if (item.certainty === "假设") cert.classList.add("is-assumption");
-        if (item.certainty === "不确定") cert.classList.add("is-uncertain");
-        ihead.appendChild(cert);
-        box.appendChild(ihead);
-        box.appendChild(node("p", "change", item.change));
-        box.appendChild(node("p", "causal", item.causal));
-        dim.appendChild(box);
-      }
-      grid.appendChild(dim);
+  /* ---------- 第 2/3/4 版 维度 ---------- */
+
+  function dimBlock(item) {
+    const box = node("article", "dim-block");
+    const head = node("div", "dim-head");
+    head.appendChild(node("h3", null, item.title));
+    const cert = node("span", "certainty mono", item.certainty);
+    if (item.certainty === "假设") cert.classList.add("is-assumption");
+    if (item.certainty === "不确定") cert.classList.add("is-uncertain");
+    head.appendChild(cert);
+    box.appendChild(head);
+    box.appendChild(node("p", "change", item.change));
+    box.appendChild(node("p", "causal", item.causal));
+    return box;
+  }
+
+  function renderDimPage(container, items) {
+    container.replaceChildren();
+    container.appendChild(dimBlock(items[0]));
+    if (items[1]) {
+      const det = document.createElement("details");
+      det.className = "more-dim";
+      det.appendChild(node("summary", "more-summary mono", "还有一条"));
+      det.appendChild(dimBlock(items[1]));
+      container.appendChild(det);
     }
+  }
 
-    global.WRM_CAUSAL.render($("causalSvg"), $("causalList"), $("causalLegend"), r);
-
-    const un = $("unintendedList");
-    un.replaceChildren();
-    r.unintended.forEach((u, i) => {
-      const li = document.createElement("li");
-      li.appendChild(node("span", "idx", "意外 0" + (i + 1)));
-      const body = document.createElement("div");
-      body.appendChild(node("h5", null, u.title));
-      body.appendChild(node("p", null, u.description));
-      li.appendChild(body);
-      un.appendChild(li);
+  function renderPage4() {
+    const wrap = $("p4Body");
+    wrap.replaceChildren();
+    const dims = state.resultA.dimensions;
+    [["society", "社会"], ["individual", "个人"]].forEach(([key, label]) => {
+      const col = node("div", "dual-col");
+      col.appendChild(node("h3", "dual-head", label));
+      const body = node("div", "dim-page");
+      renderDimPage(body, dims[key]);
+      col.appendChild(body);
+      wrap.appendChild(col);
     });
   }
 
-  function generate(scroll) {
-    state.resultA = engine().evaluate(state.ruleId, state.paramsA);
-    renderWorld();
-    renderReport();
-    renderHot();
-    refreshNarrative();
-    $("world").hidden = false;
-    $("compare").hidden = false;
-    $("archive").hidden = false;
-    saveState();
-    if (scroll) $("world").scrollIntoView();
+  /* ---------- 第 5 版 因果 ---------- */
+
+  function causalView() {
+    const r = state.resultA;
+    if (state.causalExpanded) return r;
+    const ids = ["e1", "e2", "e3"];
+    const events = r.events.filter((e) => ids.indexOf(e.id) !== -1);
+    const edges = r.edges.filter((e) =>
+      (e.from === "e1" && e.to === "e2") || (e.from === "e2" && e.to === "e3"));
+    return Object.assign({}, r, { events, edges });
   }
 
-  /* ---------- 对比 ---------- */
+  function renderPage5() {
+    const view = causalView();
+    global.WRM_CAUSAL.render($("causalSvg"), $("causalList"), $("causalLegend"), view);
+    const btn = $("causalToggle");
+    btn.textContent = state.causalExpanded ? "收起 · 只看关键 3 节点" : "展开全部 6 节点";
+    btn.setAttribute("aria-expanded", String(state.causalExpanded));
+    $("p5Note").textContent = state.causalExpanded
+      ? "完整 10 年链：6 个事件、6 条因果边。"
+      : "先看 3 个关键节点、2 条边；展开全部看完整链。";
+  }
+
+  /* ---------- 第 6 版 热点副刊 ---------- */
+
+  const hotCards = () => (global.WRM_HOT ? global.WRM_HOT.cards : []);
+  const hotForRule = () => hotCards().filter((c) => c.ruleFit.indexOf(state.ruleId) !== -1);
+  const hotFiltered = () => hotForRule().filter((c) => state.hotFilter === "all" || c.category === state.hotFilter);
+
+  function readHotPicks() {
+    try {
+      const raw = global.localStorage.getItem(LS_HOT);
+      const arr = raw ? JSON.parse(raw) : null;
+      if (Array.isArray(arr)) return arr.filter((id) => hotCards().some((c) => c.id === id));
+    } catch (e) { /* 忽略存储不可用 */ }
+    return null;
+  }
+
+  function saveHotPicks() {
+    try {
+      global.localStorage.setItem(LS_HOT, JSON.stringify(state.hotPicks));
+    } catch (e) { /* 忽略存储不可用 */ }
+  }
+
+  function toggleHotPick(id) {
+    const i = state.hotPicks.indexOf(id);
+    if (i !== -1) state.hotPicks.splice(i, 1);
+    else {
+      state.hotPicks.push(id);
+      if (state.hotPicks.length > 3) state.hotPicks.shift();
+    }
+    saveHotPicks();
+    renderPage6();
+    renderHotArchive();
+  }
+
+  function buildHotCard(card) {
+    const picked = state.hotPicks.indexOf(card.id) !== -1;
+    const el = node("article", "hotcard");
+    const head = node("div", "hotcard-head");
+    head.appendChild(node("span", "hot-code mono", card.code));
+    head.appendChild(node("span", "hot-cat mono", card.category));
+    if (card.sensitivity === "medium") head.appendChild(node("span", "hot-sens mono", "敏感级 中"));
+    el.appendChild(head);
+    el.appendChild(node("h4", null, card.title));
+    const real = node("p", "hot-real");
+    real.appendChild(node("span", "hot-tag", "现实｜"));
+    real.appendChild(document.createTextNode(card.realLine));
+    el.appendChild(real);
+    const alt = node("p", "hot-alt");
+    alt.appendChild(node("span", "hot-tag", "本世界｜"));
+    alt.appendChild(document.createTextNode(card.altLine));
+    el.appendChild(alt);
+    if (card.memeTags && card.memeTags.length) {
+      const tags = node("div", "hot-tags");
+      card.memeTags.forEach((t) => tags.appendChild(node("span", null, t)));
+      el.appendChild(tags);
+    }
+    el.appendChild(node("p", "hot-note", card.note));
+    const btn = node("button", "hot-pick", picked ? "已收进档案" : "收进档案");
+    btn.type = "button";
+    btn.setAttribute("aria-pressed", String(picked));
+    btn.addEventListener("click", () => toggleHotPick(card.id));
+    el.appendChild(btn);
+    return el;
+  }
+
+  function renderHotFilters() {
+    const wrap = $("hotFilters");
+    wrap.replaceChildren();
+    const cards = hotForRule();
+    const mk = (key, label, count) => {
+      const btn = node("button", "hot-filter", label + " " + count);
+      btn.type = "button";
+      btn.setAttribute("aria-pressed", String(state.hotFilter === key));
+      btn.addEventListener("click", () => {
+        state.hotFilter = key;
+        state.hotWindow = 0;
+        renderPage6();
+      });
+      wrap.appendChild(btn);
+    };
+    mk("all", "全部", cards.length);
+    HOT_CATS.forEach((cat) => {
+      const n = cards.filter((c) => c.category === cat).length;
+      if (n) mk(cat, cat, n);
+    });
+  }
+
+  function renderPage6() {
+    renderHotFilters();
+    const cards = hotFiltered();
+    const grid = $("hotGrid");
+    grid.replaceChildren();
+    const pages = Math.max(1, Math.ceil(cards.length / 2));
+    if (state.hotWindow >= pages) state.hotWindow = 0;
+    const start = state.hotWindow * 2;
+    const slice = cards.slice(start, start + 2);
+    if (!slice.length) {
+      grid.appendChild(node("p", "note hot-empty", "这条规则下没有该分类的改写卡。换个分类看看。"));
+    } else {
+      slice.forEach((c) => grid.appendChild(buildHotCard(c)));
+    }
+    $("hotWindowNote").textContent = cards.length
+      ? "第 " + (start + 1) + "–" + Math.min(start + 2, cards.length) + " 张 / 共 " + cards.length + " 张 · 一次只看两张。"
+      : "共 0 张。";
+    $("hotMore").disabled = cards.length <= 2;
+  }
+
+  function renderHotArchive() {
+    const grid = $("hotArchive");
+    grid.replaceChildren();
+    const picks = state.hotPicks.map((id) => hotCards().find((c) => c.id === id)).filter(Boolean);
+    $("hotArchiveNote").textContent = picks.length
+      ? "已收 " + picks.length + " 张 · 最多 3 张，再收会挤掉最早的一张。摘录跟着档案走，不随规则切换清空。"
+      : "还没收卡。去第 6 版热点副刊点「收进档案」，这里会留下摘录。";
+    picks.forEach((c) => grid.appendChild(buildHotCard(c)));
+  }
+
+  /* ---------- 第 7 版 对比 ---------- */
 
   function compareCol(el, letter, r) {
     el.replaceChildren();
     const preset = rule().presets[r.presetKey];
     const name = r.match === "exact" ? preset.name : r.report.title;
-    el.appendChild(node("h4", null, "世界 " + letter + " · " + name));
+    el.appendChild(node("h3", null, "世界 " + letter + " · " + name));
     el.appendChild(node("p", "tagline", r.match === "exact" ? preset.tagline : matchText(r)));
     for (const m of engine().METRICS) el.appendChild(metricRow(m, r.metrics[m], ""));
   }
@@ -276,13 +457,14 @@
     }
   }
 
-  /* ---------- 报告 / 叙事 / 海报 ---------- */
+  /* ---------- 第 8 版 报告 / 叙事 / 海报 ---------- */
 
-  function renderReport() {
+  function renderPage8() {
     global.WRM_REPORT.render($("reportCard"), state.resultA, {
       ruleTitle: rule().title,
       matchText: matchText(state.resultA)
     });
+    renderHotArchive();
   }
 
   function refreshNarrative() {
@@ -320,118 +502,39 @@
       .finally(() => { btn.disabled = false; });
   }
 
-  /* ---------- 副刊 · 热点改写 ---------- */
-
-  const hotCards = () => (global.WRM_HOT ? global.WRM_HOT.cards : []);
-  const hotForRule = () => hotCards().filter((c) => c.ruleFit.indexOf(state.ruleId) !== -1);
-
-  function readHotPicks() {
-    try {
-      const raw = global.localStorage.getItem(LS_HOT);
-      const arr = raw ? JSON.parse(raw) : null;
-      if (Array.isArray(arr)) return arr.filter((id) => hotCards().some((c) => c.id === id));
-    } catch (e) { /* 忽略存储不可用 */ }
-    return null;
-  }
-
-  function saveHotPicks() {
-    try {
-      global.localStorage.setItem(LS_HOT, JSON.stringify(state.hotPicks));
-    } catch (e) { /* 忽略存储不可用 */ }
-  }
-
-  function toggleHotPick(id) {
-    const i = state.hotPicks.indexOf(id);
-    if (i !== -1) state.hotPicks.splice(i, 1);
-    else {
-      state.hotPicks.push(id);
-      if (state.hotPicks.length > 3) state.hotPicks.shift();
+  function renderFooterMeta() {
+    const meta = data().meta;
+    $("metaScale").textContent = meta.scaleNote;
+    $("metaPreset").textContent = meta.presetNote;
+    const dl = $("certaintyLegend");
+    dl.replaceChildren();
+    for (const key of Object.keys(meta.certaintyLegend)) {
+      dl.appendChild(node("dt", null, key));
+      dl.appendChild(node("dd", null, meta.certaintyLegend[key]));
     }
-    saveHotPicks();
-    renderHotGrid();
-    renderHotArchive();
+    $("disclaimer").textContent = meta.disclaimer;
+    $("metaVersion").textContent =
+      "v" + APP_VERSION + " · " + APP_UPDATED + " · 数据 v" + meta.version;
   }
 
-  function buildHotCard(card) {
-    const picked = state.hotPicks.indexOf(card.id) !== -1;
-    const el = node("article", "hotcard");
-    const head = node("div", "hotcard-head");
-    head.appendChild(node("span", "hot-code mono", card.code));
-    head.appendChild(node("span", "hot-cat mono", card.category));
-    if (card.sensitivity === "medium") head.appendChild(node("span", "hot-sens mono", "敏感级 中"));
-    el.appendChild(head);
-    el.appendChild(node("h5", null, card.title));
-    const real = node("p", "hot-real");
-    real.appendChild(node("span", "hot-tag", "现实｜"));
-    real.appendChild(document.createTextNode(card.realLine));
-    el.appendChild(real);
-    const alt = node("p", "hot-alt");
-    alt.appendChild(node("span", "hot-tag", "改写｜"));
-    alt.appendChild(document.createTextNode(card.altLine));
-    el.appendChild(alt);
-    if (card.memeTags && card.memeTags.length) {
-      const tags = node("div", "hot-tags");
-      card.memeTags.forEach((t) => tags.appendChild(node("span", null, t)));
-      el.appendChild(tags);
-    }
-    el.appendChild(node("p", "hot-note", card.note));
-    const btn = node("button", "hot-pick", picked ? "已收进档案" : "收进档案");
-    btn.type = "button";
-    btn.setAttribute("aria-pressed", String(picked));
-    btn.addEventListener("click", () => toggleHotPick(card.id));
-    el.appendChild(btn);
-    return el;
-  }
+  /* ---------- 生成 ---------- */
 
-  function renderHotFilters() {
-    const wrap = $("hotFilters");
-    wrap.replaceChildren();
-    const cards = hotForRule();
-    const mk = (key, label, count) => {
-      const btn = node("button", "hot-filter", label + (count === undefined ? "" : " " + count));
-      btn.type = "button";
-      btn.setAttribute("aria-pressed", String(state.hotFilter === key));
-      btn.addEventListener("click", () => {
-        state.hotFilter = key;
-        renderHotFilters();
-        renderHotGrid();
-      });
-      wrap.appendChild(btn);
-    };
-    mk("all", "全部", cards.length);
-    HOT_CATS.forEach((cat) => {
-      const n = cards.filter((c) => c.category === cat).length;
-      if (n) mk(cat, cat, n);
-    });
-  }
-
-  function renderHotGrid() {
-    const grid = $("hotGrid");
-    grid.replaceChildren();
-    const cards = hotForRule().filter((c) => state.hotFilter === "all" || c.category === state.hotFilter);
-    if (!cards.length) {
-      grid.appendChild(node("p", "note hot-empty", "这条规则下没有该分类的改写卡。换个分类看看。"));
-      return;
-    }
-    cards.forEach((c) => grid.appendChild(buildHotCard(c)));
-  }
-
-  function renderHotArchive() {
-    const grid = $("hotArchive");
-    grid.replaceChildren();
-    const picks = state.hotPicks
-      .map((id) => hotCards().find((c) => c.id === id))
-      .filter(Boolean);
-    $("hotArchiveNote").textContent = picks.length
-      ? "已收 " + picks.length + " 张 · 最多 3 张，再收会挤掉最早的一张。摘录跟着档案走，不随规则切换清空。"
-      : "还没收卡。去世界页副刊点「收进档案」，这里会留下摘录。";
-    picks.forEach((c) => grid.appendChild(buildHotCard(c)));
-  }
-
-  function renderHot() {
-    renderHotFilters();
-    renderHotGrid();
-    renderHotArchive();
+  function generate(scroll) {
+    state.resultA = engine().evaluate(state.ruleId, state.paramsA);
+    state.causalExpanded = false;
+    state.hotWindow = 0;
+    renderStrip();
+    renderPage1();
+    renderDimPage($("p2Body"), state.resultA.dimensions.education);
+    renderDimPage($("p3Body"), state.resultA.dimensions.economy);
+    renderPage4();
+    renderPage5();
+    renderPage6();
+    runCompare();
+    renderPage8();
+    refreshNarrative();
+    saveState();
+    goToPage(1, scroll !== false);
   }
 
   /* ---------- 启动 ---------- */
@@ -445,19 +548,48 @@
     if (saved && saved.ruleId === savedRule) {
       if (saved.paramsA) state.paramsA = clone(saved.paramsA);
       if (saved.paramsB) state.paramsB = clone(saved.paramsB);
-      renderParams($("paramGrid"), state.paramsA);
-      renderParams($("paramGridB"), state.paramsB);
+      renderParams($("paramGrid"), state.paramsA, () => generate(false));
+      renderParams($("paramGridB"), state.paramsB, runCompare);
     }
-    $("generateBtn").addEventListener("click", () => generate(true));
-    $("compareBtn").addEventListener("click", runCompare);
-    $("posterBtn").addEventListener("click", exportPoster);
     const savedPicks = readHotPicks();
     state.hotPicks = savedPicks !== null ? savedPicks : hotForRule().slice(0, 2).map((c) => c.id);
     saveHotPicks();
+
+    bindPager();
+    $("generateBtn").addEventListener("click", () => {
+      $("editDesk").open = false;
+      syncEditToggle();
+      generate(true);
+    });
+    $("compareBtn").addEventListener("click", runCompare);
+    $("posterBtn").addEventListener("click", exportPoster);
+    $("causalToggle").addEventListener("click", () => {
+      state.causalExpanded = !state.causalExpanded;
+      renderPage5();
+    });
+    $("hotMore").addEventListener("click", () => {
+      const pages = Math.max(1, Math.ceil(hotFiltered().length / 2));
+      state.hotWindow = (state.hotWindow + 1) % pages;
+      renderPage6();
+    });
+    $("editToggle").addEventListener("click", () => {
+      const desk = $("editDesk");
+      desk.open = !desk.open;
+      syncEditToggle();
+    });
+    $("editDesk").addEventListener("toggle", syncEditToggle);
     global.WRM_AI.bind($("aiToggle"), $("aiKey"));
     $("aiToggle").addEventListener("change", refreshNarrative);
+
     generate(false);
-    runCompare();
+    goToPage(1, false);
+  }
+
+  function syncEditToggle() {
+    const open = $("editDesk").open;
+    const btn = $("editToggle");
+    btn.setAttribute("aria-expanded", String(open));
+    btn.textContent = open ? "收起编辑台" : "编辑规则与参数";
   }
 
   function init() {
@@ -472,6 +604,6 @@
     }
   }
 
-  global.WRM_APP = { state, generate, runCompare };
+  global.WRM_APP = { state, generate, runCompare, goToPage };
   init();
 })(typeof window !== "undefined" ? window : globalThis);

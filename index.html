@@ -2,9 +2,9 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>世界规则修改器 · 社会规则实验室</title>
-<meta name="description" content="选一条现实规则，调四个参数，推演一个虚拟世界的教育、经济、社会与个人变化。情景推演，不是预测。">
+<meta name="description" content="选一条现实规则，调四个参数，分八版推演一个虚拟世界：头版、教育、经济、社会与个人、因果、热点、对比、档案。情景推演，不是预测。">
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="styles.css">
 <script defer src="world-rule/data.js"></script>
@@ -24,90 +24,114 @@
     <h1>世界规则修改器</h1>
     <div class="latin mono">World Rule Modifier · 社会规则实验室</div>
   </div>
-  <nav class="mastnav" aria-label="版面导航">
-    <a href="#rules">规则库</a>
-    <a href="#bench">实验台</a>
-    <a href="#method">方法</a>
-    <a href="#archive">档案</a>
-  </nav>
+
+  <div class="rule-strip" aria-label="当前规则与参数">
+    <div class="strip-line">
+      <span class="strip-label mono">本版规则</span>
+      <strong id="stripRule" class="strip-rule"></strong>
+      <span id="stripBadge" class="badge mono"></span>
+    </div>
+    <div id="stripParams" class="strip-params mono"></div>
+    <button id="editToggle" class="edit-toggle" type="button" aria-expanded="false" aria-controls="editDesk">编辑规则与参数</button>
+  </div>
+
+  <details id="editDesk" class="edit-desk">
+    <summary class="edit-summary mono">编辑台 · 选规则 / 调四个参数 / 生成</summary>
+    <div class="edit-body">
+      <div class="edit-rules">
+        <h3 class="panel-head">选择一条规则</h3>
+        <ol id="ruleList" class="rule-list"></ol>
+      </div>
+      <div class="edit-params">
+        <h3 class="panel-head">设定四个参数</h3>
+        <p id="paramsNote" class="note"></p>
+        <div id="paramGrid" class="param-grid"></div>
+        <div class="bench-actions">
+          <button id="generateBtn" class="generate" type="button">生成这个世界 →</button>
+          <p class="note">拨动开关即重算并回到头版。</p>
+        </div>
+      </div>
+    </div>
+    <p id="appError" class="error" role="alert" hidden></p>
+  </details>
 </header>
 
-<main>
-
-  <section id="rules" class="hero" aria-label="规则库">
-    <div class="hero-copy">
-      <p id="heroKicker" class="kicker mono"></p>
-      <h2 id="heroTitle"></h2>
-      <p id="heroDek" class="dek"></p>
-      <ol class="steps mono">
-        <li>选规则</li>
-        <li>调参数</li>
-        <li>生成世界</li>
-      </ol>
+<div id="pager" class="pager" role="navigation" aria-label="版面翻页">
+  <button id="prevBtn" class="pager-btn" type="button">← 上一版</button>
+  <div class="pager-mid">
+    <div class="pager-top">
+      <span id="pageLabel" class="page-label mono" aria-live="polite"></span>
+      <span class="pager-hint mono">键盘 ← → 翻页</span>
     </div>
-    <aside class="rule-panel" aria-label="选择一条规则">
-      <h3 class="panel-head">选择一条规则</h3>
-      <ol id="ruleList" class="rule-list"></ol>
-      <div class="rule-custom">
-        <label for="customRule">或写一条自己的规则</label>
-        <input id="customRule" type="text" disabled placeholder="暂不支持">
-        <p class="note">自定义规则下一步支持，当前不参与推演。</p>
-      </div>
-    </aside>
+    <div class="progress-track" aria-hidden="true"><i id="progressFill"></i></div>
+    <div id="pageDots" class="page-dots" aria-hidden="true"></div>
+  </div>
+  <button id="nextBtn" class="pager-btn" type="button">下一版 →</button>
+</div>
+
+<main id="pages">
+
+  <section class="page" id="page-1" aria-labelledby="title-1">
+    <p class="page-kicker mono">第 1 版 · 头版</p>
+    <h2 class="page-title" id="title-1" tabindex="-1"></h2>
+    <div id="p1Metrics" class="metric-bars" aria-label="四项指标（示意）"></div>
+    <p id="p1Lead" class="page-lead"></p>
+    <p id="p1Match" class="note page-match"></p>
   </section>
 
-  <section id="bench" class="params" aria-label="实验台">
-    <div class="section-head">
-      <h3>设定这个世界的四个参数</h3>
-      <p id="paramsNote" class="note"></p>
-    </div>
-    <div id="paramGrid" class="param-grid"></div>
-    <div class="bench-actions">
-      <button id="generateBtn" class="generate" type="button">生成这个世界 →</button>
-      <p id="appError" class="error" role="alert" hidden></p>
-    </div>
+  <section class="page" id="page-2" aria-labelledby="title-2" hidden>
+    <p class="page-kicker mono">第 2 版 · 教育</p>
+    <h2 class="page-title" id="title-2" tabindex="-1">教育版</h2>
+    <div id="p2Body" class="dim-page"></div>
   </section>
 
-  <section id="world" class="world" aria-label="推演结果" hidden>
-    <div class="world-head">
-      <div>
-        <h3 id="worldTitle"></h3>
-        <p id="worldMeta" class="mono note"></p>
-      </div>
-      <span id="matchBadge" class="badge mono"></span>
-    </div>
-    <div id="worldMetrics" class="metric-bars" aria-label="四项指标（示意）"></div>
-    <div id="worldGrid" class="world-grid"></div>
-    <div class="causal-wrap">
-      <h4 class="small-head">因果链</h4>
-      <svg id="causalSvg" class="causal" role="img" aria-label="事件因果图"></svg>
-      <ol id="causalList" class="causal-list"></ol>
-      <p id="causalLegend" class="legend mono"></p>
-    </div>
-    <div class="unexpected-wrap">
-      <h4 class="small-head">意外后果</h4>
-      <ol id="unintendedList" class="unexpected"></ol>
-    </div>
-    <div class="hotpress-wrap">
-      <div class="hotpress-head">
-        <h4 class="small-head">副刊 · 热点改写</h4>
-        <div id="hotFilters" class="hot-filters"></div>
-      </div>
-      <p class="note hotpress-note">只写代号，不写真人。现实向一句，被本规则改写一句；点「收进档案」贴到报告页。</p>
-      <div id="hotGrid" class="hot-grid"></div>
-    </div>
+  <section class="page" id="page-3" aria-labelledby="title-3" hidden>
+    <p class="page-kicker mono">第 3 版 · 经济</p>
+    <h2 class="page-title" id="title-3" tabindex="-1">经济版</h2>
+    <div id="p3Body" class="dim-page"></div>
   </section>
 
-  <section id="compare" class="compare" aria-label="双世界对比" hidden>
-    <div class="section-head">
-      <h3>同一条规则，两个世界</h3>
-      <p class="note">世界 A 是你刚生成的世界。下面调世界 B 的参数，或一键载入示例。</p>
+  <section class="page" id="page-4" aria-labelledby="title-4" hidden>
+    <p class="page-kicker mono">第 4 版 · 社会与个人</p>
+    <h2 class="page-title" id="title-4" tabindex="-1">社会与个人</h2>
+    <div id="p4Body" class="dual-grid"></div>
+  </section>
+
+  <section class="page" id="page-5" aria-labelledby="title-5" hidden>
+    <p class="page-kicker mono">第 5 版 · 因果</p>
+    <h2 class="page-title" id="title-5" tabindex="-1">因果链</h2>
+    <div class="causal-bar">
+      <p id="p5Note" class="note"></p>
+      <button id="causalToggle" class="line-btn" type="button" aria-expanded="false">展开全部 6 节点</button>
     </div>
-    <div class="compare-controls">
-      <div id="presetBtns" class="preset-btns"></div>
-      <div id="paramGridB" class="param-grid"></div>
-      <button id="compareBtn" class="generate" type="button">生成世界 B 并对比 →</button>
+    <svg id="causalSvg" class="causal" role="img" aria-label="事件因果图"></svg>
+    <ol id="causalList" class="causal-list"></ol>
+    <p id="causalLegend" class="legend mono"></p>
+  </section>
+
+  <section class="page" id="page-6" aria-labelledby="title-6" hidden>
+    <p class="page-kicker mono">第 6 版 · 热点副刊</p>
+    <h2 class="page-title" id="title-6" tabindex="-1">热点副刊</h2>
+    <div class="hotpress-head">
+      <div id="hotFilters" class="hot-filters"></div>
+      <button id="hotMore" class="line-btn" type="button">换一批 →</button>
     </div>
+    <p id="hotWindowNote" class="note hotpress-note"></p>
+    <div id="hotGrid" class="hot-grid"></div>
+    <p class="note hotpress-foot">只写代号，不写真人。点「收进档案」把卡贴到第 8 版档案。</p>
+  </section>
+
+  <section class="page" id="page-7" aria-labelledby="title-7" hidden>
+    <p class="page-kicker mono">第 7 版 · 对比</p>
+    <h2 class="page-title" id="title-7" tabindex="-1">两个世界</h2>
+    <details id="deskB" class="edit-desk desk-b">
+      <summary class="edit-summary mono">调世界 B 参数 / 载入示例</summary>
+      <div class="compare-controls">
+        <div id="presetBtns" class="preset-btns"></div>
+        <div id="paramGridB" class="param-grid"></div>
+        <button id="compareBtn" class="generate" type="button">生成世界 B 并对比 →</button>
+      </div>
+    </details>
     <div class="compare-grid">
       <div id="compareA" class="compare-col"></div>
       <div id="compareB" class="compare-col"></div>
@@ -116,14 +140,13 @@
     <ol id="compareTop" class="top-diff mono"></ol>
   </section>
 
-  <section id="archive" class="report" aria-label="世界线档案" hidden>
-    <div class="section-head">
-      <h3>号外 · 世界线档案</h3>
-    </div>
+  <section class="page" id="page-8" aria-labelledby="title-8" hidden>
+    <p class="page-kicker mono">第 8 版 · 档案</p>
+    <h2 class="page-title" id="title-8" tabindex="-1">世界线档案</h2>
     <div class="report-grid">
       <article id="reportCard" class="report-card"></article>
       <aside class="report-side">
-        <h4 class="small-head">解读</h4>
+        <h3 class="small-head">解读</h3>
         <div id="narrativeSlot"></div>
         <div class="ai-settings">
           <label class="ai-switch" for="aiToggle">
@@ -137,26 +160,29 @@
       </aside>
     </div>
     <div class="hot-archive-wrap">
-      <h4 class="small-head">副刊摘录</h4>
+      <h3 class="small-head">副刊摘录</h3>
       <p id="hotArchiveNote" class="note"></p>
       <div id="hotArchive" class="hot-grid"></div>
     </div>
+    <details id="methodDesk" class="edit-desk method-desk">
+      <summary class="edit-summary mono">方法与确定性标签</summary>
+      <div class="method-grid">
+        <div>
+          <h4 class="small-head">方法</h4>
+          <p id="metaScale" class="note"></p>
+          <p id="metaPreset" class="note"></p>
+        </div>
+        <div>
+          <h4 class="small-head">确定性标签</h4>
+          <dl id="certaintyLegend" class="legend-list"></dl>
+        </div>
+      </div>
+    </details>
   </section>
 
 </main>
 
-<footer id="method">
-  <div class="method-grid">
-    <div>
-      <h4 class="small-head">方法</h4>
-      <p id="metaScale" class="note"></p>
-      <p id="metaPreset" class="note"></p>
-    </div>
-    <div>
-      <h4 class="small-head">确定性标签</h4>
-      <dl id="certaintyLegend" class="legend-list"></dl>
-    </div>
-  </div>
+<footer>
   <p id="disclaimer" class="disclaimer"></p>
   <p class="colophon mono"><span id="metaVersion"></span> · 报纸版式 B · 断网可玩</p>
 </footer>
