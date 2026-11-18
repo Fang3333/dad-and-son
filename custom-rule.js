@@ -25,7 +25,7 @@
     "params 只写该规则的布尔开关，可省略：no-exam 用 diploma/freeCourse/teacherEval/employerDegree；four-hour 用 hourlyPay/secondJob/enforceOff/productivity；free-goods 用 rationing/communityProduction/blackMarket/needsFirst。" +
     "deltas 是对基线世界四项指标（公平/效率/自由/稳定）的整数示意修正，范围 -25 到 25，不得全零，方向必须与 summary 的因果讲法一致。" +
     "dimensions 四个键各 2 条；events 恰 6 条，year 为 1 到 10 的递增整数，第 2 条起 causal 写「上一步为何导致这一步」；" +
-    "edges 恰 6 条，from/to 为 1 到 6 的事件序号且 from<to，六条边要把 6 个事件连成一条链，至少 2 条 assumption=true；unintended 恰 3 条。" +
+    "edges 恰 6 条，from/to 为 1 到 6 的事件序号且 from<to，禁止自环（如 6>6）与倒序；可直接用链 1→2、2→3、3→4、4→5、5→6 再加一条跨边（如 2→5），六条边要把 6 个事件连成一条链，至少 2 条 assumption=true；unintended 恰 3 条。" +
     "字数：title≤14、summary≤90、quote≤50；维度 title≤12、change/causal≤50；事件 title≤12、description/causal≤45；边 relation≤4、explanation≤45；意外 title≤12、description≤50。" +
     "写具体动作与物件，长短句交错；禁用套话与排比；不得编造统计、不得出现百分号、不得写真实人名、不得预测真实未来。这是虚构情景推演。";
 
@@ -166,7 +166,7 @@
     /* 校验不过时带上一稿让模型自修一次；仍不过返回 null，由界面提示重试 */
     const repaired = await global.WRM_AI.transport(SYSTEM,
       "读者来稿：" + text +
-      "\n上一稿补丁未通过校验。常见问题：边 from>=to、六条边没把事件 1-6 连成一条链、assumption=true 少于 2 条、事件 year 不递增、字数超限。请修正后重新输出完整 JSON。上一稿：\n" +
+      "\n上一稿补丁未通过校验。常见问题：6>6 这类自环边、边 from>=to、六条边没把事件 1-6 连成一条链、assumption=true 少于 2 条、事件 year 不递增、字数超限。边可直接用链 1→2、2→3、3→4、4→5、5→6 再加一条跨边。请修正后重新输出完整 JSON。上一稿：\n" +
       String(raw).slice(0, 6000));
     return tryPatch(repaired);
   }
