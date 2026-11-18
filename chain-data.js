@@ -80,7 +80,7 @@
     {
       id: "steam", era: "industrial", order: 9, yearLabel: "1776 年", title: "蒸汽机",
       anchor: "瓦特给纽科门机加了分离冷凝器，煤耗降了一大半。",
-      narrative: "伦敦，昨日电——蒸汽机第三次爆炸，工厂主说这是必要的代价。",
+      narrative: "伦敦工厂告示：蒸汽机第三次爆炸，厂主说这是必要的代价。",
       cause: "烧煤就能出力，工厂不必再建在河边。",
       effect: "人围着机器排班，钟点比日出管用。",
       certainty: "假设", sensitiveTo: ["four-hour"]
@@ -112,7 +112,7 @@
     {
       id: "ai", era: "modern", order: 13, yearLabel: "2020 年代", title: "AI",
       anchor: "大模型把海量文本压成权重，再按下一个词的概率往外吐。",
-      narrative: "您有一条新的世界线通知：第 3 版已生成，是否覆盖第 2 版？",
+      narrative: "您有一条新的世界线通知：第 {n} 版已生成，是否覆盖第 {prev} 版？",
       cause: "算力加数据够大，机器能接住没写过的问法。",
       effect: "判断被外包给模型，人开始复核机器的答案。",
       certainty: "不确定", sensitiveTo: ["no-exam:employerDegree", "four-hour:secondJob"]

@@ -4,10 +4,11 @@
   "use strict";
 
   const $ = (id) => document.getElementById(id);
-  const APP_VERSION = "1.4.2";
+  const APP_VERSION = "1.4.3";
   const APP_UPDATED = "2026-11-18";
   const LS_STATE = "wrm.state";
   const LS_HOT = "wrm.hotPicks";
+  const LS_APP = "wrm.appVersion";
   const HOT_CATS = ["直播", "科技", "财经", "社会", "教育", "娱乐", "生活"];
   const DIM_ORDER = ["education", "economy", "society", "individual"];
   const DIM_LABELS = { education: "教育", economy: "经济", society: "社会", individual: "个人" };
@@ -329,7 +330,7 @@
       group.appendChild(head);
       const row = node("div", "era-row");
       const eraNodes = c.nodes.filter((n) => n.era === era.id).sort((a, b) => a.order - b.order);
-      eraNodes.forEach((n) => row.appendChild(buildRiverNode(n, changed.indexOf(n.id) !== -1)));
+      eraNodes.forEach((n) => row.appendChild(buildRiverNode(n, changed.indexOf(n.id) !== -1, entry)));
       group.appendChild(row);
       if (era.id === "modern") {
         const br = node("div", "branch-row");
@@ -349,13 +350,34 @@
     river.scrollLeft = keepScroll;
     $("p5RiverNote").textContent = c.disclaimer + " 共 " + c.eras.length + " 个时代、" +
       c.nodes.length + " 个主线节点、" + c.edges.length + " 条主线边、" + c.hotBranches.length +
-      " 条热点支线。深红框 + 「已改写」= 被当前规则/参数影响的节点；点节点展开三层。";
+      " 条热点支线。深红框 + 「已改写」= 被当前规则/参数影响的节点，「改写自」写明具体规则与参数；节点「承」行是上游因果边；点节点展开三层。";
   }
 
-  function buildRiverNode(n, isChanged) {
+  function rewriteSource(n, entry) {
+    if (!entry) return "";
+    const r = engine().getRule(entry.ruleId);
+    const hits = (n.sensitiveTo || []).filter((t) => {
+      const p = t.split(":");
+      return p[0] === entry.ruleId && (p.length === 1 || Boolean(entry.params[p[1]]));
+    });
+    if (!hits.length) return "";
+    const names = hits.map((t) => {
+      const p = t.split(":");
+      if (p.length === 1) return "整条规则";
+      const param = r.params.find((x) => x.id === p[1]);
+      return param ? param.label : p[1];
+    });
+    return r.title + " · " + names.join(" / ");
+  }
+
+  function buildRiverNode(n, isChanged, entry) {
     const box = node("article", "rnode" + (isChanged ? " is-changed" : "") + (state.openNodes[n.id] ? " is-open" : ""));
     box.dataset.node = n.id;
-    if (isChanged) box.appendChild(node("span", "stamp-mini", "已改写"));
+    if (isChanged) {
+      box.appendChild(node("span", "stamp-mini", "已改写"));
+      const src = rewriteSource(n, entry);
+      if (src) box.appendChild(node("span", "rnode-why", "改写自 " + src));
+    }
     const head = node("button", "rnode-head");
     head.type = "button";
     head.dataset.node = n.id;
@@ -363,6 +385,11 @@
     head.appendChild(node("span", "rnode-order", "节点 " + String(n.order).padStart(2, "0")));
     head.appendChild(node("span", "rnode-title", n.title));
     head.appendChild(node("span", "rnode-year", n.yearLabel));
+    const inc = chain().edges.find((e) => e.to === n.id);
+    if (inc) {
+      const from = chain().nodeById(inc.from);
+      head.appendChild(node("span", "rnode-in", "承「" + (from ? from.title : inc.from) + "」· " + inc.relation));
+    }
     head.appendChild(node("span", "rnode-hint", "点开 · 锚点 / 本世界线 / 后果"));
     box.appendChild(head);
     const body = node("div", "rnode-body");
@@ -371,7 +398,12 @@
     l1.appendChild(document.createTextNode(n.anchor));
     const l2 = node("p", "layer layer-narrative");
     l2.appendChild(node("span", "layer-tag", "本世界线"));
-    l2.appendChild(document.createTextNode(n.narrative));
+    let narrative = n.narrative;
+    if (narrative.indexOf("{n}") !== -1) {
+      const vn = entry ? entry.n : version().current();
+      narrative = narrative.replace("{n}", String(vn)).replace("{prev}", String(Math.max(1, vn - 1)));
+    }
+    l2.appendChild(document.createTextNode(narrative));
     const l3 = node("p", "layer layer-causal");
     l3.appendChild(node("span", "layer-tag", "因果后果"));
     l3.appendChild(document.createTextNode(n.cause + " → " + n.effect));
@@ -787,10 +819,22 @@
     state.hotPicks = savedPicks !== null ? savedPicks : [];
     saveHotPicks();
 
-    if (!version().load()) {
+    const hadHistory = version().load();
+    if (!hadHistory) {
       const r0 = engine().evaluate(state.ruleId, state.paramsA);
       version().init(r0, state.ruleId, state.paramsA, chain().changedNodes(state.ruleId, state.paramsA));
     }
+    let prevApp = null;
+    try { prevApp = global.localStorage.getItem(LS_APP); } catch (e) { /* 存储不可用 */ }
+    if (hadHistory && prevApp !== APP_VERSION) {
+      const rNow = engine().evaluate(state.ruleId, state.paramsA);
+      version().bump({
+        force: true, label: "引擎修订 v" + APP_VERSION,
+        ruleId: state.ruleId, params: state.paramsA, metrics: rNow.metrics,
+        changedNodes: chain().changedNodes(state.ruleId, state.paramsA)
+      });
+    }
+    try { global.localStorage.setItem(LS_APP, APP_VERSION); } catch (e) { /* 存储不可用 */ }
 
     bindPager();
     $("river").addEventListener("click", (e) => {

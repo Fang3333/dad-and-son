@@ -60,9 +60,9 @@
 
   function bump(opts) {
     const prev = state.history[state.history.length - 1];
-    if (prev && prev.ruleId === opts.ruleId && sameParams(prev.params, opts.params)) return prev;
+    if (!opts.force && prev && prev.ruleId === opts.ruleId && sameParams(prev.params, opts.params)) return prev;
     const n = state.current + 1;
-    const e = entry(n, opts.ruleId, opts.params, opts.metrics, opts.changedNodes, "修订");
+    const e = entry(n, opts.ruleId, opts.params, opts.metrics, opts.changedNodes, opts.label || "修订");
     state.history.push(e);
     if (state.history.length > MAX) state.history = state.history.slice(-MAX);
     state.current = n;
