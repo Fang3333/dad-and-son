@@ -580,10 +580,11 @@ details[open] > .edit-summary::before { content: "− "; }
 .hot-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 40px; row-gap: 24px; }
 
 .hotcard { border-top: 2px solid var(--ink); padding-top: 12px; }
-.hotcard-head { display: flex; align-items: baseline; gap: 10px; }
+.hotcard-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 10px; }
+.hot-level { padding: 1px 7px; background: var(--accent); color: var(--paper); font-size: 11px; line-height: 1.5; letter-spacing: .04em; }
 .hot-code { padding: 1px 7px; border: 1px solid var(--accent); color: var(--accent); font-size: 11px; line-height: 1.5; }
 .hot-cat { font-size: 11px; color: var(--muted); }
-.hot-sens { margin-left: auto; font-size: 11px; color: var(--warn); }
+.hot-safety { margin-left: auto; padding: 1px 7px; border: 1px solid var(--rule); font-size: 11px; color: var(--muted); }
 .hotcard h4 { margin: 10px 0 8px; font: 700 19px/1.4 var(--font-serif); }
 
 .hot-real,
@@ -595,6 +596,8 @@ details[open] > .edit-summary::before { content: "− "; }
 
 .hot-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 8px; }
 .hot-tags span { padding: 1px 7px; border: 1px solid var(--rule); font: 11px/1.6 var(--font-mono); color: var(--muted); }
+.hot-proof { margin: 0 0 8px; padding: 6px 10px; border: 1px dashed var(--rule); background: var(--paper-2); font-size: 11px; line-height: 1.6; color: var(--muted); max-width: 42em; }
+.hot-proof .hot-tag { color: var(--accent-2); }
 .hot-note { margin: 0 0 10px; font: 11px/1.6 var(--font-mono); color: var(--muted); }
 
 .hot-pick {

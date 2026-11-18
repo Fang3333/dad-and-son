@@ -4,11 +4,11 @@
   "use strict";
 
   const $ = (id) => document.getElementById(id);
-  const APP_VERSION = "1.1.0";
+  const APP_VERSION = "1.2.0";
   const APP_UPDATED = "2026-11-18";
   const LS_STATE = "wrm.state";
   const LS_HOT = "wrm.hotPicks";
-  const HOT_CATS = ["财经", "科技", "社会", "教育", "娱乐", "生活"];
+  const HOT_CATS = ["直播", "科技", "财经", "社会", "教育", "娱乐", "生活"];
   const DIM_ORDER = ["education", "economy", "society", "individual"];
   const DIM_LABELS = { education: "教育", economy: "经济", society: "社会", individual: "个人" };
   const PAGE_COUNT = 8;
@@ -311,7 +311,11 @@
 
   /* ---------- 第 6 版 热点副刊 ---------- */
 
-  const hotCards = () => (global.WRM_HOT ? global.WRM_HOT.cards : []);
+  const hotCards = () => (global.WRM_HOT_EVENTS ? global.WRM_HOT_EVENTS.cards : []);
+  const hotSafetyLabel = (s) => {
+    const labels = global.WRM_HOT_EVENTS && global.WRM_HOT_EVENTS.safetyLabels;
+    return (labels && labels[s]) || "公开梗源";
+  };
   const hotForRule = () => hotCards().filter((c) => c.ruleFit.indexOf(state.ruleId) !== -1);
   const hotFiltered = () => hotForRule().filter((c) => state.hotFilter === "all" || c.category === state.hotFilter);
 
@@ -319,7 +323,10 @@
     try {
       const raw = global.localStorage.getItem(LS_HOT);
       const arr = raw ? JSON.parse(raw) : null;
-      if (Array.isArray(arr)) return arr.filter((id) => hotCards().some((c) => c.id === id));
+      if (Array.isArray(arr)) {
+        const valid = arr.filter((id) => hotCards().some((c) => c.id === id));
+        return valid.length ? valid : null;
+      }
     } catch (e) { /* 忽略存储不可用 */ }
     return null;
   }
@@ -346,9 +353,10 @@
     const picked = state.hotPicks.indexOf(card.id) !== -1;
     const el = node("article", "hotcard");
     const head = node("div", "hotcard-head");
+    head.appendChild(node("span", "hot-level mono", (card.memeLevel || "S") + " 级主梗"));
     head.appendChild(node("span", "hot-code mono", card.code));
     head.appendChild(node("span", "hot-cat mono", card.category));
-    if (card.sensitivity === "medium") head.appendChild(node("span", "hot-sens mono", "敏感级 中"));
+    head.appendChild(node("span", "hot-safety mono", hotSafetyLabel(card.safety)));
     el.appendChild(head);
     el.appendChild(node("h4", null, card.title));
     const real = node("p", "hot-real");
@@ -363,6 +371,15 @@
       const tags = node("div", "hot-tags");
       card.memeTags.forEach((t) => tags.appendChild(node("span", null, t)));
       el.appendChild(tags);
+    }
+    if (card.heatProof) {
+      const proof = node("p", "hot-proof mono");
+      proof.appendChild(node("span", "hot-tag", "梗源｜"));
+      const hp = card.heatProof;
+      proof.appendChild(document.createTextNode(
+        [hp.source, hp.date, hp.metric].filter(Boolean).join(" · ")
+      ));
+      el.appendChild(proof);
     }
     el.appendChild(node("p", "hot-note", card.note));
     const btn = node("button", "hot-pick", picked ? "已收进档案" : "收进档案");
