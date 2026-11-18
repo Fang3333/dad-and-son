@@ -1,41 +1,10 @@
-/* 可选 AI 叙事层：默认关闭。只写叙述，不碰 metrics/events/edges。
-   Key 与开关只存 localStorage；失败静默回退内置文案。
-   通道顺序：Qoder Sites 公共代理（服务端 Secret）→ 自填 OpenAI 兼容端点 → 内置文案。
-   自填默认走 OpenAI 兼容接口；可用 localStorage wrm.aiUrl / wrm.aiModel 覆盖。 */
+/* AI 叙事层：默认启用，只写叙述，不碰 metrics/events/edges。
+   唯一通道：Qoder Sites 公共代理（key 在服务端 Secret，访客免填）。
+   代理不可用 / 失败返回 null：叙事回退内置文案，来稿解析由界面提示重试。 */
 (function (global) {
   "use strict";
 
-  const LS_ON = "wrm.aiOn";
-  const LS_KEY = "wrm.aiKey";
-  const LS_URL = "wrm.aiUrl";
-  const LS_MODEL = "wrm.aiModel";
-  const DEFAULT_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
-  const DEFAULT_MODEL = "qwen-plus";
   const TIMEOUT = 15000;
-
-  function read(key) {
-    try { return global.localStorage.getItem(key); } catch (e) { return null; }
-  }
-  function write(key, value) {
-    try { global.localStorage.setItem(key, value); } catch (e) { /* 隐私模式等场景忽略 */ }
-  }
-
-  function enabled() { return read(LS_ON) === "1"; }
-
-  function bind(toggleEl, keyEl, urlEl, modelEl) {
-    toggleEl.checked = enabled();
-    keyEl.value = read(LS_KEY) || "";
-    toggleEl.addEventListener("change", () => write(LS_ON, toggleEl.checked ? "1" : "0"));
-    keyEl.addEventListener("change", () => write(LS_KEY, keyEl.value.trim()));
-    if (urlEl) {
-      urlEl.value = read(LS_URL) || "";
-      urlEl.addEventListener("change", () => write(LS_URL, urlEl.value.trim()));
-    }
-    if (modelEl) {
-      modelEl.value = read(LS_MODEL) || "";
-      modelEl.addEventListener("change", () => write(LS_MODEL, modelEl.value.trim()));
-    }
-  }
 
   function validate(obj) {
     if (!obj || typeof obj !== "object") return null;
@@ -63,9 +32,7 @@
     "禁用套话：让我们一起、在这个…的时代、随着…的发展、综上所述、值得注意的是、不难发现、赋能、助力、彰显、不仅…而且。" +
     "情绪写动作，不贴标签；不写排比；结尾收在一个具体画面，不升华。";
 
-  /* 公共代理优先（Qoder Sites 云函数，key 在服务端 Secret）；
-     非 Sites 部署 / 未配 Secret / 失败时回退自填 key，再失败回退内置文案。 */
-  async function viaProxy(system, user) {
+  async function transport(system, user) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT);
     try {
@@ -80,40 +47,6 @@
       const data = await res.json();
       if (data && data.ok === true && typeof data.content === "string" && data.content) return data.content;
       return null;
-    } catch (e) {
-      return null;
-    } finally {
-      clearTimeout(timer);
-    }
-  }
-
-  /* 通用传输：返回模型原文字符串；未启用 / 无可用通道 / 失败均返回 null。 */
-  async function transport(system, user) {
-    if (!enabled()) return null;
-    const proxied = await viaProxy(system, user);
-    if (proxied) return proxied;
-    const key = read(LS_KEY);
-    if (!key) return null;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT);
-    try {
-      const res = await fetch(read(LS_URL) || DEFAULT_URL, {
-        method: "POST",
-        signal: controller.signal,
-        headers: { "Content-Type": "application/json", Authorization: "Bearer " + key },
-        body: JSON.stringify({
-          model: read(LS_MODEL) || DEFAULT_MODEL,
-          temperature: 0.4,
-          messages: [
-            { role: "system", content: system },
-            { role: "user", content: user }
-          ]
-        })
-      });
-      if (!res.ok) return null;
-      const data = await res.json();
-      const content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-      return content || null;
     } catch (e) {
       return null;
     } finally {
@@ -143,6 +76,6 @@
     }
   }
 
-  global.WRM_AI = { bind, enabled, request, validate, transport };
+  global.WRM_AI = { request, validate, transport };
   if (typeof module !== "undefined" && module.exports) module.exports = global.WRM_AI;
 })(typeof window !== "undefined" ? window : globalThis);

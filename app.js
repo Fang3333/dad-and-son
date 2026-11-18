@@ -4,7 +4,7 @@
   "use strict";
 
   const $ = (id) => document.getElementById(id);
-  const APP_VERSION = "1.6.0";
+  const APP_VERSION = "1.7.0";
   const APP_UPDATED = "2026-11-18";
   const LS_STATE = "wrm.state";
   const LS_HOT = "wrm.hotPicks";
@@ -115,8 +115,7 @@
 
   function matchText(r) {
     if (r.custom) {
-      return (r.custom.source === "ai" ? "自定义来稿 · AI 推演" : "自定义来稿 · 关键词解析") +
-        " · 基于示例 " + r.basePresetKey;
+      return "自定义来稿 · AI 推演 · 基于示例 " + r.basePresetKey;
     }
     return r.match === "exact" ? "示例世界 " + r.presetKey : "近似推演 · 基于示例 " + r.basePresetKey;
   }
@@ -132,7 +131,7 @@
     if (r.custom) {
       const src = node("span", "strip-chip is-on");
       src.appendChild(node("i", "chip-dot"));
-      src.appendChild(document.createTextNode(r.custom.source === "ai" ? "来稿 · AI 解析" : "来稿 · 关键词解析"));
+      src.appendChild(document.createTextNode("来稿 · AI 解析"));
       wrap.appendChild(src);
     }
     rule().params.forEach((p) => {
@@ -254,9 +253,7 @@
     $("p1Lead").textContent = r.report.summary;
     $("p1Match").textContent = matchText(r) + "。" +
       (r.custom
-        ? (r.custom.source === "ai"
-          ? "指标 = 示例基线 + 来稿修正；事件、维度与意外后果由 AI 按来稿改写，置信度低。"
-          : "未启用 AI：只路由到最接近的内置规则，内容跟随示例，零 API 调用。")
+        ? "指标 = 示例基线 + 来稿修正；事件、维度与意外后果由 AI 按来稿改写，置信度低。"
         : (r.match === "nearest"
           ? "指标按参数权重近似修正，事件与因果跟随最近预设。"
           : "参数与示例预设完全一致。"));
@@ -329,10 +326,8 @@
     const entry = effectiveEntry();
     const changed = entry ? entry.changedNodes : [];
     const river = $("river");
-    const keepScroll = river.scrollLeft;
     river.replaceChildren();
     const track = node("div", "river-track");
-    track.appendChild(node("div", "river-line"));
     c.eras.forEach((era) => {
       const group = node("div", "era-group");
       group.dataset.era = era.id;
@@ -361,10 +356,9 @@
       track.appendChild(group);
     });
     river.appendChild(track);
-    river.scrollLeft = keepScroll;
     $("p5RiverNote").textContent = c.disclaimer + " 共 " + c.eras.length + " 个时代、" +
       c.nodes.length + " 个主线节点、" + c.edges.length + " 条主线边、" + c.hotBranches.length +
-      " 条热点支线。深红框 + 「已改写」= 被当前规则/参数影响的节点，「改写自」写明具体规则与参数；节点「承」行是上游因果边；点节点展开三层。";
+      " 条热点支线。深红框 + 「已改写」= 被当前规则/参数影响的节点，「改写自」写明具体规则与参数；节点「承」行是上游因果边；点节点展开三层。时代自上而下顺流排列，同代节点按网格铺开，不需横向滚动。";
   }
 
   function rewriteSource(n, entry) {
@@ -498,6 +492,7 @@
     const chip = $("pagerVersion");
     chip.textContent = (state.previewN !== null ? "预览 " : "") + "第 " + shown + " 版";
     chip.classList.toggle("is-preview", state.previewN !== null);
+    $("histSumMeta").textContent = "当前第 " + cur + " 版 · 存 " + v.history().length + " 版 · 展开预览与对比";
 
     const hist = $("versionHistory");
     hist.replaceChildren();
@@ -756,10 +751,6 @@
     const seq = ++narrativeSeq;
     const slot = $("narrativeSlot");
     const result = state.resultA;
-    if (!global.WRM_AI.enabled()) {
-      global.WRM_REPORT.renderNarrative(slot, result);
-      return;
-    }
     slot.replaceChildren();
     slot.className = "narrative";
     slot.appendChild(node("p", "note", "AI 解读请求中…"));
@@ -823,9 +814,7 @@
     customCount();
     $("customClear").hidden = !state.custom;
     if (state.custom) {
-      setCustomStatus(state.custom.source === "ai"
-        ? "当前来稿由 AI 解析：指标 = 基线 + 修正，事件与维度整版改写。"
-        : "当前来稿为关键词解析：路由到内置规则，零 API 调用。", state.custom.source === "local");
+      setCustomStatus("当前来稿由 AI 解析：指标 = 基线 + 修正，事件与维度整版改写。");
     }
   }
 
@@ -838,11 +827,8 @@
       return;
     }
     run.disabled = true;
-    let patch = null;
-    if (global.WRM_AI.enabled()) {
-      setCustomStatus("AI 解析来稿中…（1–2 次调用，校验不过自动重试一次）");
-      patch = await global.WRM_CUSTOM.parseAI(text);
-    }
+    setCustomStatus("AI 解析来稿中…（1–2 次调用，校验不过自动重试一次）");
+    const patch = await global.WRM_CUSTOM.parseAI(text);
     if (patch) {
       if (patch.base !== state.ruleId) selectRule(patch.base);
       if (Object.keys(patch.params).length) {
@@ -853,14 +839,9 @@
       }
       state.custom = { text: text, source: "ai", patch: patch };
     } else {
-      const loc = global.WRM_CUSTOM.parseLocal(text);
-      if (!loc) {
-        run.disabled = false;
-        setCustomStatus("没认出这条规则改的是什么。试试含「考试 / 工时 / 价格」这类词，或在第 8 版启用 AI 解析。", true);
-        return;
-      }
-      if (loc.base !== state.ruleId) selectRule(loc.base);
-      state.custom = { text: text, source: "local", patch: null };
+      run.disabled = false;
+      setCustomStatus("AI 解析未成功：公共代理不可用或两次校验不过。稍后重试，或把来稿写得更具体。", true);
+      return;
     }
     run.disabled = false;
     $("editDesk").open = false;
@@ -894,11 +875,7 @@
 
   function currentResult() {
     if (state.custom) {
-      return global.WRM_CUSTOM.build(
-        state.custom.text,
-        state.custom.source === "ai" ? state.custom.patch : null,
-        state.ruleId, state.paramsA
-      );
+      return global.WRM_CUSTOM.build(state.custom.text, state.custom.patch, state.ruleId, state.paramsA);
     }
     return engine().evaluate(state.ruleId, state.paramsA);
   }
@@ -949,11 +926,11 @@
     }
     if (saved && saved.custom && typeof saved.custom.text === "string") {
       const c = saved.custom;
-      const patch = c.source === "ai" ? global.WRM_CUSTOM.validatePatch(c.patch) : null;
-      if (c.source !== "ai" || patch) {
+      const patch = global.WRM_CUSTOM.validatePatch(c.patch);
+      if (patch) {
         state.custom = {
           text: c.text.slice(0, global.WRM_CUSTOM.MAX_TEXT),
-          source: patch ? "ai" : "local",
+          source: "ai",
           patch: patch
         };
       }
@@ -1016,6 +993,7 @@
       state.previewN = n === version().current() ? null : n;
       renderPage5();
       renderVersionUI();
+      if (state.previewN !== null) goToPage(5);
     });
     $("previewBack").addEventListener("click", () => {
       state.previewN = null;
@@ -1052,9 +1030,8 @@
       syncEditToggle();
     });
     $("editDesk").addEventListener("toggle", syncEditToggle);
-    global.WRM_AI.bind($("aiToggle"), $("aiKey"), $("aiUrl"), $("aiModel"));
-    $("aiToggle").addEventListener("change", refreshNarrative);
     bindCustomDesk();
+    $("historyDesk").open = !global.matchMedia("(max-width: 620px)").matches;
 
     generate(false, { record: false });
     goToPage(1, false);

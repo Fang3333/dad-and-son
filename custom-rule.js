@@ -1,7 +1,7 @@
 /* 读者来稿 · 自定义规则：把一句话规则解析成结构化补丁，引擎照算基线后叠补丁。
-   启用 AI 时由模型产出补丁（指标修正 + 四维度 + 6 事件 + 6 边 + 3 意外）；
-   未启用或失败时关键词近似解析，只路由到最接近的内置规则，不改写内容、零调用。
-   补丁校验不过一律视为无 AI；所有文本最终走 textContent。 */
+   默认由公共 AI 代理产出补丁（指标修正 + 四维度 + 6 事件 + 6 边 + 3 意外）；
+   代理不可用或两次校验不过返回 null，由界面提示重试，不做关键词近似。
+   所有文本最终走 textContent。 */
 (function (global) {
   "use strict";
 
@@ -28,12 +28,6 @@
     "edges 恰 6 条，from/to 为 1 到 6 的事件序号且 from<to，六条边要把 6 个事件连成一条链，至少 2 条 assumption=true；unintended 恰 3 条。" +
     "字数：title≤14、summary≤90、quote≤50；维度 title≤12、change/causal≤50；事件 title≤12、description/causal≤45；边 relation≤4、explanation≤45；意外 title≤12、description≤50。" +
     "写具体动作与物件，长短句交错；禁用套话与排比；不得编造统计、不得出现百分号、不得写真实人名、不得预测真实未来。这是虚构情景推演。";
-
-  const LEX = [
-    { id: "no-exam", re: /考试|考题|成绩|分数|毕业|学历|文凭|高考|测验|上课|课程|学校/g },
-    { id: "four-hour", re: /工作|工时|上班|加班|下班|小时|兼职|假期|休假|通勤|打工/g },
-    { id: "free-goods", re: /价格|价钱|免费|收费|钱|货币|商品|配给|市场|买卖|交易|物价/g }
-  ];
 
   function clamp(n) {
     return Math.max(0, Math.min(100, Math.round(n)));
@@ -154,17 +148,6 @@
     return { title, summary, quote, base: obj.base, params, deltas, dimensions, events, edges, unintended };
   }
 
-  function parseLocal(text) {
-    let best = null;
-    for (const lex of LEX) {
-      const hits = (text.match(lex.re) || []).length;
-      if (hits && (!best || hits > best.hits)) best = { id: lex.id, hits: hits };
-    }
-    if (!best) return null;
-    const rule = global.WRM_ENGINE.getRule(best.id);
-    return { base: best.id, params: global.WRM_ENGINE.defaultParams(rule) };
-  }
-
   function tryPatch(raw) {
     if (!raw) return null;
     try {
@@ -180,7 +163,7 @@
     const raw = await global.WRM_AI.transport(SYSTEM, "读者来稿：" + text);
     const first = tryPatch(raw);
     if (first || !raw) return first;
-    /* 校验不过时带上一稿让模型自修一次；仍不过才降级关键词解析 */
+    /* 校验不过时带上一稿让模型自修一次；仍不过返回 null，由界面提示重试 */
     const repaired = await global.WRM_AI.transport(SYSTEM,
       "读者来稿：" + text +
       "\n上一稿补丁未通过校验。常见问题：边 from>=to、六条边没把事件 1-6 连成一条链、assumption=true 少于 2 条、事件 year 不递增、字数超限。请修正后重新输出完整 JSON。上一稿：\n" +
@@ -192,41 +175,27 @@
   function build(text, patch, ruleId, params) {
     const base = global.WRM_ENGINE.evaluate(ruleId, params);
     const out = Object.assign({}, base);
-    const deltas = patch ? patch.deltas : { fairness: 0, efficiency: 0, freedom: 0, stability: 0 };
     out.metrics = {};
-    for (const m of METRICS) out.metrics[m] = clamp(base.metrics[m] + deltas[m]);
+    for (const m of METRICS) out.metrics[m] = clamp(base.metrics[m] + patch.deltas[m]);
     out.match = "custom";
-    out.custom = {
-      text: text,
-      source: patch ? "ai" : "local",
-      base: ruleId,
-      title: patch ? patch.title : "来稿 · " + base.report.title
-    };
-    if (patch) {
-      out.dimensions = {};
-      for (const dim of DIMS) {
-        out.dimensions[dim] = patch.dimensions[dim].map((it, i) => ({
-          title: it.title, change: it.change, causal: it.causal,
-          certainty: i === 0 ? "假设" : "不确定"
-        }));
-      }
-      out.events = patch.events.map((e, i) => ({
-        id: "e" + (i + 1), year: e.year, title: e.title, description: e.description,
-        certainty: i < 3 ? "假设" : "不确定"
+    out.custom = { text: text, source: "ai", base: ruleId, title: patch.title };
+    out.dimensions = {};
+    for (const dim of DIMS) {
+      out.dimensions[dim] = patch.dimensions[dim].map((it, i) => ({
+        title: it.title, change: it.change, causal: it.causal,
+        certainty: i === 0 ? "假设" : "不确定"
       }));
-      out.edges = patch.edges.map((e) => ({
-        from: "e" + e.from, to: "e" + e.to, relation: e.relation,
-        strength: e.assumption ? 2 : 3, assumption: e.assumption, explanation: e.explanation
-      }));
-      out.unintended = patch.unintended;
-      out.report = { title: patch.title, quote: patch.quote, summary: patch.summary, confidence: "低" };
-    } else {
-      out.report = Object.assign({}, base.report, {
-        title: out.custom.title,
-        summary: "关键词近似解析：来稿被路由到内置规则「" + base.ruleTitle + "」推演。未启用 AI 时事件与维度跟随该规则示例，指标不做额外修正。",
-        confidence: "低"
-      });
     }
+    out.events = patch.events.map((e, i) => ({
+      id: "e" + (i + 1), year: e.year, title: e.title, description: e.description,
+      certainty: i < 3 ? "假设" : "不确定"
+    }));
+    out.edges = patch.edges.map((e) => ({
+      from: "e" + e.from, to: "e" + e.to, relation: e.relation,
+      strength: e.assumption ? 2 : 3, assumption: e.assumption, explanation: e.explanation
+    }));
+    out.unintended = patch.unintended;
+    out.report = { title: patch.title, quote: patch.quote, summary: patch.summary, confidence: "低" };
     return out;
   }
 
@@ -235,7 +204,6 @@
     EXAMPLES: EXAMPLES,
     SYSTEM: SYSTEM,
     validatePatch: validatePatch,
-    parseLocal: parseLocal,
     parseAI: parseAI,
     build: build
   };

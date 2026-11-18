@@ -6,18 +6,18 @@
 <title>世界规则修改器 · 社会规则实验室</title>
 <meta name="description" content="选一条现实规则，调四个参数，分八版推演一个虚拟世界：头版、教育、经济、社会与个人、因果、热点、对比、档案。情景推演，不是预测。">
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="styles.css?v=1.6.0">
-<script defer src="world-rule/data.js?v=1.6.0"></script>
-<script defer src="world-rule/engine.js?v=1.6.0"></script>
-<script defer src="causal.js?v=1.6.0"></script>
-<script defer src="report.js?v=1.6.0"></script>
-<script defer src="poster.js?v=1.6.0"></script>
-<script defer src="ai.js?v=1.6.0"></script>
-<script defer src="hot-cards.js?v=1.6.0"></script>
-<script defer src="chain-data.js?v=1.6.0"></script>
-<script defer src="version.js?v=1.6.0"></script>
-<script defer src="custom-rule.js?v=1.6.0"></script>
-<script defer src="app.js?v=1.6.0"></script>
+<link rel="stylesheet" href="styles.css?v=1.7.0">
+<script defer src="world-rule/data.js?v=1.7.0"></script>
+<script defer src="world-rule/engine.js?v=1.7.0"></script>
+<script defer src="causal.js?v=1.7.0"></script>
+<script defer src="report.js?v=1.7.0"></script>
+<script defer src="poster.js?v=1.7.0"></script>
+<script defer src="ai.js?v=1.7.0"></script>
+<script defer src="hot-cards.js?v=1.7.0"></script>
+<script defer src="chain-data.js?v=1.7.0"></script>
+<script defer src="version.js?v=1.7.0"></script>
+<script defer src="custom-rule.js?v=1.7.0"></script>
+<script defer src="app.js?v=1.7.0"></script>
 </head>
 <body>
 
@@ -61,7 +61,7 @@
         <h3 id="customHead" class="small-head">读者来稿 · 自定义规则</h3>
         <span class="custom-stamp mono">你的规则 你的世界</span>
       </div>
-      <p class="note">用一句话写下你想改的规则。启用 AI（第 8 版）后由模型解析成指标修正与整版事件 / 维度，1–2 次调用（校验不过自动重试一次）；未启用时关键词近似解析，路由到最接近的内置规则，零调用。</p>
+      <p class="note">用一句话写下你想改的规则。默认由公共 AI 代理解析成指标修正与整版事件 / 维度，1–2 次调用（校验不过自动重试一次）；代理不可用或校验不过时提示重试，不做关键词近似。</p>
       <label class="ai-key-label mono" for="customText">来稿内容</label>
       <textarea id="customText" class="custom-text" rows="3" maxlength="200" placeholder="例：全国每周只上三天课，其余时间自学，毕业看自学记录"></textarea>
       <div class="custom-meta mono">
@@ -75,6 +75,22 @@
       </div>
     </section>
     <p id="appError" class="error" role="alert" hidden></p>
+  </details>
+
+  <details id="historyDesk" class="edit-desk history-desk">
+    <summary class="edit-summary mono">世界线修订历史 · <span id="histSumMeta">展开预览与对比</span></summary>
+    <div class="history-body">
+      <p class="note">点旧版只读预览（自动跳到因果长河），当前版高亮。规则或参数每改一次 +1（拨回也算一次），同参数重跑不增版；历史只留最近 5 版。</p>
+      <button id="versionReset" class="line-btn version-reset" type="button">清空历史，从第 1 版重新编号</button>
+      <div id="versionHistory" class="version-history mono" role="group" aria-label="世界线版本历史"></div>
+      <div class="version-compare">
+        <label class="mono" for="vcA">对比</label>
+        <select id="vcA" class="mono"></select>
+        <span class="mono">→</span>
+        <select id="vcB" class="mono"></select>
+        <div id="vcOut" class="vc-out mono"></div>
+      </div>
+    </div>
   </details>
 </header>
 
@@ -130,19 +146,6 @@
     </div>
     <div id="river" class="river" aria-label="因果长河：从原始到现代"></div>
     <div id="branchPanel" class="branch-panel" hidden></div>
-    <div class="version-desk">
-      <h3 class="small-head">世界线修订历史</h3>
-      <p class="note">点旧版只读预览，当前版高亮。规则或参数每改一次 +1（拨回也算一次），同参数重跑不增版；历史只留最近 5 版。</p>
-      <button id="versionReset" class="line-btn version-reset" type="button">清空历史，从第 1 版重新编号</button>
-      <div id="versionHistory" class="version-history mono" role="group" aria-label="世界线版本历史"></div>
-      <div class="version-compare">
-        <label class="mono" for="vcA">对比</label>
-        <select id="vcA" class="mono"></select>
-        <span class="mono">→</span>
-        <select id="vcB" class="mono"></select>
-        <div id="vcOut" class="vc-out mono"></div>
-      </div>
-    </div>
     <details id="ruleChainDesk" class="edit-desk rule-chain-desk">
       <summary class="edit-summary mono">本规则 10 年因果链（6 事件）</summary>
       <div class="causal-bar">
@@ -193,18 +196,7 @@
       <aside class="report-side">
         <h3 class="small-head">解读</h3>
         <div id="narrativeSlot"></div>
-        <div class="ai-settings">
-          <label class="ai-switch" for="aiToggle">
-            <input type="checkbox" id="aiToggle"> 启用 AI 叙事（可选）
-          </label>
-          <label class="ai-key-label mono" for="aiKey">API Key</label>
-          <input id="aiKey" type="password" autocomplete="off" placeholder="只存本机 localStorage">
-          <label class="ai-key-label mono" for="aiUrl">接口地址</label>
-          <input id="aiUrl" type="url" autocomplete="off" placeholder="留空默认：阿里云百炼 DashScope 兼容端点">
-          <label class="ai-key-label mono" for="aiModel">模型</label>
-          <input id="aiModel" type="text" autocomplete="off" placeholder="留空默认：qwen-plus">
-          <p class="note">关闭或失败时使用内置文案。AI 只写叙述，不改指标与因果。部署在 Qoder Sites 且站长配好 Secret 时优先走公共代理（访客免填 Key）；其余情况用上面的 Key，接口与模型留空用默认（阿里云百炼）。</p>
-        </div>
+        <p class="note ai-note">AI 解读默认启用，走站点公共代理（访客免填 Key）；代理不可用时自动用内置文案。AI 只写叙述，不改指标与因果。</p>
         <button id="posterBtn" class="generate" type="button">下载海报 PNG</button>
       </aside>
     </div>

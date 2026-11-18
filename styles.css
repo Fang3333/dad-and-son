@@ -710,30 +710,8 @@ details[open] > .edit-summary::before { content: "− "; }
 .report-side { border-left: var(--hairline); padding-left: 28px; }
 .report-side .narrative p { margin: 0 0 10px; max-width: 42em; font-size: 14px; line-height: 1.75; }
 
-.ai-settings { margin-top: 22px; padding-top: 14px; border-top: var(--hairline); }
-.ai-switch { display: flex; align-items: center; gap: 8px; font: 13px/1.4 var(--font-sans); cursor: pointer; }
-.ai-switch input {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 15px;
-  height: 15px;
-  margin: 0;
-  border: 1px solid var(--ink);
-  background: var(--paper);
-  cursor: pointer;
-}
-.ai-switch input:checked { background: var(--ink); }
 .ai-key-label { display: block; margin: 12px 0 4px; font-size: 11px; letter-spacing: .1em; color: var(--muted); }
-.ai-settings input[type="password"],
-.ai-settings input[type="url"],
-.ai-settings input[type="text"] {
-  width: 100%;
-  padding: 8px 10px;
-  border: 1px solid var(--ink);
-  background: var(--paper);
-  font: 12px/1.4 var(--font-mono);
-}
-.ai-settings .note { margin: 8px 0 16px; }
+.ai-note { margin: 16px 0; padding-top: 12px; border-top: var(--hairline); }
 
 .method-desk { margin-top: 30px; }
 .method-grid { display: grid; grid-template-columns: 1fr 1fr; gap: calc(40px * var(--site-space, 1)); padding: 6px 0 18px; }
@@ -952,34 +930,37 @@ footer { padding-top: 28px; padding-bottom: 52px; }
 }
 
 .river {
-  overflow-x: auto;
-  overflow-y: hidden;
   margin: 0 0 18px;
   border: 1px solid var(--ink);
   background: var(--paper);
 }
-.river-track { position: relative; display: flex; align-items: stretch; min-width: max-content; }
-.river-line { position: absolute; left: 0; right: 0; top: 106px; height: 2px; background: var(--ink); z-index: 2; }
+.river-track { display: flex; flex-direction: column; }
 
-.era-group { position: relative; display: flex; flex-direction: column; padding: 14px 16px 18px; border-right: 1px solid var(--rule); }
-.era-group:last-child { border-right: 0; }
-.era-head { height: 56px; margin: 0 0 12px; }
-.era-name { display: block; font: 700 16px/1.3 var(--font-serif); color: var(--ink); }
-.era-span { display: block; font: 11px/1.5 var(--font-mono); color: var(--muted); }
-.era-tone { display: block; font: 10px/1.5 var(--font-mono); color: var(--muted); letter-spacing: .04em; }
-.era-row { display: flex; align-items: flex-start; }
+.era-group { position: relative; padding: 14px 16px 18px; border-bottom: 1px solid var(--rule); border-left: 3px solid var(--ink); }
+.era-group:last-child { border-bottom: 0; }
+.era-group + .era-group::before {
+  content: "↓";
+  position: absolute;
+  top: -10px;
+  left: 26px;
+  padding: 0 5px;
+  background: var(--paper);
+  font: 12px/1.6 var(--font-mono);
+  color: var(--muted);
+}
+.era-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; margin: 0 0 12px; }
+.era-name { font: 700 18px/1.3 var(--font-serif); color: var(--ink); }
+.era-span { font: 11px/1.5 var(--font-mono); color: var(--muted); }
+.era-tone { font: 10px/1.5 var(--font-mono); color: var(--muted); letter-spacing: .04em; }
+.era-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px 16px; align-items: start; }
 
 .rnode {
   position: relative;
-  z-index: 3;
-  flex: 0 0 auto;
-  width: 192px;
   padding: 10px 12px;
   border: 1px solid var(--rule);
   background: var(--paper-2);
   color: var(--muted);
 }
-.rnode + .rnode { margin-left: 34px; }
 .rnode.is-changed { border: 2px solid var(--accent); background: var(--paper); color: var(--ink); }
 .rnode-head { display: block; width: 100%; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; font: inherit; color: inherit; }
 .rnode-head:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
@@ -1036,7 +1017,7 @@ footer { padding-top: 28px; padding-bottom: 52px; }
 
 /* ---------- 版本历史 / 版本对比 ---------- */
 
-.version-desk { margin: 26px 0 0; padding-top: 18px; border-top: var(--double); }
+.history-body { padding: 6px 0 18px; }
 .version-history { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 16px; }
 .vbtn { padding: 5px 10px; border: 1px solid var(--rule); background: var(--paper); color: var(--muted); font: 11px/1.5 var(--font-mono); cursor: pointer; text-align: left; }
 .vbtn:hover { border-color: var(--ink); color: var(--ink); }
@@ -1053,24 +1034,11 @@ footer { padding-top: 28px; padding-bottom: 52px; }
 
 /* ---------- 长河断点 ---------- */
 
-@media (max-width: 1000px) {
-  .rnode { width: 176px; }
-  .rnode + .rnode { margin-left: 26px; }
-}
-
 @media (max-width: 620px) {
   .version-badge { position: static; display: flex; align-items: center; text-align: center; margin: 0 auto 10px; }
   .pager-version { font-size: 10px; }
-  .river { overflow: visible; }
-  .river-track { flex-direction: column; min-width: 0; }
-  .river-line { display: none; }
-  .era-group { width: 100%; border-right: 0; border-bottom: 1px solid var(--rule); border-left: 3px solid var(--ink); }
-  .era-group:last-child { border-bottom: 0; }
-  .era-head { height: auto; }
-  .era-row { position: relative; flex-direction: column; gap: 12px; padding-left: 22px; }
+  .era-row { position: relative; grid-template-columns: 1fr; gap: 12px; padding-left: 22px; }
   .era-row::before { content: ""; position: absolute; left: 6px; top: 6px; bottom: 6px; width: 2px; background: var(--rule); }
-  .rnode { width: 100%; }
-  .rnode + .rnode { margin-left: 0; }
   .rnode::after { content: ""; position: absolute; left: -22px; top: 22px; width: 16px; height: 2px; background: var(--rule); }
   .branch-row { padding-left: 22px; }
   .preview-banner { flex-wrap: wrap; }
