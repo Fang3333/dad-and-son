@@ -61,7 +61,7 @@
         <h3 id="customHead" class="small-head">读者来稿 · 自定义规则</h3>
         <span class="custom-stamp mono">你的规则 你的世界</span>
       </div>
-      <p class="note">用一句话写下你想改的规则。启用 AI（第 8 版）后由模型解析成指标修正与整版事件 / 维度，约 1 次调用；未启用时关键词近似解析，路由到最接近的内置规则，零调用。</p>
+      <p class="note">用一句话写下你想改的规则。启用 AI（第 8 版）后由模型解析成指标修正与整版事件 / 维度，1–2 次调用（校验不过自动重试一次）；未启用时关键词近似解析，路由到最接近的内置规则，零调用。</p>
       <label class="ai-key-label mono" for="customText">来稿内容</label>
       <textarea id="customText" class="custom-text" rows="3" maxlength="200" placeholder="例：全国每周只上三天课，其余时间自学，毕业看自学记录"></textarea>
       <div class="custom-meta mono">

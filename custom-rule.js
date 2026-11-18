@@ -43,8 +43,8 @@
     if (typeof v !== "string") return null;
     const t = v.trim();
     if (!t && !allowEmpty) return null;
-    if (t.length > max) return null;
-    return t;
+    /* 超长按上限截断而非整份拒收：版面字数上限不变，模型偶尔超字不再毁掉整个补丁 */
+    return t.length > max ? t.slice(0, max) : t;
   }
 
   function validatePatch(obj) {
@@ -165,9 +165,7 @@
     return { base: best.id, params: global.WRM_ENGINE.defaultParams(rule) };
   }
 
-  async function parseAI(text) {
-    if (!global.WRM_AI || !global.WRM_AI.transport) return null;
-    const raw = await global.WRM_AI.transport(SYSTEM, "读者来稿：" + text);
+  function tryPatch(raw) {
     if (!raw) return null;
     try {
       const stripped = String(raw).replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
@@ -175,6 +173,19 @@
     } catch (e) {
       return null;
     }
+  }
+
+  async function parseAI(text) {
+    if (!global.WRM_AI || !global.WRM_AI.transport) return null;
+    const raw = await global.WRM_AI.transport(SYSTEM, "读者来稿：" + text);
+    const first = tryPatch(raw);
+    if (first || !raw) return first;
+    /* 校验不过时带上一稿让模型自修一次；仍不过才降级关键词解析 */
+    const repaired = await global.WRM_AI.transport(SYSTEM,
+      "读者来稿：" + text +
+      "\n上一稿补丁未通过校验。常见问题：边 from>=to、六条边没把事件 1-6 连成一条链、assumption=true 少于 2 条、事件 year 不递增、字数超限。请修正后重新输出完整 JSON。上一稿：\n" +
+      String(raw).slice(0, 6000));
+    return tryPatch(repaired);
   }
 
   /* 基线由引擎照算；补丁只叠指标修正与内容改写，不碰引擎与 data.js。 */

@@ -840,7 +840,7 @@
     run.disabled = true;
     let patch = null;
     if (global.WRM_AI.enabled()) {
-      setCustomStatus("AI 解析来稿中…（约 1 次调用，几秒到十几秒）");
+      setCustomStatus("AI 解析来稿中…（1–2 次调用，校验不过自动重试一次）");
       patch = await global.WRM_CUSTOM.parseAI(text);
     }
     if (patch) {

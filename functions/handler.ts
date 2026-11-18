@@ -91,8 +91,8 @@ export async function handler(req) {
 
   if (path.endsWith("/ai")) {
     if (req.method !== "POST") return json(405, { ok: false, code: "method_not_allowed" });
-    const origin = req.headers.get("origin");
-    if (origin && origin !== url.origin) return json(403, { ok: false, code: "origin_rejected" });
+    /* 同源校验由 Sites 网关负责（伪造 / 缺失 Origin 的写请求到不了这里）；
+       函数内 req.url 是内部转发地址，不能拿它比对浏览器 Origin。 */
     const key = secret();
     if (!key) return json(503, { ok: false, code: "service_not_configured" });
     let body = null;
