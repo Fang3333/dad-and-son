@@ -3,206 +3,67 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>世界规则修改器 · 社会规则实验室</title>
-<meta name="description" content="选一条现实规则，调四个参数，分八版推演一个虚拟世界：头版、教育、经济、社会与个人、因果、热点、对比、档案。情景推演，不是预测。">
+<title>世界规则修改器 · 长河两页式</title>
+<meta name="description" content="选一条现实规则，调四个参数，设三个世界假设，生成一条从原始到现代的长河：每件大事对照原来与现在。情景推演，不是史实。">
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="styles.css">
 <script defer src="world-rule/data.js"></script>
 <script defer src="world-rule/engine.js"></script>
-<script defer src="causal.js"></script>
-<script defer src="report.js"></script>
-<script defer src="poster.js"></script>
-<script defer src="ai.js"></script>
-<script defer src="hot-cards.js"></script>
-<script defer src="chain-data.js"></script>
+<script defer src="river-data.js"></script>
 <script defer src="version.js"></script>
+<script defer src="setup.js"></script>
+<script defer src="river.js"></script>
 <script defer src="app.js"></script>
 </head>
 <body>
 
 <header class="masthead">
-  <div id="versionBadge" class="version-badge mono" aria-live="polite"></div>
-  <div class="issue mono">号外 · 第 014 期<br>情景推演，不是预测</div>
+  <div class="issue mono">号外 · 情景推演，不是史实</div>
   <div class="brand">
     <h1>世界规则修改器</h1>
-    <div class="latin mono">World Rule Modifier · 社会规则实验室</div>
+    <div class="latin mono">World Rule Modifier · 长河两页式</div>
   </div>
-
-  <div class="rule-strip" aria-label="当前规则与参数">
-    <div class="strip-line">
-      <span class="strip-label mono">本版规则</span>
-      <strong id="stripRule" class="strip-rule"></strong>
-      <span id="stripBadge" class="badge mono"></span>
-    </div>
-    <div id="stripParams" class="strip-params mono"></div>
-    <button id="editToggle" class="edit-toggle" type="button" aria-expanded="false" aria-controls="editDesk">编辑规则与参数</button>
-  </div>
-
-  <details id="editDesk" class="edit-desk">
-    <summary class="edit-summary mono">编辑台 · 选规则 / 调四个参数 / 生成</summary>
-    <div class="edit-body">
-      <div class="edit-rules">
-        <h3 class="panel-head">选择一条规则</h3>
-        <ol id="ruleList" class="rule-list"></ol>
-      </div>
-      <div class="edit-params">
-        <h3 class="panel-head">设定四个参数</h3>
-        <p id="paramsNote" class="note"></p>
-        <div id="paramGrid" class="param-grid"></div>
-        <div class="bench-actions">
-          <button id="generateBtn" class="generate" type="button">生成这个世界 →</button>
-          <p class="note">拨动开关即重算并回到头版。</p>
-        </div>
-      </div>
-    </div>
-    <p id="appError" class="error" role="alert" hidden></p>
-  </details>
 </header>
 
-<div id="pager" class="pager" role="navigation" aria-label="版面翻页">
-  <button id="prevBtn" class="pager-btn" type="button">← 上一版</button>
-  <div class="pager-mid">
-    <div class="pager-top">
-      <span id="pageLabel" class="page-label mono" aria-live="polite"></span>
-      <span id="pagerVersion" class="pager-version mono"></span>
-      <span class="pager-hint mono">键盘 ← → 翻页</span>
+<main>
+
+  <section id="setup" class="setup" aria-labelledby="setupTitle">
+    <p id="setupVersion" class="setup-ver mono" aria-live="polite"></p>
+    <h2 id="setupTitle" class="page-title" tabindex="-1">设定这个世界</h2>
+
+    <div class="setup-block">
+      <h3 class="block-head">选一条要改的规则</h3>
+      <div id="ruleCards" class="rule-cards" role="group" aria-label="选择规则"></div>
     </div>
-    <div class="progress-track" aria-hidden="true"><i id="progressFill"></i></div>
-    <div id="pageDots" class="page-dots" aria-hidden="true"></div>
-  </div>
-  <button id="nextBtn" class="pager-btn" type="button">下一版 →</button>
-</div>
 
-<main id="pages">
-
-  <section class="page" id="page-1" aria-labelledby="title-1">
-    <p class="page-kicker mono">第 1 版 · 头版</p>
-    <h2 class="page-title" id="title-1" tabindex="-1"></h2>
-    <div id="p1Metrics" class="metric-bars" aria-label="四项指标（示意）"></div>
-    <p id="p1Lead" class="page-lead"></p>
-    <p id="p1Match" class="note page-match"></p>
-  </section>
-
-  <section class="page" id="page-2" aria-labelledby="title-2" hidden>
-    <p class="page-kicker mono">第 2 版 · 教育</p>
-    <h2 class="page-title" id="title-2" tabindex="-1">教育版</h2>
-    <div id="p2Body" class="dim-page"></div>
-  </section>
-
-  <section class="page" id="page-3" aria-labelledby="title-3" hidden>
-    <p class="page-kicker mono">第 3 版 · 经济</p>
-    <h2 class="page-title" id="title-3" tabindex="-1">经济版</h2>
-    <div id="p3Body" class="dim-page"></div>
-  </section>
-
-  <section class="page" id="page-4" aria-labelledby="title-4" hidden>
-    <p class="page-kicker mono">第 4 版 · 社会与个人</p>
-    <h2 class="page-title" id="title-4" tabindex="-1">社会与个人</h2>
-    <div id="p4Body" class="dual-grid"></div>
-  </section>
-
-  <section class="page" id="page-5" aria-labelledby="title-5" hidden>
-    <p class="page-kicker mono">第 5 版 · 因果</p>
-    <h2 class="page-title" id="title-5" tabindex="-1">因果长河</h2>
-    <p id="p5RiverNote" class="note river-note"></p>
-    <div id="previewBanner" class="preview-banner mono" hidden>
-      <span id="previewText"></span>
-      <button id="previewBack" class="line-btn" type="button">返回当前版</button>
+    <div class="setup-block">
+      <h3 class="block-head">四个参数</h3>
+      <p id="paramNote" class="note"></p>
+      <div id="paramToggles" class="switch-list" role="group" aria-label="规则参数"></div>
     </div>
-    <div id="river" class="river" aria-label="因果长河：从原始到现代"></div>
-    <div id="branchPanel" class="branch-panel" hidden></div>
-    <div class="version-desk">
-      <h3 class="small-head">世界线修订历史</h3>
-      <p class="note">点旧版只读预览，当前版高亮。每次「生成这个世界」+1，同参数重跑也 +1。</p>
-      <div id="versionHistory" class="version-history mono" role="group" aria-label="世界线版本历史"></div>
-      <div class="version-compare">
-        <label class="mono" for="vcA">对比</label>
-        <select id="vcA" class="mono"></select>
-        <span class="mono">→</span>
-        <select id="vcB" class="mono"></select>
-        <div id="vcOut" class="vc-out mono"></div>
+
+    <div class="setup-block">
+      <h3 class="block-head">三个世界假设</h3>
+      <div id="assumeToggles" class="switch-list" role="group" aria-label="世界假设"></div>
+      <p class="note">假设决定规则能改到长河的哪一段；关掉一条，对应的改写会落空。</p>
+    </div>
+
+    <button id="generateBtn" class="generate" type="button">生成这个世界 →</button>
+    <p id="appError" class="error" role="alert" hidden></p>
+  </section>
+
+  <section id="river" class="river-page" aria-labelledby="riverWorld" hidden>
+    <div class="river-top">
+      <div class="river-top-line">
+        <h2 id="riverWorld" class="river-world" tabindex="-1"></h2>
+        <span id="riverVersion" class="river-version mono"></span>
+        <button id="editAssumptions" class="line-btn" type="button">修改假设</button>
       </div>
+      <p id="riverSummary" class="river-summary mono"></p>
+      <p id="riverCount" class="river-count mono"></p>
     </div>
-    <details id="ruleChainDesk" class="edit-desk rule-chain-desk">
-      <summary class="edit-summary mono">本规则 10 年因果链（6 事件）</summary>
-      <div class="causal-bar">
-        <p id="p5Note" class="note"></p>
-        <button id="causalToggle" class="line-btn" type="button" aria-expanded="false">展开全部 6 节点</button>
-      </div>
-      <svg id="causalSvg" class="causal" role="img" aria-label="事件因果图"></svg>
-      <ol id="causalList" class="causal-list"></ol>
-      <p id="causalLegend" class="legend mono"></p>
-    </details>
-  </section>
-
-  <section class="page" id="page-6" aria-labelledby="title-6" hidden>
-    <p class="page-kicker mono">第 6 版 · 热点副刊</p>
-    <h2 class="page-title" id="title-6" tabindex="-1">热点副刊</h2>
-    <div class="hotpress-head">
-      <div id="hotFilters" class="hot-filters"></div>
-    </div>
-    <p id="hotWindowNote" class="note hotpress-note"></p>
-    <div id="hotGrid" class="hot-grid"></div>
-    <p class="note hotpress-foot">只做 S 级主梗，按热度取前 3 张，每张附「梗源」公开出处。人物只用代号、只写公开职业事件。点「收进档案」把卡贴到第 8 版档案。</p>
-  </section>
-
-  <section class="page" id="page-7" aria-labelledby="title-7" hidden>
-    <p class="page-kicker mono">第 7 版 · 对比</p>
-    <h2 class="page-title" id="title-7" tabindex="-1">两个世界</h2>
-    <details id="deskB" class="edit-desk desk-b">
-      <summary class="edit-summary mono">调世界 B 参数 / 载入示例</summary>
-      <div class="compare-controls">
-        <div id="presetBtns" class="preset-btns"></div>
-        <div id="paramGridB" class="param-grid"></div>
-        <button id="compareBtn" class="generate" type="button">生成世界 B 并对比 →</button>
-      </div>
-    </details>
-    <div class="compare-grid">
-      <div id="compareA" class="compare-col"></div>
-      <div id="compareB" class="compare-col"></div>
-    </div>
-    <p id="compareDiff" class="diff-line mono"></p>
-    <ol id="compareTop" class="top-diff mono"></ol>
-  </section>
-
-  <section class="page" id="page-8" aria-labelledby="title-8" hidden>
-    <p class="page-kicker mono">第 8 版 · 档案</p>
-    <h2 class="page-title" id="title-8" tabindex="-1">世界线档案</h2>
-    <div class="report-grid">
-      <article id="reportCard" class="report-card"></article>
-      <aside class="report-side">
-        <h3 class="small-head">解读</h3>
-        <div id="narrativeSlot"></div>
-        <div class="ai-settings">
-          <label class="ai-switch" for="aiToggle">
-            <input type="checkbox" id="aiToggle"> 启用 AI 叙事（可选）
-          </label>
-          <label class="ai-key-label mono" for="aiKey">API Key</label>
-          <input id="aiKey" type="password" autocomplete="off" placeholder="只存本机 localStorage">
-          <p class="note">关闭或失败时使用内置文案。AI 只写叙述，不改指标与因果。</p>
-        </div>
-        <button id="posterBtn" class="generate" type="button">下载海报 PNG</button>
-      </aside>
-    </div>
-    <div class="hot-archive-wrap">
-      <h3 class="small-head">副刊摘录</h3>
-      <p id="hotArchiveNote" class="note"></p>
-      <div id="hotArchive" class="hot-grid"></div>
-    </div>
-    <details id="methodDesk" class="edit-desk method-desk">
-      <summary class="edit-summary mono">方法与确定性标签</summary>
-      <div class="method-grid">
-        <div>
-          <h4 class="small-head">方法</h4>
-          <p id="metaScale" class="note"></p>
-          <p id="metaPreset" class="note"></p>
-        </div>
-        <div>
-          <h4 class="small-head">确定性标签</h4>
-          <dl id="certaintyLegend" class="legend-list"></dl>
-        </div>
-      </div>
-    </details>
+    <div id="riverBody" class="river-body"></div>
+    <p class="note river-foot">长河只读。要换规则、拨参数、改假设，点上方「修改假设」回到设定页；再次生成，版本 +1。</p>
   </section>
 
 </main>
