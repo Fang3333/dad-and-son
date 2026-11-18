@@ -33,6 +33,7 @@
 | world-rule/data.js | 3 规则 × A/B 预设世界（数据契约，不改结构） |
 | world-rule/engine.js | 推演引擎（不改结构；本页只取世界名） |
 | causal.js / report.js / poster.js / ai.js / hot-cards.js / chain-data.js | 八版时期模块，留库备用，当前页面不加载 |
+| custom-rule.js / functions/ | 读者来稿与 Sites AI 代理（v1.5–v1.7 并行会话成果），留库不加载 |
 | ui-mockups/ / design/ / contracts/ | 视觉参考、静态图版、tokens 契约，不参与生产页面 |
 
 ## 三条诚实约定
