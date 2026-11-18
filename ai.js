@@ -8,8 +8,8 @@
   const LS_KEY = "wrm.aiKey";
   const LS_URL = "wrm.aiUrl";
   const LS_MODEL = "wrm.aiModel";
-  const DEFAULT_URL = "https://api.openai.com/v1/chat/completions";
-  const DEFAULT_MODEL = "gpt-4o-mini";
+  const DEFAULT_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
+  const DEFAULT_MODEL = "qwen-plus";
   const TIMEOUT = 15000;
 
   function read(key) {
@@ -21,11 +21,19 @@
 
   function enabled() { return read(LS_ON) === "1"; }
 
-  function bind(toggleEl, keyEl) {
+  function bind(toggleEl, keyEl, urlEl, modelEl) {
     toggleEl.checked = enabled();
     keyEl.value = read(LS_KEY) || "";
     toggleEl.addEventListener("change", () => write(LS_ON, toggleEl.checked ? "1" : "0"));
     keyEl.addEventListener("change", () => write(LS_KEY, keyEl.value.trim()));
+    if (urlEl) {
+      urlEl.value = read(LS_URL) || "";
+      urlEl.addEventListener("change", () => write(LS_URL, urlEl.value.trim()));
+    }
+    if (modelEl) {
+      modelEl.value = read(LS_MODEL) || "";
+      modelEl.addEventListener("change", () => write(LS_MODEL, modelEl.value.trim()));
+    }
   }
 
   function validate(obj) {

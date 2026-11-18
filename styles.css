@@ -710,7 +710,9 @@ details[open] > .edit-summary::before { content: "− "; }
 }
 .ai-switch input:checked { background: var(--ink); }
 .ai-key-label { display: block; margin: 12px 0 4px; font-size: 11px; letter-spacing: .1em; color: var(--muted); }
-.ai-settings input[type="password"] {
+.ai-settings input[type="password"],
+.ai-settings input[type="url"],
+.ai-settings input[type="text"] {
   width: 100%;
   padding: 8px 10px;
   border: 1px solid var(--ink);

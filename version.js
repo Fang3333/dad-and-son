@@ -1,4 +1,4 @@
-/* 世界线修订版本号：每次生成 +1，同参数重跑也 +1 并标注；localStorage 持久化，历史最多 12 版。
+/* 世界线修订版本号：规则或参数每改一次 +1，同参数重跑不增版；localStorage 持久化，历史最多 12 版。
    只记录引擎输出的快照，不改 data.js / engine.js。 */
 (function (global) {
   "use strict";
@@ -52,12 +52,17 @@
     return state.history[0];
   }
 
+  function sameParams(a, b) {
+    const ka = Object.keys(a);
+    return ka.length === Object.keys(b).length &&
+      ka.every((k) => Boolean(a[k]) === Boolean(b[k]));
+  }
+
   function bump(opts) {
     const prev = state.history[state.history.length - 1];
-    const same = prev && prev.ruleId === opts.ruleId &&
-      JSON.stringify(prev.params) === JSON.stringify(opts.params);
+    if (prev && prev.ruleId === opts.ruleId && sameParams(prev.params, opts.params)) return prev;
     const n = state.current + 1;
-    const e = entry(n, opts.ruleId, opts.params, opts.metrics, opts.changedNodes, same ? "同参数重跑" : "修订");
+    const e = entry(n, opts.ruleId, opts.params, opts.metrics, opts.changedNodes, "修订");
     state.history.push(e);
     if (state.history.length > MAX) state.history = state.history.slice(-MAX);
     state.current = n;

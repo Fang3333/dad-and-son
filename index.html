@@ -113,7 +113,7 @@
     <div id="branchPanel" class="branch-panel" hidden></div>
     <div class="version-desk">
       <h3 class="small-head">世界线修订历史</h3>
-      <p class="note">点旧版只读预览，当前版高亮。每次「生成这个世界」+1，同参数重跑也 +1。</p>
+      <p class="note">点旧版只读预览，当前版高亮。规则或参数每改一次 +1，同参数重跑不增版。</p>
       <div id="versionHistory" class="version-history mono" role="group" aria-label="世界线版本历史"></div>
       <div class="version-compare">
         <label class="mono" for="vcA">对比</label>
@@ -179,7 +179,11 @@
           </label>
           <label class="ai-key-label mono" for="aiKey">API Key</label>
           <input id="aiKey" type="password" autocomplete="off" placeholder="只存本机 localStorage">
-          <p class="note">关闭或失败时使用内置文案。AI 只写叙述，不改指标与因果。</p>
+          <label class="ai-key-label mono" for="aiUrl">接口地址</label>
+          <input id="aiUrl" type="url" autocomplete="off" placeholder="留空默认：阿里云百炼 DashScope 兼容端点">
+          <label class="ai-key-label mono" for="aiModel">模型</label>
+          <input id="aiModel" type="text" autocomplete="off" placeholder="留空默认：qwen-plus">
+          <p class="note">关闭或失败时使用内置文案。AI 只写叙述，不改指标与因果。接口与模型留空用默认（阿里云百炼）。</p>
         </div>
         <button id="posterBtn" class="generate" type="button">下载海报 PNG</button>
       </aside>

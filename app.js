@@ -4,7 +4,7 @@
   "use strict";
 
   const $ = (id) => document.getElementById(id);
-  const APP_VERSION = "1.4.1";
+  const APP_VERSION = "1.4.2";
   const APP_UPDATED = "2026-11-18";
   const LS_STATE = "wrm.state";
   const LS_HOT = "wrm.hotPicks";
@@ -20,6 +20,7 @@
     previewN: null, openNodes: {}, branchOpen: null
   };
   let narrativeSeq = 0;
+  const vcUserPicked = { a: false, b: false };
 
   const engine = () => global.WRM_ENGINE;
   const data = () => global.WRM_DATA;
@@ -471,8 +472,10 @@
       selB.lastChild.value = String(h.n);
     });
     const hs = v.history();
-    selA.value = hs.some((h) => String(h.n) === prevA) ? prevA : String(hs.length > 1 ? hs[hs.length - 2].n : cur);
-    selB.value = hs.some((h) => String(h.n) === prevB) ? prevB : String(cur);
+    const defA = String(hs.length > 1 ? hs[hs.length - 2].n : cur);
+    const defB = String(cur);
+    selA.value = vcUserPicked.a && hs.some((h) => String(h.n) === prevA) ? prevA : defA;
+    selB.value = vcUserPicked.b && hs.some((h) => String(h.n) === prevB) ? prevB : defB;
     renderVersionCompare();
   }
 
@@ -781,7 +784,7 @@
       renderParams($("paramGridB"), state.paramsB, runCompare);
     }
     const savedPicks = readHotPicks();
-    state.hotPicks = savedPicks !== null ? savedPicks : hotByHeat(hotForRule()).slice(0, 2).map((c) => c.id);
+    state.hotPicks = savedPicks !== null ? savedPicks : [];
     saveHotPicks();
 
     if (!version().load()) {
@@ -826,8 +829,8 @@
       renderPage5();
       renderVersionUI();
     });
-    $("vcA").addEventListener("change", renderVersionCompare);
-    $("vcB").addEventListener("change", renderVersionCompare);
+    $("vcA").addEventListener("change", () => { vcUserPicked.a = true; renderVersionCompare(); });
+    $("vcB").addEventListener("change", () => { vcUserPicked.b = true; renderVersionCompare(); });
     $("generateBtn").addEventListener("click", () => {
       $("editDesk").open = false;
       syncEditToggle();
@@ -845,7 +848,7 @@
       syncEditToggle();
     });
     $("editDesk").addEventListener("toggle", syncEditToggle);
-    global.WRM_AI.bind($("aiToggle"), $("aiKey"));
+    global.WRM_AI.bind($("aiToggle"), $("aiKey"), $("aiUrl"), $("aiModel"));
     $("aiToggle").addEventListener("change", refreshNarrative);
 
     generate(false, { record: false });
