@@ -13,6 +13,7 @@
 <script defer src="report.js"></script>
 <script defer src="poster.js"></script>
 <script defer src="ai.js"></script>
+<script defer src="hot-cards.js"></script>
 <script defer src="app.js"></script>
 </head>
 <body>
@@ -87,6 +88,14 @@
       <h4 class="small-head">意外后果</h4>
       <ol id="unintendedList" class="unexpected"></ol>
     </div>
+    <div class="hotpress-wrap">
+      <div class="hotpress-head">
+        <h4 class="small-head">副刊 · 热点改写</h4>
+        <div id="hotFilters" class="hot-filters"></div>
+      </div>
+      <p class="note hotpress-note">只写代号，不写真人。现实向一句，被本规则改写一句；点「收进档案」贴到报告页。</p>
+      <div id="hotGrid" class="hot-grid"></div>
+    </div>
   </section>
 
   <section id="compare" class="compare" aria-label="双世界对比" hidden>
@@ -126,6 +135,11 @@
         </div>
         <button id="posterBtn" class="generate" type="button">下载海报 PNG</button>
       </aside>
+    </div>
+    <div class="hot-archive-wrap">
+      <h4 class="small-head">副刊摘录</h4>
+      <p id="hotArchiveNote" class="note"></p>
+      <div id="hotArchive" class="hot-grid"></div>
     </div>
   </section>
 

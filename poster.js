@@ -210,7 +210,7 @@
     ctx.fillText(meta.disclaimer, M, 1364);
     ctx.fillStyle = C.muted;
     ctx.font = "14px " + MONO;
-    ctx.fillText("v" + meta.version + " · " + meta.updated + " · fang3333.github.io/dad-and-son", M, 1394);
+    ctx.fillText("v" + (ctxInfo.appVersion || meta.version) + " · " + meta.updated + " · fang3333.github.io/dad-and-son", M, 1394);
     return canvas;
   }
 

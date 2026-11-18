@@ -4,11 +4,18 @@
   "use strict";
 
   const $ = (id) => document.getElementById(id);
+  const APP_VERSION = "1.0.0";
+  const APP_UPDATED = "2026-11-18";
   const LS_STATE = "wrm.state";
+  const LS_HOT = "wrm.hotPicks";
+  const HOT_CATS = ["财经", "科技", "社会", "教育", "娱乐", "生活"];
   const DIM_ORDER = ["education", "economy", "society", "individual"];
   const DIM_LABELS = { education: "教育", economy: "经济", society: "社会", individual: "个人" };
 
-  const state = { ruleId: null, paramsA: null, paramsB: null, resultA: null, resultB: null };
+  const state = {
+    ruleId: null, paramsA: null, paramsB: null, resultA: null, resultB: null,
+    hotFilter: "all", hotPicks: []
+  };
   let narrativeSeq = 0;
 
   const engine = () => global.WRM_ENGINE;
@@ -58,7 +65,8 @@
       dl.appendChild(node("dd", null, meta.certaintyLegend[key]));
     }
     $("disclaimer").textContent = meta.disclaimer;
-    $("metaVersion").textContent = "v" + meta.version + " · " + meta.updated;
+    $("metaVersion").textContent =
+      "v" + APP_VERSION + " · " + APP_UPDATED + " · 数据 v" + meta.version;
   }
 
   function renderRuleList() {
@@ -134,6 +142,7 @@
 
   function selectRule(id) {
     state.ruleId = id;
+    state.hotFilter = "all";
     const r = rule();
     state.paramsA = engine().defaultParams(r);
     state.paramsB = clone(r.presets.B.params);
@@ -226,6 +235,7 @@
     state.resultA = engine().evaluate(state.ruleId, state.paramsA);
     renderWorld();
     renderReport();
+    renderHot();
     refreshNarrative();
     $("world").hidden = false;
     $("compare").hidden = false;
@@ -301,13 +311,127 @@
     const btn = $("posterBtn");
     btn.disabled = true;
     btn.textContent = "导出中…";
-    global.WRM_POSTER.download(state.resultA, { rule: rule(), meta: data().meta })
+    global.WRM_POSTER.download(state.resultA, { rule: rule(), meta: data().meta, appVersion: APP_VERSION })
       .then((name) => {
         btn.textContent = "已下载 " + name;
         setTimeout(() => { btn.textContent = "下载海报 PNG"; }, 2400);
       })
       .catch((err) => fail("海报导出失败：" + err.message))
       .finally(() => { btn.disabled = false; });
+  }
+
+  /* ---------- 副刊 · 热点改写 ---------- */
+
+  const hotCards = () => (global.WRM_HOT ? global.WRM_HOT.cards : []);
+  const hotForRule = () => hotCards().filter((c) => c.ruleFit.indexOf(state.ruleId) !== -1);
+
+  function readHotPicks() {
+    try {
+      const raw = global.localStorage.getItem(LS_HOT);
+      const arr = raw ? JSON.parse(raw) : null;
+      if (Array.isArray(arr)) return arr.filter((id) => hotCards().some((c) => c.id === id));
+    } catch (e) { /* 忽略存储不可用 */ }
+    return null;
+  }
+
+  function saveHotPicks() {
+    try {
+      global.localStorage.setItem(LS_HOT, JSON.stringify(state.hotPicks));
+    } catch (e) { /* 忽略存储不可用 */ }
+  }
+
+  function toggleHotPick(id) {
+    const i = state.hotPicks.indexOf(id);
+    if (i !== -1) state.hotPicks.splice(i, 1);
+    else {
+      state.hotPicks.push(id);
+      if (state.hotPicks.length > 3) state.hotPicks.shift();
+    }
+    saveHotPicks();
+    renderHotGrid();
+    renderHotArchive();
+  }
+
+  function buildHotCard(card) {
+    const picked = state.hotPicks.indexOf(card.id) !== -1;
+    const el = node("article", "hotcard");
+    const head = node("div", "hotcard-head");
+    head.appendChild(node("span", "hot-code mono", card.code));
+    head.appendChild(node("span", "hot-cat mono", card.category));
+    if (card.sensitivity === "medium") head.appendChild(node("span", "hot-sens mono", "敏感级 中"));
+    el.appendChild(head);
+    el.appendChild(node("h5", null, card.title));
+    const real = node("p", "hot-real");
+    real.appendChild(node("span", "hot-tag", "现实｜"));
+    real.appendChild(document.createTextNode(card.realLine));
+    el.appendChild(real);
+    const alt = node("p", "hot-alt");
+    alt.appendChild(node("span", "hot-tag", "改写｜"));
+    alt.appendChild(document.createTextNode(card.altLine));
+    el.appendChild(alt);
+    if (card.memeTags && card.memeTags.length) {
+      const tags = node("div", "hot-tags");
+      card.memeTags.forEach((t) => tags.appendChild(node("span", null, t)));
+      el.appendChild(tags);
+    }
+    el.appendChild(node("p", "hot-note", card.note));
+    const btn = node("button", "hot-pick", picked ? "已收进档案" : "收进档案");
+    btn.type = "button";
+    btn.setAttribute("aria-pressed", String(picked));
+    btn.addEventListener("click", () => toggleHotPick(card.id));
+    el.appendChild(btn);
+    return el;
+  }
+
+  function renderHotFilters() {
+    const wrap = $("hotFilters");
+    wrap.replaceChildren();
+    const cards = hotForRule();
+    const mk = (key, label, count) => {
+      const btn = node("button", "hot-filter", label + (count === undefined ? "" : " " + count));
+      btn.type = "button";
+      btn.setAttribute("aria-pressed", String(state.hotFilter === key));
+      btn.addEventListener("click", () => {
+        state.hotFilter = key;
+        renderHotFilters();
+        renderHotGrid();
+      });
+      wrap.appendChild(btn);
+    };
+    mk("all", "全部", cards.length);
+    HOT_CATS.forEach((cat) => {
+      const n = cards.filter((c) => c.category === cat).length;
+      if (n) mk(cat, cat, n);
+    });
+  }
+
+  function renderHotGrid() {
+    const grid = $("hotGrid");
+    grid.replaceChildren();
+    const cards = hotForRule().filter((c) => state.hotFilter === "all" || c.category === state.hotFilter);
+    if (!cards.length) {
+      grid.appendChild(node("p", "note hot-empty", "这条规则下没有该分类的改写卡。换个分类看看。"));
+      return;
+    }
+    cards.forEach((c) => grid.appendChild(buildHotCard(c)));
+  }
+
+  function renderHotArchive() {
+    const grid = $("hotArchive");
+    grid.replaceChildren();
+    const picks = state.hotPicks
+      .map((id) => hotCards().find((c) => c.id === id))
+      .filter(Boolean);
+    $("hotArchiveNote").textContent = picks.length
+      ? "已收 " + picks.length + " 张 · 最多 3 张，再收会挤掉最早的一张。摘录跟着档案走，不随规则切换清空。"
+      : "还没收卡。去世界页副刊点「收进档案」，这里会留下摘录。";
+    picks.forEach((c) => grid.appendChild(buildHotCard(c)));
+  }
+
+  function renderHot() {
+    renderHotFilters();
+    renderHotGrid();
+    renderHotArchive();
   }
 
   /* ---------- 启动 ---------- */
@@ -327,6 +451,9 @@
     $("generateBtn").addEventListener("click", () => generate(true));
     $("compareBtn").addEventListener("click", runCompare);
     $("posterBtn").addEventListener("click", exportPoster);
+    const savedPicks = readHotPicks();
+    state.hotPicks = savedPicks !== null ? savedPicks : hotForRule().slice(0, 2).map((c) => c.id);
+    saveHotPicks();
     global.WRM_AI.bind($("aiToggle"), $("aiKey"));
     $("aiToggle").addEventListener("change", refreshNarrative);
     generate(false);
