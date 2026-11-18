@@ -2,6 +2,16 @@
 
 本格式遵循 Keep a Changelog，版本号遵循 semver。
 
+## [1.6.0] - 2026-11-18
+
+### 新增
+- Qoder Sites 部署：新增 `functions/`（Deno Edge Function `app`）作公共 AI 代理。Key 只存服务端 Secret `DEEPSEEK_API_KEY`，不进前端与仓库；带每日 500 次总量闸、单 IP 每分钟 10 次限流、同内容 30 分钟缓存、20 秒上游超时、同源校验与稳定错误码（未配 Secret 返回 service_not_configured）。`/health` 可查配置状态与当日用量。
+- ai.js 通道顺序改为：公共代理（`/functions/v1/app/ai`，同源、免填 Key）→ 自填 OpenAI 兼容端点 → 内置文案。AI 开关关闭时依旧零调用（含代理）。
+- 样式接入 Sites 设计变量（--site-bg/fg/accent/surface/muted/border/font/radius/space/type/motion），原有报纸视觉为默认值，支持工作台 Nudge 调参。
+
+### 变更
+- 「读者来稿 · 自定义规则」从第 1 版头版正文移入页头编辑台（选规则 / 调参数 / 来稿同处一台）；点「推演这条来稿」后编辑台收起并回到头版，与「生成这个世界」一致。头版只留世界名、指标与结论。
+
 ## [1.5.0] - 2026-11-18
 
 ### 新增

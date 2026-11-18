@@ -4,7 +4,7 @@
   "use strict";
 
   const $ = (id) => document.getElementById(id);
-  const APP_VERSION = "1.5.0";
+  const APP_VERSION = "1.6.0";
   const APP_UPDATED = "2026-11-18";
   const LS_STATE = "wrm.state";
   const LS_HOT = "wrm.hotPicks";
@@ -805,7 +805,7 @@
       "v" + APP_VERSION + " · " + APP_UPDATED + " · 数据 v" + meta.version;
   }
 
-  /* ---------- 第 1 版 读者来稿台 ---------- */
+  /* ---------- 编辑台 读者来稿 ---------- */
 
   function setCustomStatus(text, warn) {
     const el = $("customStatus");
@@ -863,6 +863,8 @@
       state.custom = { text: text, source: "local", patch: null };
     }
     run.disabled = false;
+    $("editDesk").open = false;
+    syncEditToggle();
     generate(true);
   }
 

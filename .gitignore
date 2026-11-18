@@ -9,3 +9,7 @@ vibe_images/
 # 测试残留
 .test_*
 node_modules/
+
+# Qoder Sites 本地构建输出与站点描述符（含发布快照，不进公开仓库）
+dist/
+*.qoder.site

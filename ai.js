@@ -1,6 +1,7 @@
 /* 可选 AI 叙事层：默认关闭。只写叙述，不碰 metrics/events/edges。
    Key 与开关只存 localStorage；失败静默回退内置文案。
-   默认走 OpenAI 兼容接口；可用 localStorage wrm.aiUrl / wrm.aiModel 覆盖。 */
+   通道顺序：Qoder Sites 公共代理（服务端 Secret）→ 自填 OpenAI 兼容端点 → 内置文案。
+   自填默认走 OpenAI 兼容接口；可用 localStorage wrm.aiUrl / wrm.aiModel 覆盖。 */
 (function (global) {
   "use strict";
 
@@ -62,9 +63,35 @@
     "禁用套话：让我们一起、在这个…的时代、随着…的发展、综上所述、值得注意的是、不难发现、赋能、助力、彰显、不仅…而且。" +
     "情绪写动作，不贴标签；不写排比；结尾收在一个具体画面，不升华。";
 
-  /* 通用传输：返回模型原文字符串；未启用 / 无 key / 失败均返回 null。 */
+  /* 公共代理优先（Qoder Sites 云函数，key 在服务端 Secret）；
+     非 Sites 部署 / 未配 Secret / 失败时回退自填 key，再失败回退内置文案。 */
+  async function viaProxy(system, user) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT);
+    try {
+      const res = await fetch("/functions/v1/app/ai", {
+        method: "POST",
+        credentials: "same-origin",
+        signal: controller.signal,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: [{ role: "system", content: system }, { role: "user", content: user }] })
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (data && data.ok === true && typeof data.content === "string" && data.content) return data.content;
+      return null;
+    } catch (e) {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /* 通用传输：返回模型原文字符串；未启用 / 无可用通道 / 失败均返回 null。 */
   async function transport(system, user) {
     if (!enabled()) return null;
+    const proxied = await viaProxy(system, user);
+    if (proxied) return proxied;
     const key = read(LS_KEY);
     if (!key) return null;
     const controller = new AbortController();

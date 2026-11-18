@@ -6,18 +6,18 @@
 <title>世界规则修改器 · 社会规则实验室</title>
 <meta name="description" content="选一条现实规则，调四个参数，分八版推演一个虚拟世界：头版、教育、经济、社会与个人、因果、热点、对比、档案。情景推演，不是预测。">
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="styles.css?v=1.5.0">
-<script defer src="world-rule/data.js?v=1.5.0"></script>
-<script defer src="world-rule/engine.js?v=1.5.0"></script>
-<script defer src="causal.js?v=1.5.0"></script>
-<script defer src="report.js?v=1.5.0"></script>
-<script defer src="poster.js?v=1.5.0"></script>
-<script defer src="ai.js?v=1.5.0"></script>
-<script defer src="hot-cards.js?v=1.5.0"></script>
-<script defer src="chain-data.js?v=1.5.0"></script>
-<script defer src="version.js?v=1.5.0"></script>
-<script defer src="custom-rule.js?v=1.5.0"></script>
-<script defer src="app.js?v=1.5.0"></script>
+<link rel="stylesheet" href="styles.css?v=1.6.0">
+<script defer src="world-rule/data.js?v=1.6.0"></script>
+<script defer src="world-rule/engine.js?v=1.6.0"></script>
+<script defer src="causal.js?v=1.6.0"></script>
+<script defer src="report.js?v=1.6.0"></script>
+<script defer src="poster.js?v=1.6.0"></script>
+<script defer src="ai.js?v=1.6.0"></script>
+<script defer src="hot-cards.js?v=1.6.0"></script>
+<script defer src="chain-data.js?v=1.6.0"></script>
+<script defer src="version.js?v=1.6.0"></script>
+<script defer src="custom-rule.js?v=1.6.0"></script>
+<script defer src="app.js?v=1.6.0"></script>
 </head>
 <body>
 
@@ -40,7 +40,7 @@
   </div>
 
   <details id="editDesk" class="edit-desk">
-    <summary class="edit-summary mono">编辑台 · 选规则 / 调四个参数 / 生成</summary>
+    <summary class="edit-summary mono">编辑台 · 选规则 / 调四个参数 / 读者来稿</summary>
     <div class="edit-body">
       <div class="edit-rules">
         <h3 class="panel-head">选择一条规则</h3>
@@ -56,6 +56,24 @@
         </div>
       </div>
     </div>
+    <section class="custom-desk" aria-labelledby="customHead">
+      <div class="custom-head">
+        <h3 id="customHead" class="small-head">读者来稿 · 自定义规则</h3>
+        <span class="custom-stamp mono">你的规则 你的世界</span>
+      </div>
+      <p class="note">用一句话写下你想改的规则。启用 AI（第 8 版）后由模型解析成指标修正与整版事件 / 维度，约 1 次调用；未启用时关键词近似解析，路由到最接近的内置规则，零调用。</p>
+      <label class="ai-key-label mono" for="customText">来稿内容</label>
+      <textarea id="customText" class="custom-text" rows="3" maxlength="200" placeholder="例：全国每周只上三天课，其余时间自学，毕业看自学记录"></textarea>
+      <div class="custom-meta mono">
+        <span id="customCount">0 / 200</span>
+        <span id="customStatus" class="custom-status" role="status"></span>
+      </div>
+      <div id="customExamples" class="custom-examples" aria-label="来稿示例"></div>
+      <div class="bench-actions">
+        <button id="customRun" class="generate" type="button">推演这条来稿 →</button>
+        <button id="customClear" class="line-btn" type="button" hidden>清除来稿，回内置规则</button>
+      </div>
+    </section>
     <p id="appError" class="error" role="alert" hidden></p>
   </details>
 </header>
@@ -82,24 +100,6 @@
     <div id="p1Metrics" class="metric-bars" aria-label="四项指标（示意）"></div>
     <p id="p1Lead" class="page-lead"></p>
     <p id="p1Match" class="note page-match"></p>
-    <section class="custom-desk" aria-labelledby="customHead">
-      <div class="custom-head">
-        <h3 id="customHead" class="small-head">读者来稿 · 自定义规则</h3>
-        <span class="custom-stamp mono">你的规则 你的世界</span>
-      </div>
-      <p class="note">用一句话写下你想改的规则。启用 AI（第 8 版）后由模型解析成指标修正与整版事件 / 维度，约 1 次调用；未启用时关键词近似解析，路由到最接近的内置规则，零调用。</p>
-      <label class="ai-key-label mono" for="customText">来稿内容</label>
-      <textarea id="customText" class="custom-text" rows="3" maxlength="200" placeholder="例：全国每周只上三天课，其余时间自学，毕业看自学记录"></textarea>
-      <div class="custom-meta mono">
-        <span id="customCount">0 / 200</span>
-        <span id="customStatus" class="custom-status" role="status"></span>
-      </div>
-      <div id="customExamples" class="custom-examples" aria-label="来稿示例"></div>
-      <div class="bench-actions">
-        <button id="customRun" class="generate" type="button">推演这条来稿 →</button>
-        <button id="customClear" class="line-btn" type="button" hidden>清除来稿，回内置规则</button>
-      </div>
-    </section>
   </section>
 
   <section class="page" id="page-2" aria-labelledby="title-2" hidden>
@@ -203,7 +203,7 @@
           <input id="aiUrl" type="url" autocomplete="off" placeholder="留空默认：阿里云百炼 DashScope 兼容端点">
           <label class="ai-key-label mono" for="aiModel">模型</label>
           <input id="aiModel" type="text" autocomplete="off" placeholder="留空默认：qwen-plus">
-          <p class="note">关闭或失败时使用内置文案。AI 只写叙述，不改指标与因果。接口与模型留空用默认（阿里云百炼）。</p>
+          <p class="note">关闭或失败时使用内置文案。AI 只写叙述，不改指标与因果。部署在 Qoder Sites 且站长配好 Secret 时优先走公共代理（访客免填 Key）；其余情况用上面的 Key，接口与模型留空用默认（阿里云百炼）。</p>
         </div>
         <button id="posterBtn" class="generate" type="button">下载海报 PNG</button>
       </aside>
