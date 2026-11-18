@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>世界规则修改器 · 社会规则实验室</title>
+<meta name="description" content="选一条现实规则，调四个参数，推演一个虚拟世界的教育、经济、社会与个人变化。情景推演，不是预测。">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="styles.css">
+<script defer src="world-rule/data.js"></script>
+<script defer src="world-rule/engine.js"></script>
+<script defer src="causal.js"></script>
+<script defer src="report.js"></script>
+<script defer src="poster.js"></script>
+<script defer src="ai.js"></script>
+<script defer src="app.js"></script>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="issue mono">号外 · 第 014 期<br>情景推演，不是预测</div>
+  <div class="brand">
+    <h1>世界规则修改器</h1>
+    <div class="latin mono">World Rule Modifier · 社会规则实验室</div>
+  </div>
+  <nav class="mastnav" aria-label="版面导航">
+    <a href="#rules">规则库</a>
+    <a href="#bench">实验台</a>
+    <a href="#method">方法</a>
+    <a href="#archive">档案</a>
+  </nav>
+</header>
+
+<main>
+
+  <section id="rules" class="hero" aria-label="规则库">
+    <div class="hero-copy">
+      <p id="heroKicker" class="kicker mono"></p>
+      <h2 id="heroTitle"></h2>
+      <p id="heroDek" class="dek"></p>
+      <ol class="steps mono">
+        <li>选规则</li>
+        <li>调参数</li>
+        <li>生成世界</li>
+      </ol>
+    </div>
+    <aside class="rule-panel" aria-label="选择一条规则">
+      <h3 class="panel-head">选择一条规则</h3>
+      <ol id="ruleList" class="rule-list"></ol>
+      <div class="rule-custom">
+        <label for="customRule">或写一条自己的规则</label>
+        <input id="customRule" type="text" disabled placeholder="暂不支持">
+        <p class="note">自定义规则下一步支持，当前不参与推演。</p>
+      </div>
+    </aside>
+  </section>
+
+  <section id="bench" class="params" aria-label="实验台">
+    <div class="section-head">
+      <h3>设定这个世界的四个参数</h3>
+      <p id="paramsNote" class="note"></p>
+    </div>
+    <div id="paramGrid" class="param-grid"></div>
+    <div class="bench-actions">
+      <button id="generateBtn" class="generate" type="button">生成这个世界 →</button>
+      <p id="appError" class="error" role="alert" hidden></p>
+    </div>
+  </section>
+
+  <section id="world" class="world" aria-label="推演结果" hidden>
+    <div class="world-head">
+      <div>
+        <h3 id="worldTitle"></h3>
+        <p id="worldMeta" class="mono note"></p>
+      </div>
+      <span id="matchBadge" class="badge mono"></span>
+    </div>
+    <div id="worldMetrics" class="metric-bars" aria-label="四项指标（示意）"></div>
+    <div id="worldGrid" class="world-grid"></div>
+    <div class="causal-wrap">
+      <h4 class="small-head">因果链</h4>
+      <svg id="causalSvg" class="causal" role="img" aria-label="事件因果图"></svg>
+      <ol id="causalList" class="causal-list"></ol>
+      <p id="causalLegend" class="legend mono"></p>
+    </div>
+    <div class="unexpected-wrap">
+      <h4 class="small-head">意外后果</h4>
+      <ol id="unintendedList" class="unexpected"></ol>
+    </div>
+  </section>
+
+  <section id="compare" class="compare" aria-label="双世界对比" hidden>
+    <div class="section-head">
+      <h3>同一条规则，两个世界</h3>
+      <p class="note">世界 A 是你刚生成的世界。下面调世界 B 的参数，或一键载入示例。</p>
+    </div>
+    <div class="compare-controls">
+      <div id="presetBtns" class="preset-btns"></div>
+      <div id="paramGridB" class="param-grid"></div>
+      <button id="compareBtn" class="generate" type="button">生成世界 B 并对比 →</button>
+    </div>
+    <div class="compare-grid">
+      <div id="compareA" class="compare-col"></div>
+      <div id="compareB" class="compare-col"></div>
+    </div>
+    <p id="compareDiff" class="diff-line mono"></p>
+    <ol id="compareTop" class="top-diff mono"></ol>
+  </section>
+
+  <section id="archive" class="report" aria-label="世界线档案" hidden>
+    <div class="section-head">
+      <h3>号外 · 世界线档案</h3>
+    </div>
+    <div class="report-grid">
+      <article id="reportCard" class="report-card"></article>
+      <aside class="report-side">
+        <h4 class="small-head">解读</h4>
+        <div id="narrativeSlot"></div>
+        <div class="ai-settings">
+          <label class="ai-switch" for="aiToggle">
+            <input type="checkbox" id="aiToggle"> 启用 AI 叙事（可选）
+          </label>
+          <label class="ai-key-label mono" for="aiKey">API Key</label>
+          <input id="aiKey" type="password" autocomplete="off" placeholder="只存本机 localStorage">
+          <p class="note">关闭或失败时使用内置文案。AI 只写叙述，不改指标与因果。</p>
+        </div>
+        <button id="posterBtn" class="generate" type="button">下载海报 PNG</button>
+      </aside>
+    </div>
+  </section>
+
+</main>
+
+<footer id="method">
+  <div class="method-grid">
+    <div>
+      <h4 class="small-head">方法</h4>
+      <p id="metaScale" class="note"></p>
+      <p id="metaPreset" class="note"></p>
+    </div>
+    <div>
+      <h4 class="small-head">确定性标签</h4>
+      <dl id="certaintyLegend" class="legend-list"></dl>
+    </div>
+  </div>
+  <p id="disclaimer" class="disclaimer"></p>
+  <p class="colophon mono"><span id="metaVersion"></span> · 报纸版式 B · 断网可玩</p>
+</footer>
+
+<noscript><p class="error">本页需要 JavaScript 才能推演世界。请启用后刷新。</p></noscript>
+
+</body>
+</html>
