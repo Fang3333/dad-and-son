@@ -4,7 +4,7 @@
   "use strict";
 
   const $ = (id) => document.getElementById(id);
-  const APP_VERSION = "1.4.4";
+  const APP_VERSION = "1.5.0";
   const APP_UPDATED = "2026-11-18";
   const LS_STATE = "wrm.state";
   const LS_HOT = "wrm.hotPicks";
@@ -18,7 +18,7 @@
   const state = {
     ruleId: null, paramsA: null, paramsB: null, resultA: null, resultB: null,
     page: 1, hotFilter: "all", hotPicks: [], causalExpanded: false,
-    previewN: null, openNodes: {}, branchOpen: null
+    previewN: null, openNodes: {}, branchOpen: null, custom: null
   };
   let narrativeSeq = 0;
   const vcUserPicked = { a: false, b: false };
@@ -56,7 +56,7 @@
   function saveState() {
     try {
       global.localStorage.setItem(LS_STATE, JSON.stringify({
-        ruleId: state.ruleId, paramsA: state.paramsA, paramsB: state.paramsB
+        ruleId: state.ruleId, paramsA: state.paramsA, paramsB: state.paramsB, custom: state.custom
       }));
     } catch (e) { /* 忽略存储不可用 */ }
   }
@@ -114,17 +114,27 @@
   /* ---------- 页头规则条 / 编辑台 ---------- */
 
   function matchText(r) {
+    if (r.custom) {
+      return (r.custom.source === "ai" ? "自定义来稿 · AI 推演" : "自定义来稿 · 关键词解析") +
+        " · 基于示例 " + r.basePresetKey;
+    }
     return r.match === "exact" ? "示例世界 " + r.presetKey : "近似推演 · 基于示例 " + r.basePresetKey;
   }
 
   function renderStrip() {
     const r = state.resultA;
-    $("stripRule").textContent = rule().title;
+    $("stripRule").textContent = r.custom ? r.custom.title : rule().title;
     const badge = $("stripBadge");
     badge.textContent = matchText(r);
-    badge.className = "badge mono" + (r.match === "nearest" ? " is-nearest" : "");
+    badge.className = "badge mono" + (r.custom ? " is-custom" : (r.match === "nearest" ? " is-nearest" : ""));
     const wrap = $("stripParams");
     wrap.replaceChildren();
+    if (r.custom) {
+      const src = node("span", "strip-chip is-on");
+      src.appendChild(node("i", "chip-dot"));
+      src.appendChild(document.createTextNode(r.custom.source === "ai" ? "来稿 · AI 解析" : "来稿 · 关键词解析"));
+      wrap.appendChild(src);
+    }
     rule().params.forEach((p) => {
       const on = Boolean(r.params[p.id]);
       const chip = node("span", "strip-chip" + (on ? " is-on" : ""));
@@ -238,14 +248,18 @@
     metrics.replaceChildren();
     for (const m of engine().METRICS) {
       const delta = r.metrics[m] - baseMetrics[m];
-      const deltaText = r.match === "nearest" && delta !== 0 ? "较示例 " + fmt(delta) : "";
+      const deltaText = (r.match === "nearest" || r.custom) && delta !== 0 ? "较示例 " + fmt(delta) : "";
       metrics.appendChild(metricRow(m, r.metrics[m], deltaText));
     }
     $("p1Lead").textContent = r.report.summary;
     $("p1Match").textContent = matchText(r) + "。" +
-      (r.match === "nearest"
-        ? "指标按参数权重近似修正，事件与因果跟随最近预设。"
-        : "参数与示例预设完全一致。");
+      (r.custom
+        ? (r.custom.source === "ai"
+          ? "指标 = 示例基线 + 来稿修正；事件、维度与意外后果由 AI 按来稿改写，置信度低。"
+          : "未启用 AI：只路由到最接近的内置规则，内容跟随示例，零 API 调用。")
+        : (r.match === "nearest"
+          ? "指标按参数权重近似修正，事件与因果跟随最近预设。"
+          : "参数与示例预设完全一致。"));
   }
 
   /* ---------- 第 2/3/4 版 维度 ---------- */
@@ -355,6 +369,9 @@
 
   function rewriteSource(n, entry) {
     if (!entry) return "";
+    if (entry.ruleId === "custom") {
+      return "自定义来稿 · 「" + String((entry.params && entry.params.text) || "").slice(0, 18) + "」";
+    }
     const r = engine().getRule(entry.ruleId);
     const hits = (n.sensitiveTo || []).filter((t) => {
       const p = t.split(":");
@@ -698,22 +715,29 @@
 
   function runCompare() {
     state.resultB = engine().evaluate(state.ruleId, state.paramsB);
-    const cmp = engine().compare(state.ruleId, state.paramsA, state.paramsB);
-    compareCol($("compareA"), "A", cmp.a);
-    compareCol($("compareB"), "B", cmp.b);
+    const a = state.resultA, b = state.resultB;
+    const diff = {};
+    for (const m of engine().METRICS) diff[m] = a.metrics[m] - b.metrics[m];
+    const top = engine().METRICS
+      .map((m) => ({ metric: m, label: engine().METRIC_LABELS[m], delta: diff[m] }))
+      .filter((x) => x.delta !== 0)
+      .sort((x, y) => Math.abs(y.delta) - Math.abs(x.delta))
+      .slice(0, 3);
+    compareCol($("compareA"), "A", a);
+    compareCol($("compareB"), "B", b);
     $("compareDiff").textContent = "差异（A − B）：" +
-      engine().METRICS.map((m) => engine().METRIC_LABELS[m] + " " + fmt(cmp.diff[m])).join(" / ");
-    const top = $("compareTop");
-    top.replaceChildren();
-    if (!cmp.top.length) {
-      top.appendChild(node("li", null, "两个世界指标一致。换一组参数再比。"));
+      engine().METRICS.map((m) => engine().METRIC_LABELS[m] + " " + fmt(diff[m])).join(" / ");
+    const topEl = $("compareTop");
+    topEl.replaceChildren();
+    if (!top.length) {
+      topEl.appendChild(node("li", null, "两个世界指标一致。换一组参数再比。"));
       return;
     }
-    for (const t of cmp.top) {
+    for (const t of top) {
       const li = document.createElement("li");
       li.appendChild(document.createTextNode(t.label + " "));
       li.appendChild(node("span", "t-delta", fmt(t.delta)));
-      top.appendChild(li);
+      topEl.appendChild(li);
     }
   }
 
@@ -721,7 +745,7 @@
 
   function renderPage8() {
     global.WRM_REPORT.render($("reportCard"), state.resultA, {
-      ruleTitle: rule().title,
+      ruleTitle: state.resultA.custom ? state.resultA.custom.title : rule().title,
       matchText: matchText(state.resultA),
       world: worldTag()
     });
@@ -754,7 +778,10 @@
     const btn = $("posterBtn");
     btn.disabled = true;
     btn.textContent = "导出中…";
-    global.WRM_POSTER.download(state.resultA, { rule: rule(), meta: data().meta, appVersion: APP_VERSION, world: worldTag() })
+    const posterRule = state.resultA.custom
+      ? Object.assign({}, rule(), { title: state.resultA.custom.title, category: "读者来稿" })
+      : rule();
+    global.WRM_POSTER.download(state.resultA, { rule: posterRule, meta: data().meta, appVersion: APP_VERSION, world: worldTag() })
       .then((name) => {
         btn.textContent = "已下载 " + name;
         setTimeout(() => { btn.textContent = "下载海报 PNG"; }, 2400);
@@ -778,22 +805,119 @@
       "v" + APP_VERSION + " · " + APP_UPDATED + " · 数据 v" + meta.version;
   }
 
+  /* ---------- 第 1 版 读者来稿台 ---------- */
+
+  function setCustomStatus(text, warn) {
+    const el = $("customStatus");
+    el.textContent = text || "";
+    el.classList.toggle("is-warn", Boolean(warn));
+  }
+
+  function customCount() {
+    $("customCount").textContent = $("customText").value.length + " / " + global.WRM_CUSTOM.MAX_TEXT;
+  }
+
+  function renderCustomDesk() {
+    const ta = $("customText");
+    if (state.custom && document.activeElement !== ta) ta.value = state.custom.text;
+    customCount();
+    $("customClear").hidden = !state.custom;
+    if (state.custom) {
+      setCustomStatus(state.custom.source === "ai"
+        ? "当前来稿由 AI 解析：指标 = 基线 + 修正，事件与维度整版改写。"
+        : "当前来稿为关键词解析：路由到内置规则，零 API 调用。", state.custom.source === "local");
+    }
+  }
+
+  async function runCustom() {
+    const ta = $("customText");
+    const text = ta.value.trim().slice(0, global.WRM_CUSTOM.MAX_TEXT);
+    const run = $("customRun");
+    if (!text) {
+      setCustomStatus("先写一句想改的规则，或点一条示例。", true);
+      return;
+    }
+    run.disabled = true;
+    let patch = null;
+    if (global.WRM_AI.enabled()) {
+      setCustomStatus("AI 解析来稿中…（约 1 次调用，几秒到十几秒）");
+      patch = await global.WRM_CUSTOM.parseAI(text);
+    }
+    if (patch) {
+      if (patch.base !== state.ruleId) selectRule(patch.base);
+      if (Object.keys(patch.params).length) {
+        for (const p of rule().params) {
+          if (Object.prototype.hasOwnProperty.call(patch.params, p.id)) state.paramsA[p.id] = patch.params[p.id];
+        }
+        renderParams($("paramGrid"), state.paramsA, () => generate(false));
+      }
+      state.custom = { text: text, source: "ai", patch: patch };
+    } else {
+      const loc = global.WRM_CUSTOM.parseLocal(text);
+      if (!loc) {
+        run.disabled = false;
+        setCustomStatus("没认出这条规则改的是什么。试试含「考试 / 工时 / 价格」这类词，或在第 8 版启用 AI 解析。", true);
+        return;
+      }
+      if (loc.base !== state.ruleId) selectRule(loc.base);
+      state.custom = { text: text, source: "local", patch: null };
+    }
+    run.disabled = false;
+    generate(true);
+  }
+
+  function bindCustomDesk() {
+    const ta = $("customText");
+    const ex = $("customExamples");
+    global.WRM_CUSTOM.EXAMPLES.forEach((text) => {
+      const btn = node("button", null, text);
+      btn.type = "button";
+      btn.addEventListener("click", () => {
+        ta.value = text;
+        customCount();
+        ta.focus();
+      });
+      ex.appendChild(btn);
+    });
+    ta.addEventListener("input", customCount);
+    $("customRun").addEventListener("click", runCustom);
+    $("customClear").addEventListener("click", () => {
+      state.custom = null;
+      setCustomStatus("已清除来稿，回到内置规则。");
+      generate(false);
+    });
+  }
+
   /* ---------- 生成 ---------- */
 
+  function currentResult() {
+    if (state.custom) {
+      return global.WRM_CUSTOM.build(
+        state.custom.text,
+        state.custom.source === "ai" ? state.custom.patch : null,
+        state.ruleId, state.paramsA
+      );
+    }
+    return engine().evaluate(state.ruleId, state.paramsA);
+  }
+
   function generate(scroll, opts) {
-    state.resultA = engine().evaluate(state.ruleId, state.paramsA);
+    state.resultA = currentResult();
     state.causalExpanded = false;
     state.previewN = null;
     if (!opts || opts.record !== false) {
       version().bump({
-        ruleId: state.ruleId,
-        params: state.paramsA,
+        ruleId: state.custom ? "custom" : state.ruleId,
+        params: state.custom
+          ? Object.assign({ text: state.custom.text, base: state.ruleId }, state.paramsA)
+          : state.paramsA,
         metrics: state.resultA.metrics,
         changedNodes: chain().changedNodes(state.ruleId, state.paramsA)
       });
     }
     renderStrip();
     renderPage1();
+    renderCustomDesk();
     renderDimPage($("p2Body"), state.resultA.dimensions.education);
     renderDimPage($("p3Body"), state.resultA.dimensions.economy);
     renderPage4();
@@ -821,22 +945,39 @@
       renderParams($("paramGrid"), state.paramsA, () => generate(false));
       renderParams($("paramGridB"), state.paramsB, runCompare);
     }
+    if (saved && saved.custom && typeof saved.custom.text === "string") {
+      const c = saved.custom;
+      const patch = c.source === "ai" ? global.WRM_CUSTOM.validatePatch(c.patch) : null;
+      if (c.source !== "ai" || patch) {
+        state.custom = {
+          text: c.text.slice(0, global.WRM_CUSTOM.MAX_TEXT),
+          source: patch ? "ai" : "local",
+          patch: patch
+        };
+      }
+    }
     const savedPicks = readHotPicks();
     state.hotPicks = savedPicks !== null ? savedPicks : [];
     saveHotPicks();
 
     const hadHistory = version().load();
     if (!hadHistory) {
-      const r0 = engine().evaluate(state.ruleId, state.paramsA);
-      version().init(r0, state.ruleId, state.paramsA, chain().changedNodes(state.ruleId, state.paramsA));
+      const r0 = currentResult();
+      version().init(r0, state.custom ? "custom" : state.ruleId,
+        state.custom ? Object.assign({ text: state.custom.text, base: state.ruleId }, state.paramsA) : state.paramsA,
+        chain().changedNodes(state.ruleId, state.paramsA));
     }
     let prevApp = null;
     try { prevApp = global.localStorage.getItem(LS_APP); } catch (e) { /* 存储不可用 */ }
     if (hadHistory && prevApp !== APP_VERSION) {
-      const rNow = engine().evaluate(state.ruleId, state.paramsA);
+      const rNow = currentResult();
       version().bump({
         force: true, label: "引擎修订 v" + APP_VERSION,
-        ruleId: state.ruleId, params: state.paramsA, metrics: rNow.metrics,
+        ruleId: state.custom ? "custom" : state.ruleId,
+        params: state.custom
+          ? Object.assign({ text: state.custom.text, base: state.ruleId }, state.paramsA)
+          : state.paramsA,
+        metrics: rNow.metrics,
         changedNodes: chain().changedNodes(state.ruleId, state.paramsA)
       });
     }
@@ -883,7 +1024,12 @@
     $("vcB").addEventListener("change", () => { vcUserPicked.b = true; renderVersionCompare(); });
     $("versionReset").addEventListener("click", () => {
       state.previewN = null;
-      version().reset(state.resultA.metrics, state.ruleId, state.paramsA, chain().changedNodes(state.ruleId, state.paramsA));
+      version().reset(
+        state.resultA.metrics,
+        state.custom ? "custom" : state.ruleId,
+        state.custom ? Object.assign({ text: state.custom.text, base: state.ruleId }, state.paramsA) : state.paramsA,
+        chain().changedNodes(state.ruleId, state.paramsA)
+      );
       renderPage5();
       renderVersionUI();
     });
@@ -906,6 +1052,7 @@
     $("editDesk").addEventListener("toggle", syncEditToggle);
     global.WRM_AI.bind($("aiToggle"), $("aiKey"), $("aiUrl"), $("aiModel"));
     $("aiToggle").addEventListener("change", refreshNarrative);
+    bindCustomDesk();
 
     generate(false, { record: false });
     goToPage(1, false);
@@ -919,8 +1066,8 @@
   }
 
   function init() {
-    if (!global.WRM_DATA || !global.WRM_ENGINE) {
-      fail("数据或引擎未加载：请确认 world-rule/data.js 与 world-rule/engine.js 能正常访问。");
+    if (!global.WRM_DATA || !global.WRM_ENGINE || !global.WRM_CUSTOM) {
+      fail("数据或引擎未加载：请确认 world-rule/data.js、world-rule/engine.js 与 custom-rule.js 能正常访问。");
       return;
     }
     try {

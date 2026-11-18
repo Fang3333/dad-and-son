@@ -739,6 +739,86 @@ footer { padding-top: 28px; padding-bottom: 52px; }
 }
 .colophon { margin: 8px 0 0; font-size: 11px; color: var(--muted); }
 
+/* ---------- 读者来稿 · 自定义规则 ---------- */
+
+.custom-desk {
+  margin-top: 36px;
+  padding-top: 18px;
+  border-top: var(--double);
+  text-align: left;
+}
+
+.custom-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.custom-stamp {
+  flex: none;
+  padding: 2px 8px;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: 11px;
+  line-height: 1.6;
+  letter-spacing: .08em;
+  transform: rotate(-1.5deg);
+}
+
+.custom-text {
+  display: block;
+  width: 100%;
+  margin: 6px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  background: var(--paper-2);
+  color: var(--ink);
+  font: 15px/1.7 var(--font-serif);
+  resize: vertical;
+  min-height: 76px;
+}
+
+.custom-text:focus {
+  outline: 2px solid var(--action);
+  outline-offset: 2px;
+  border-color: var(--action);
+}
+
+.custom-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.custom-status { color: var(--accent-2); text-align: right; }
+.custom-status.is-warn { color: var(--warn); }
+
+.custom-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 12px;
+}
+
+.custom-examples button {
+  padding: 3px 9px;
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  font: 11px/1.6 var(--font-sans);
+  cursor: pointer;
+}
+
+.custom-examples button:hover { border-color: var(--accent); color: var(--accent); }
+
+.badge.is-custom { border-color: var(--accent-2); color: var(--accent-2); }
+
 /* ---------- 断点 1000px ---------- */
 
 @media (max-width: 1000px) {
@@ -798,6 +878,9 @@ footer { padding-top: 28px; padding-bottom: 52px; }
   .report-title { font-size: 28px; }
   .stamp { position: static; display: inline-block; margin-top: 14px; }
   .bench-actions { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .custom-head { flex-direction: column; gap: 6px; }
+  .custom-meta { flex-direction: column; gap: 2px; }
+  .custom-status { text-align: left; }
   footer { padding-bottom: 24px; }
 }
 

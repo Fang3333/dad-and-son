@@ -5,7 +5,7 @@
 
   const LS = "wrm.worldVersion";
   const MAX = 5;
-  const LETTER = { "no-exam": "A", "four-hour": "B", "free-goods": "C" };
+  const LETTER = { "no-exam": "A", "four-hour": "B", "free-goods": "C", custom: "D" };
 
   const state = { current: 0, label: "", semver: "", at: 0, history: [] };
 
@@ -62,7 +62,10 @@
   function sameParams(a, b) {
     const ka = Object.keys(a);
     return ka.length === Object.keys(b).length &&
-      ka.every((k) => Boolean(a[k]) === Boolean(b[k]));
+      ka.every((k) => {
+        if (typeof a[k] === "string" || typeof b[k] === "string") return a[k] === b[k];
+        return Boolean(a[k]) === Boolean(b[k]);
+      });
   }
 
   function bump(opts) {

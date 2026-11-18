@@ -56,10 +56,45 @@
     return validate(JSON.parse(stripped));
   }
 
-  async function request(result) {
+  const NARRATIVE_SYSTEM = "你是社会规则推演刊物的编辑。把给定的结构化世界改写成通俗解读。只输出 JSON：" +
+    '{"dimensions":{"education":"","economy":"","society":"","individual":""},"unintended":["","",""],"conclusion":""}。' +
+    "每段不超过 80 字，长短句交错，至少写到一个具体动作或物件。不得修改或新增任何数字，不得编造统计，不得预测真实未来。" +
+    "禁用套话：让我们一起、在这个…的时代、随着…的发展、综上所述、值得注意的是、不难发现、赋能、助力、彰显、不仅…而且。" +
+    "情绪写动作，不贴标签；不写排比；结尾收在一个具体画面，不升华。";
+
+  /* 通用传输：返回模型原文字符串；未启用 / 无 key / 失败均返回 null。 */
+  async function transport(system, user) {
     if (!enabled()) return null;
     const key = read(LS_KEY);
     if (!key) return null;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT);
+    try {
+      const res = await fetch(read(LS_URL) || DEFAULT_URL, {
+        method: "POST",
+        signal: controller.signal,
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + key },
+        body: JSON.stringify({
+          model: read(LS_MODEL) || DEFAULT_MODEL,
+          temperature: 0.4,
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: user }
+          ]
+        })
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      const content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+      return content || null;
+    } catch (e) {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async function request(result) {
     const payload = {
       rule: result.ruleTitle,
       params: result.params,
@@ -72,41 +107,15 @@
       edges: result.edges.map((e) => ({ from: e.from, to: e.to, relation: e.relation, assumption: e.assumption })),
       unintended: result.unintended.map((u) => u.title)
     };
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT);
+    const content = await transport(NARRATIVE_SYSTEM, JSON.stringify(payload));
+    if (!content) return null;
     try {
-      const res = await fetch(read(LS_URL) || DEFAULT_URL, {
-        method: "POST",
-        signal: controller.signal,
-        headers: { "Content-Type": "application/json", Authorization: "Bearer " + key },
-        body: JSON.stringify({
-          model: read(LS_MODEL) || DEFAULT_MODEL,
-          temperature: 0.4,
-          messages: [
-            {
-              role: "system",
-              content: "你是社会规则推演刊物的编辑。把给定的结构化世界改写成通俗解读。只输出 JSON：" +
-                '{"dimensions":{"education":"","economy":"","society":"","individual":""},"unintended":["","",""],"conclusion":""}。' +
-                "每段不超过 80 字，长短句交错，至少写到一个具体动作或物件。不得修改或新增任何数字，不得编造统计，不得预测真实未来。" +
-                "禁用套话：让我们一起、在这个…的时代、随着…的发展、综上所述、值得注意的是、不难发现、赋能、助力、彰显、不仅…而且。" +
-                "情绪写动作，不贴标签；不写排比；结尾收在一个具体画面，不升华。"
-            },
-            { role: "user", content: JSON.stringify(payload) }
-          ]
-        })
-      });
-      if (!res.ok) return null;
-      const data = await res.json();
-      const content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-      if (!content) return null;
       return parseContent(content);
     } catch (e) {
       return null;
-    } finally {
-      clearTimeout(timer);
     }
   }
 
-  global.WRM_AI = { bind, enabled, request, validate };
+  global.WRM_AI = { bind, enabled, request, validate, transport };
   if (typeof module !== "undefined" && module.exports) module.exports = global.WRM_AI;
 })(typeof window !== "undefined" ? window : globalThis);
