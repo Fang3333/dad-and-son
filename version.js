@@ -1,10 +1,10 @@
-/* 世界线修订版本号：规则或参数每改一次 +1，同参数重跑不增版；localStorage 持久化，历史最多 12 版。
+/* 世界线修订版本号：规则或参数每改一次 +1，同参数重跑不增版；localStorage 持久化，历史最多 5 版。
    只记录引擎输出的快照，不改 data.js / engine.js。 */
 (function (global) {
   "use strict";
 
   const LS = "wrm.worldVersion";
-  const MAX = 12;
+  const MAX = 5;
   const LETTER = { "no-exam": "A", "four-hour": "B", "free-goods": "C" };
 
   const state = { current: 0, label: "", semver: "", at: 0, history: [] };
@@ -52,6 +52,13 @@
     return state.history[0];
   }
 
+  function reset(metrics, ruleId, params, changedNodes) {
+    state.history = [entry(1, ruleId, params, metrics, changedNodes, "清空重编号")];
+    state.current = 1;
+    sync(); save();
+    return state.history[0];
+  }
+
   function sameParams(a, b) {
     const ka = Object.keys(a);
     return ka.length === Object.keys(b).length &&
@@ -86,7 +93,7 @@
 
   global.WRM_VERSION = {
     state: state,
-    load: load, init: init, bump: bump, get: get, serial: serial, timeText: timeText,
+    load: load, init: init, reset: reset, bump: bump, get: get, serial: serial, timeText: timeText,
     current: function () { return state.current; },
     history: function () { return state.history; },
     MAX: MAX

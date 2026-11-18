@@ -891,6 +891,7 @@ footer { padding-top: 28px; padding-bottom: 52px; }
 .rnode-year { display: block; font: 10px/1.5 var(--font-mono); color: var(--muted); }
 .rnode-in { display: block; margin-top: 2px; font: 10px/1.4 var(--font-mono); color: var(--muted); }
 .rnode-why { display: block; margin: 2px 0 4px; font: 10px/1.4 var(--font-mono); color: var(--accent); }
+.version-reset { margin: 0 0 10px; }
 .rnode-hint { display: block; margin-top: 4px; font: 10px/1.4 var(--font-mono); color: var(--muted); }
 .stamp-mini {
   position: absolute;

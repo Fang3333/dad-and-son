@@ -4,7 +4,7 @@
   "use strict";
 
   const $ = (id) => document.getElementById(id);
-  const APP_VERSION = "1.4.3";
+  const APP_VERSION = "1.4.4";
   const APP_UPDATED = "2026-11-18";
   const LS_STATE = "wrm.state";
   const LS_HOT = "wrm.hotPicks";
@@ -504,7 +504,13 @@
       selB.lastChild.value = String(h.n);
     });
     const hs = v.history();
-    const defA = String(hs.length > 1 ? hs[hs.length - 2].n : cur);
+    const curEntry = v.get(cur);
+    const sig = (e) => e.ruleId + JSON.stringify(e.metrics) + JSON.stringify(e.changedNodes);
+    let defAEntry = null;
+    for (let i = hs.length - 2; i >= 0; i--) {
+      if (!curEntry || sig(hs[i]) !== sig(curEntry)) { defAEntry = hs[i]; break; }
+    }
+    const defA = String(defAEntry ? defAEntry.n : (hs.length > 1 ? hs[hs.length - 2].n : cur));
     const defB = String(cur);
     selA.value = vcUserPicked.a && hs.some((h) => String(h.n) === prevA) ? prevA : defA;
     selB.value = vcUserPicked.b && hs.some((h) => String(h.n) === prevB) ? prevB : defB;
@@ -875,6 +881,12 @@
     });
     $("vcA").addEventListener("change", () => { vcUserPicked.a = true; renderVersionCompare(); });
     $("vcB").addEventListener("change", () => { vcUserPicked.b = true; renderVersionCompare(); });
+    $("versionReset").addEventListener("click", () => {
+      state.previewN = null;
+      version().reset(state.resultA.metrics, state.ruleId, state.paramsA, chain().changedNodes(state.ruleId, state.paramsA));
+      renderPage5();
+      renderVersionUI();
+    });
     $("generateBtn").addEventListener("click", () => {
       $("editDesk").open = false;
       syncEditToggle();
