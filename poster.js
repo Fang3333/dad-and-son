@@ -211,6 +211,11 @@
     ctx.fillStyle = C.muted;
     ctx.font = "14px " + MONO;
     ctx.fillText("v" + (ctxInfo.appVersion || meta.version) + " · " + meta.updated + " · fang3333.github.io/dad-and-son", M, 1394);
+    if (ctxInfo.world) {
+      ctx.fillStyle = C.accent;
+      ctx.font = "700 15px " + MONO;
+      ctx.fillText("世界线 " + ctxInfo.world.serial + " · " + ctxInfo.world.label + " · v0." + ctxInfo.world.n, M, 1418);
+    }
     return canvas;
   }
 
@@ -221,7 +226,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "世界线-" + result.presetKey + "014.png";
+    a.download = "世界线-" + (ctxInfo.world ? ctxInfo.world.serial.replace("#", "") + "-第" + ctxInfo.world.n + "版" : result.presetKey + "014") + ".png";
     document.body.appendChild(a);
     a.click();
     a.remove();

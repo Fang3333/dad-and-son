@@ -804,3 +804,172 @@ footer { padding-top: 28px; padding-bottom: 52px; }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* ---------- 世界线版本号（页头常驻 + 翻页条紧凑 chip） ---------- */
+
+.version-badge {
+  position: absolute;
+  top: 28px;
+  left: var(--gutter);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 6px 10px;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  text-align: left;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.version-badge .vb-kicker { color: var(--muted); letter-spacing: .08em; }
+.version-badge .vb-n { padding: 1px 7px; background: var(--accent); color: #fff; font-weight: 700; font-size: 13px; }
+.version-badge .vb-n.is-preview { background: var(--accent-2); }
+.version-badge .vb-meta { color: var(--muted); font-size: 10px; }
+
+.pager-version {
+  padding: 1px 7px;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.pager-version.is-preview { border-color: var(--accent-2); color: var(--accent-2); }
+
+/* ---------- 第 5 版 因果长河 ---------- */
+
+.river-note { margin: 0 0 14px; }
+
+.preview-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 14px;
+  padding: 8px 12px;
+  border: 1px dashed var(--accent-2);
+  background: var(--paper-2);
+  font-size: 12px;
+  color: var(--accent-2);
+}
+
+.river {
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 0 0 18px;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+}
+.river-track { position: relative; display: flex; align-items: stretch; min-width: max-content; }
+.river-line { position: absolute; left: 0; right: 0; top: 106px; height: 2px; background: var(--ink); z-index: 2; }
+
+.era-group { position: relative; display: flex; flex-direction: column; padding: 14px 16px 18px; border-right: 1px solid var(--rule); }
+.era-group:last-child { border-right: 0; }
+.era-head { height: 56px; margin: 0 0 12px; }
+.era-name { display: block; font: 700 16px/1.3 var(--font-serif); color: var(--ink); }
+.era-span { display: block; font: 11px/1.5 var(--font-mono); color: var(--muted); }
+.era-tone { display: block; font: 10px/1.5 var(--font-mono); color: var(--muted); letter-spacing: .04em; }
+.era-row { display: flex; align-items: flex-start; }
+
+.rnode {
+  position: relative;
+  z-index: 3;
+  flex: 0 0 auto;
+  width: 192px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  background: var(--paper-2);
+  color: var(--muted);
+}
+.rnode + .rnode { margin-left: 34px; }
+.rnode.is-changed { border: 2px solid var(--accent); background: var(--paper); color: var(--ink); }
+.rnode-head { display: block; width: 100%; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; font: inherit; color: inherit; }
+.rnode-head:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
+.rnode-order { display: block; font: 10px/1.4 var(--font-mono); color: var(--muted); }
+.rnode-title { display: block; font: 700 16px/1.35 var(--font-serif); }
+.rnode-year { display: block; font: 10px/1.5 var(--font-mono); color: var(--muted); }
+.rnode-hint { display: block; margin-top: 4px; font: 10px/1.4 var(--font-mono); color: var(--muted); }
+.stamp-mini {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  padding: 1px 6px;
+  background: var(--accent);
+  color: #fff;
+  font: 700 10px/1.6 var(--font-mono);
+  letter-spacing: .06em;
+}
+.rnode-body { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--rule); }
+.rnode.is-open .rnode-body { display: block; }
+.rnode.is-open .rnode-hint { display: none; }
+.layer { margin: 0 0 8px; font-size: 12px; line-height: 1.65; }
+.layer-tag { display: block; font: 10px/1.6 var(--font-mono); letter-spacing: .06em; color: var(--accent-2); }
+.layer-anchor { color: var(--muted); }
+.layer-narrative { font: 13px/1.7 var(--font-serif); color: var(--ink); }
+.layer-causal { color: var(--muted); }
+.layer-cert { display: inline-block; margin-top: 2px; padding: 0 6px; border: 1px solid var(--rule); font: 10px/1.6 var(--font-mono); color: var(--muted); }
+
+.branch-row { position: relative; z-index: 3; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.branch {
+  padding: 4px 9px;
+  border: 1px dashed var(--accent);
+  background: transparent;
+  color: var(--accent);
+  font: 11px/1.6 var(--font-mono);
+  cursor: pointer;
+}
+.branch:hover { background: var(--accent); color: #fff; }
+.branch[aria-pressed="true"] { background: var(--accent); color: #fff; }
+.branch-label { flex-basis: 100%; font: 10px/1.6 var(--font-mono); color: var(--muted); }
+
+.branch-panel {
+  max-width: 560px;
+  margin: 0 0 18px;
+  padding: 16px 18px;
+  border: 1px solid var(--ink);
+  border-top: 3px solid var(--accent);
+  background: var(--paper);
+}
+.branch-panel .hotcard { border-top: 0; padding-top: 0; }
+.branch-close { margin-top: 12px; }
+
+/* ---------- 版本历史 / 版本对比 ---------- */
+
+.version-desk { margin: 26px 0 0; padding-top: 18px; border-top: var(--double); }
+.version-history { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 16px; }
+.vbtn { padding: 5px 10px; border: 1px solid var(--rule); background: var(--paper); color: var(--muted); font: 11px/1.5 var(--font-mono); cursor: pointer; text-align: left; }
+.vbtn:hover { border-color: var(--ink); color: var(--ink); }
+.vbtn.is-current { border-color: var(--accent); background: var(--accent); color: #fff; }
+.vbtn.is-preview { border-color: var(--accent-2); background: var(--paper-2); color: var(--accent-2); }
+.vbtn .vlabel { display: block; font-size: 9px; opacity: .85; }
+.version-compare { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 12px; }
+.version-compare select { padding: 5px 8px; border: 1px solid var(--ink); background: var(--paper); color: var(--ink); font: 11px/1.5 var(--font-mono); }
+.vc-out { flex-basis: 100%; margin: 6px 0 0; padding: 10px 12px; border: 1px dashed var(--rule); background: var(--paper-2); font-size: 11px; line-height: 1.8; color: var(--muted); }
+.vc-out .vc-delta { color: var(--accent); }
+.rule-chain-desk { margin-top: 26px; }
+
+.report-world { margin: 0 0 10px; font: 11px/1.6 var(--font-mono); letter-spacing: .04em; color: var(--accent); }
+
+/* ---------- 长河断点 ---------- */
+
+@media (max-width: 1000px) {
+  .rnode { width: 176px; }
+  .rnode + .rnode { margin-left: 26px; }
+}
+
+@media (max-width: 620px) {
+  .version-badge { position: static; display: flex; align-items: center; text-align: center; margin: 0 auto 10px; }
+  .pager-version { font-size: 10px; }
+  .river { overflow: visible; }
+  .river-track { flex-direction: column; min-width: 0; }
+  .river-line { display: none; }
+  .era-group { width: 100%; border-right: 0; border-bottom: 1px solid var(--rule); border-left: 3px solid var(--ink); }
+  .era-group:last-child { border-bottom: 0; }
+  .era-head { height: auto; }
+  .era-row { position: relative; flex-direction: column; gap: 12px; padding-left: 22px; }
+  .era-row::before { content: ""; position: absolute; left: 6px; top: 6px; bottom: 6px; width: 2px; background: var(--rule); }
+  .rnode { width: 100%; }
+  .rnode + .rnode { margin-left: 0; }
+  .rnode::after { content: ""; position: absolute; left: -22px; top: 22px; width: 16px; height: 2px; background: var(--rule); }
+  .branch-row { padding-left: 22px; }
+  .preview-banner { flex-wrap: wrap; }
+}

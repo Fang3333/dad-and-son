@@ -14,11 +14,14 @@
 <script defer src="poster.js"></script>
 <script defer src="ai.js"></script>
 <script defer src="hot-cards.js"></script>
+<script defer src="chain-data.js"></script>
+<script defer src="version.js"></script>
 <script defer src="app.js"></script>
 </head>
 <body>
 
 <header class="masthead">
+  <div id="versionBadge" class="version-badge mono" aria-live="polite"></div>
   <div class="issue mono">号外 · 第 014 期<br>情景推演，不是预测</div>
   <div class="brand">
     <h1>世界规则修改器</h1>
@@ -61,6 +64,7 @@
   <div class="pager-mid">
     <div class="pager-top">
       <span id="pageLabel" class="page-label mono" aria-live="polite"></span>
+      <span id="pagerVersion" class="pager-version mono"></span>
       <span class="pager-hint mono">键盘 ← → 翻页</span>
     </div>
     <div class="progress-track" aria-hidden="true"><i id="progressFill"></i></div>
@@ -99,14 +103,36 @@
 
   <section class="page" id="page-5" aria-labelledby="title-5" hidden>
     <p class="page-kicker mono">第 5 版 · 因果</p>
-    <h2 class="page-title" id="title-5" tabindex="-1">因果链</h2>
-    <div class="causal-bar">
-      <p id="p5Note" class="note"></p>
-      <button id="causalToggle" class="line-btn" type="button" aria-expanded="false">展开全部 6 节点</button>
+    <h2 class="page-title" id="title-5" tabindex="-1">因果长河</h2>
+    <p id="p5RiverNote" class="note river-note"></p>
+    <div id="previewBanner" class="preview-banner mono" hidden>
+      <span id="previewText"></span>
+      <button id="previewBack" class="line-btn" type="button">返回当前版</button>
     </div>
-    <svg id="causalSvg" class="causal" role="img" aria-label="事件因果图"></svg>
-    <ol id="causalList" class="causal-list"></ol>
-    <p id="causalLegend" class="legend mono"></p>
+    <div id="river" class="river" aria-label="因果长河：从原始到现代"></div>
+    <div id="branchPanel" class="branch-panel" hidden></div>
+    <div class="version-desk">
+      <h3 class="small-head">世界线修订历史</h3>
+      <p class="note">点旧版只读预览，当前版高亮。每次「生成这个世界」+1，同参数重跑也 +1。</p>
+      <div id="versionHistory" class="version-history mono" role="group" aria-label="世界线版本历史"></div>
+      <div class="version-compare">
+        <label class="mono" for="vcA">对比</label>
+        <select id="vcA" class="mono"></select>
+        <span class="mono">→</span>
+        <select id="vcB" class="mono"></select>
+        <div id="vcOut" class="vc-out mono"></div>
+      </div>
+    </div>
+    <details id="ruleChainDesk" class="edit-desk rule-chain-desk">
+      <summary class="edit-summary mono">本规则 10 年因果链（6 事件）</summary>
+      <div class="causal-bar">
+        <p id="p5Note" class="note"></p>
+        <button id="causalToggle" class="line-btn" type="button" aria-expanded="false">展开全部 6 节点</button>
+      </div>
+      <svg id="causalSvg" class="causal" role="img" aria-label="事件因果图"></svg>
+      <ol id="causalList" class="causal-list"></ol>
+      <p id="causalLegend" class="legend mono"></p>
+    </details>
   </section>
 
   <section class="page" id="page-6" aria-labelledby="title-6" hidden>

@@ -23,6 +23,7 @@
   function render(card, result, ctx) {
     card.replaceChildren();
     card.appendChild(node("p", "report-kicker mono", "世界线档案 / " + result.presetKey + "-014"));
+    if (ctx.world) card.appendChild(node("p", "report-world mono", "世界线 " + ctx.world.serial + " · " + ctx.world.label));
     card.appendChild(node("h3", "report-title", result.report.title));
     card.appendChild(node("p", "report-rule mono", "规则：" + ctx.ruleTitle + " · " + ctx.matchText));
 

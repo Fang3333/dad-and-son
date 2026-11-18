@@ -4,7 +4,7 @@
   "use strict";
 
   const $ = (id) => document.getElementById(id);
-  const APP_VERSION = "1.3.0";
+  const APP_VERSION = "1.4.0";
   const APP_UPDATED = "2026-11-18";
   const LS_STATE = "wrm.state";
   const LS_HOT = "wrm.hotPicks";
@@ -12,16 +12,19 @@
   const DIM_ORDER = ["education", "economy", "society", "individual"];
   const DIM_LABELS = { education: "教育", economy: "经济", society: "社会", individual: "个人" };
   const PAGE_COUNT = 8;
-  const PAGE_NAMES = ["头版", "教育", "经济", "社会·个人", "因果", "热点", "对比", "档案"];
+  const PAGE_NAMES = ["头版", "教育", "经济", "社会·个人", "因果长河", "热点", "对比", "档案"];
 
   const state = {
     ruleId: null, paramsA: null, paramsB: null, resultA: null, resultB: null,
-    page: 1, hotFilter: "all", hotPicks: [], causalExpanded: false
+    page: 1, hotFilter: "all", hotPicks: [], causalExpanded: false,
+    previewN: null, openNodes: {}, branchOpen: null
   };
   let narrativeSeq = 0;
 
   const engine = () => global.WRM_ENGINE;
   const data = () => global.WRM_DATA;
+  const chain = () => global.WRM_CHAIN;
+  const version = () => global.WRM_VERSION;
   const rule = () => engine().getRule(state.ruleId);
   const clone = (o) => Object.assign({}, o);
   const fmt = (n) => (n > 0 ? "+" : "") + n;
@@ -290,7 +293,217 @@
     return Object.assign({}, r, { events, edges });
   }
 
+  /* ---------- 第 5 版 因果长河 + 世界线版本 ---------- */
+
+  function effectiveEntry() {
+    const v = version();
+    const n = state.previewN !== null ? state.previewN : v.current();
+    return v.get(n) || v.get(v.current());
+  }
+
+  function worldTag() {
+    const v = version();
+    const n = v.current();
+    const e = v.get(n);
+    return { serial: v.serial(e ? e.ruleId : state.ruleId, n), label: "第 " + n + " 版", n: n };
+  }
+
+  function renderRiver() {
+    const c = chain();
+    const entry = effectiveEntry();
+    const changed = entry ? entry.changedNodes : [];
+    const river = $("river");
+    const keepScroll = river.scrollLeft;
+    river.replaceChildren();
+    const track = node("div", "river-track");
+    track.appendChild(node("div", "river-line"));
+    c.eras.forEach((era) => {
+      const group = node("div", "era-group");
+      group.dataset.era = era.id;
+      group.style.background = era.band;
+      const head = node("div", "era-head");
+      head.appendChild(node("span", "era-name", era.name));
+      head.appendChild(node("span", "era-span", era.span));
+      head.appendChild(node("span", "era-tone", era.tone));
+      group.appendChild(head);
+      const row = node("div", "era-row");
+      const eraNodes = c.nodes.filter((n) => n.era === era.id).sort((a, b) => a.order - b.order);
+      eraNodes.forEach((n) => row.appendChild(buildRiverNode(n, changed.indexOf(n.id) !== -1)));
+      group.appendChild(row);
+      if (era.id === "modern") {
+        const br = node("div", "branch-row");
+        br.appendChild(node("span", "branch-label", "热点支线 · 点开看梗卡（虚构改写）"));
+        c.hotBranches.forEach((b) => {
+          const btn = node("button", "branch", b.title);
+          btn.type = "button";
+          btn.dataset.branch = b.id;
+          btn.setAttribute("aria-pressed", String(state.branchOpen === b.id));
+          br.appendChild(btn);
+        });
+        group.appendChild(br);
+      }
+      track.appendChild(group);
+    });
+    river.appendChild(track);
+    river.scrollLeft = keepScroll;
+    $("p5RiverNote").textContent = c.disclaimer + " 共 " + c.eras.length + " 个时代、" +
+      c.nodes.length + " 个主线节点、" + c.edges.length + " 条主线边、" + c.hotBranches.length +
+      " 条热点支线。深红框 + 「已改写」= 被当前规则/参数影响的节点；点节点展开三层。";
+  }
+
+  function buildRiverNode(n, isChanged) {
+    const box = node("article", "rnode" + (isChanged ? " is-changed" : "") + (state.openNodes[n.id] ? " is-open" : ""));
+    box.dataset.node = n.id;
+    if (isChanged) box.appendChild(node("span", "stamp-mini", "已改写"));
+    const head = node("button", "rnode-head");
+    head.type = "button";
+    head.dataset.node = n.id;
+    head.setAttribute("aria-expanded", String(Boolean(state.openNodes[n.id])));
+    head.appendChild(node("span", "rnode-order", "节点 " + String(n.order).padStart(2, "0")));
+    head.appendChild(node("span", "rnode-title", n.title));
+    head.appendChild(node("span", "rnode-year", n.yearLabel));
+    head.appendChild(node("span", "rnode-hint", "点开 · 锚点 / 本世界线 / 后果"));
+    box.appendChild(head);
+    const body = node("div", "rnode-body");
+    const l1 = node("p", "layer layer-anchor");
+    l1.appendChild(node("span", "layer-tag", "史实锚点"));
+    l1.appendChild(document.createTextNode(n.anchor));
+    const l2 = node("p", "layer layer-narrative");
+    l2.appendChild(node("span", "layer-tag", "本世界线"));
+    l2.appendChild(document.createTextNode(n.narrative));
+    const l3 = node("p", "layer layer-causal");
+    l3.appendChild(node("span", "layer-tag", "因果后果"));
+    l3.appendChild(document.createTextNode(n.cause + " → " + n.effect));
+    l3.appendChild(node("span", "layer-cert", n.certainty));
+    body.appendChild(l1); body.appendChild(l2); body.appendChild(l3);
+    box.appendChild(body);
+    return box;
+  }
+
+  function branchCard(b) {
+    if (b.cardId) {
+      const found = hotCards().find((c) => c.id === b.cardId);
+      if (found) return found;
+    }
+    return b.card || null;
+  }
+
+  function renderBranchPanel() {
+    const panel = $("branchPanel");
+    panel.replaceChildren();
+    const b = chain().hotBranches.find((x) => x.id === state.branchOpen);
+    if (!b) { panel.hidden = true; return; }
+    const card = branchCard(b);
+    panel.hidden = false;
+    if (!card) { panel.appendChild(node("p", "note", "支线卡片缺失。")); return; }
+    const art = node("article", "hotcard");
+    const head = node("div", "hotcard-head");
+    head.appendChild(node("span", "hot-level", (card.memeLevel || "S") + " 级主梗"));
+    head.appendChild(node("span", "hot-code", card.code));
+    head.appendChild(node("span", "hot-cat", card.category));
+    head.appendChild(node("span", "hot-safety", hotSafetyLabel(card.safety)));
+    art.appendChild(head);
+    art.appendChild(node("h4", null, card.title));
+    const real = node("p", "hot-real");
+    real.appendChild(node("span", "hot-tag", "现实｜"));
+    real.appendChild(document.createTextNode(card.realLine));
+    const alt = node("p", "hot-alt");
+    alt.appendChild(node("span", "hot-tag", "本世界｜"));
+    alt.appendChild(document.createTextNode(card.altLine));
+    art.appendChild(real); art.appendChild(alt);
+    const tags = node("div", "hot-tags");
+    (card.memeTags || []).forEach((t) => tags.appendChild(node("span", null, t)));
+    art.appendChild(tags);
+    if (card.heatProof) {
+      const proof = node("p", "hot-proof");
+      proof.appendChild(node("span", "hot-tag", "梗源｜"));
+      proof.appendChild(document.createTextNode(card.heatProof.source + " · " + card.heatProof.date + " · " + card.heatProof.metric));
+      art.appendChild(proof);
+    }
+    art.appendChild(node("p", "hot-note", (card.note || "虚构改写，勿对号入座") + " · 支线只读，不收进档案。"));
+    panel.appendChild(art);
+    const close = node("button", "line-btn branch-close", "收起支线");
+    close.type = "button";
+    close.dataset.branchClose = "1";
+    panel.appendChild(close);
+  }
+
+  function renderPreviewBanner() {
+    const banner = $("previewBanner");
+    if (state.previewN === null) { banner.hidden = true; return; }
+    banner.hidden = false;
+    $("previewText").textContent = "预览 第 " + state.previewN + " 版（只读）· 当前 第 " + version().current() + " 版";
+  }
+
+  function renderVersionUI() {
+    const v = version();
+    const cur = v.current();
+    const shown = state.previewN !== null ? state.previewN : cur;
+    const e = v.get(shown);
+    const badge = $("versionBadge");
+    badge.replaceChildren();
+    badge.appendChild(node("span", "vb-kicker", "世界线修订"));
+    badge.appendChild(node("strong", "vb-n" + (state.previewN !== null ? " is-preview" : ""), "第 " + shown + " 版"));
+    badge.appendChild(node("span", "vb-meta", "v0." + shown + " · " + (e ? v.timeText(e.at) : "") + (state.previewN !== null ? " · 只读" : "")));
+    const chip = $("pagerVersion");
+    chip.textContent = (state.previewN !== null ? "预览 " : "") + "第 " + shown + " 版";
+    chip.classList.toggle("is-preview", state.previewN !== null);
+
+    const hist = $("versionHistory");
+    hist.replaceChildren();
+    v.history().forEach((h) => {
+      const btn = node("button", "vbtn" + (h.n === cur ? " is-current" : "") + (h.n === state.previewN ? " is-preview" : ""));
+      btn.type = "button";
+      btn.dataset.v = String(h.n);
+      btn.setAttribute("aria-current", String(h.n === shown));
+      btn.appendChild(document.createTextNode("第 " + h.n + " 版"));
+      btn.appendChild(node("span", "vlabel", h.label + " · " + v.timeText(h.at)));
+      hist.appendChild(btn);
+    });
+
+    const selA = $("vcA"), selB = $("vcB");
+    const prevA = selA.value, prevB = selB.value;
+    selA.replaceChildren(); selB.replaceChildren();
+    v.history().forEach((h) => {
+      selA.appendChild(node("option", null, "第 " + h.n + " 版"));
+      selA.lastChild.value = String(h.n);
+      selB.appendChild(node("option", null, "第 " + h.n + " 版"));
+      selB.lastChild.value = String(h.n);
+    });
+    const hs = v.history();
+    selA.value = hs.some((h) => String(h.n) === prevA) ? prevA : String(hs.length > 1 ? hs[hs.length - 2].n : cur);
+    selB.value = hs.some((h) => String(h.n) === prevB) ? prevB : String(cur);
+    renderVersionCompare();
+  }
+
+  function renderVersionCompare() {
+    const v = version();
+    const a = v.get(parseInt($("vcA").value, 10));
+    const b = v.get(parseInt($("vcB").value, 10));
+    const out = $("vcOut");
+    out.replaceChildren();
+    if (!a || !b) { out.appendChild(document.createTextNode("选两个版本看差异。")); return; }
+    const line = node("p", null);
+    line.appendChild(document.createTextNode("第 " + a.n + " 版 → 第 " + b.n + " 版（B − A）："));
+    engine().METRICS.forEach((m) => {
+      const d = b.metrics[m] - a.metrics[m];
+      line.appendChild(document.createTextNode(" " + engine().METRIC_LABELS[m] + " "));
+      line.appendChild(node("span", "vc-delta", fmt(d)));
+    });
+    out.appendChild(line);
+    const setB = b.changedNodes;
+    const setA = a.changedNodes;
+    const added = setB.filter((id) => setA.indexOf(id) === -1);
+    const removed = setA.filter((id) => setB.indexOf(id) === -1);
+    const names = (ids) => ids.map((id) => (chain().nodeById(id) || {}).title || id).join("、") || "无";
+    out.appendChild(node("p", null, "新增改写：" + names(added) + "；取消改写：" + names(removed) + "。"));
+    out.appendChild(node("p", null, "规则：" + (a.ruleId === b.ruleId ? a.ruleId : a.ruleId + " → " + b.ruleId) + "。指标为示意分数，只作同规则内对比。"));
+  }
+
   function renderPage5() {
+    renderRiver();
+    renderBranchPanel();
+    renderPreviewBanner();
     const view = causalView();
     global.WRM_CAUSAL.render($("causalSvg"), $("causalList"), $("causalLegend"), view);
     const btn = $("causalToggle");
@@ -468,7 +681,8 @@
   function renderPage8() {
     global.WRM_REPORT.render($("reportCard"), state.resultA, {
       ruleTitle: rule().title,
-      matchText: matchText(state.resultA)
+      matchText: matchText(state.resultA),
+      world: worldTag()
     });
     renderHotArchive();
   }
@@ -499,7 +713,7 @@
     const btn = $("posterBtn");
     btn.disabled = true;
     btn.textContent = "导出中…";
-    global.WRM_POSTER.download(state.resultA, { rule: rule(), meta: data().meta, appVersion: APP_VERSION })
+    global.WRM_POSTER.download(state.resultA, { rule: rule(), meta: data().meta, appVersion: APP_VERSION, world: worldTag() })
       .then((name) => {
         btn.textContent = "已下载 " + name;
         setTimeout(() => { btn.textContent = "下载海报 PNG"; }, 2400);
@@ -525,15 +739,25 @@
 
   /* ---------- 生成 ---------- */
 
-  function generate(scroll) {
+  function generate(scroll, opts) {
     state.resultA = engine().evaluate(state.ruleId, state.paramsA);
     state.causalExpanded = false;
+    state.previewN = null;
+    if (!opts || opts.record !== false) {
+      version().bump({
+        ruleId: state.ruleId,
+        params: state.paramsA,
+        metrics: state.resultA.metrics,
+        changedNodes: chain().changedNodes(state.ruleId, state.paramsA)
+      });
+    }
     renderStrip();
     renderPage1();
     renderDimPage($("p2Body"), state.resultA.dimensions.education);
     renderDimPage($("p3Body"), state.resultA.dimensions.economy);
     renderPage4();
     renderPage5();
+    renderVersionUI();
     renderPage6();
     runCompare();
     renderPage8();
@@ -560,7 +784,50 @@
     state.hotPicks = savedPicks !== null ? savedPicks : hotByHeat(hotForRule()).slice(0, 2).map((c) => c.id);
     saveHotPicks();
 
+    if (!version().load()) {
+      const r0 = engine().evaluate(state.ruleId, state.paramsA);
+      version().init(r0, state.ruleId, state.paramsA, chain().changedNodes(state.ruleId, state.paramsA));
+    }
+
     bindPager();
+    $("river").addEventListener("click", (e) => {
+      const head = e.target.closest(".rnode-head");
+      if (head) {
+        const id = head.dataset.node;
+        state.openNodes[id] = !state.openNodes[id];
+        renderRiver();
+        return;
+      }
+      const br = e.target.closest(".branch");
+      if (br) {
+        const id = br.dataset.branch;
+        state.branchOpen = state.branchOpen === id ? null : id;
+        renderRiver();
+        renderBranchPanel();
+      }
+    });
+    $("branchPanel").addEventListener("click", (e) => {
+      if (e.target.closest("[data-branch-close]")) {
+        state.branchOpen = null;
+        renderBranchPanel();
+        renderRiver();
+      }
+    });
+    $("versionHistory").addEventListener("click", (e) => {
+      const btn = e.target.closest(".vbtn");
+      if (!btn) return;
+      const n = parseInt(btn.dataset.v, 10);
+      state.previewN = n === version().current() ? null : n;
+      renderPage5();
+      renderVersionUI();
+    });
+    $("previewBack").addEventListener("click", () => {
+      state.previewN = null;
+      renderPage5();
+      renderVersionUI();
+    });
+    $("vcA").addEventListener("change", renderVersionCompare);
+    $("vcB").addEventListener("change", renderVersionCompare);
     $("generateBtn").addEventListener("click", () => {
       $("editDesk").open = false;
       syncEditToggle();
@@ -581,7 +848,7 @@
     global.WRM_AI.bind($("aiToggle"), $("aiKey"));
     $("aiToggle").addEventListener("change", refreshNarrative);
 
-    generate(false);
+    generate(false, { record: false });
     goToPage(1, false);
   }
 
