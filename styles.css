@@ -1,4 +1,4 @@
-/* 世界规则修改器 · B 报纸/编辑部版式 · 长河两页式
+/* 世界规则修改器 · B 报纸/编辑部版式 · 分版长河
    纸 #F4F1E9 / 墨 #141414 / 细线 #B9B2A2 / 编辑强调深红 #A6231A / 交互蓝 #1F5FA8。
    0 圆角 / 0 阴影 / 0 渐变 / 0 emoji；宋体标题 + 等宽数据；阅读宽度 ≤880px。 */
 
@@ -245,11 +245,11 @@ main {
 .generate:hover { background: var(--action-hover); }
 .generate:active { background: var(--action-press); transform: translateY(1px); }
 
-/* ---------- 第 2 页 · 长河 ---------- */
+/* ---------- 第 2–6 页 · 分版长河 ---------- */
 
-.river-page { padding-bottom: 48px; }
+.chapter-page { padding-bottom: 96px; }
 
-.river-top {
+.chapter-top {
   position: sticky;
   top: 0;
   z-index: 20;
@@ -259,20 +259,20 @@ main {
   border-bottom: var(--double);
 }
 
-.river-top-line {
+.chapter-top-line {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 12px;
 }
 
-.river-world {
+.chapter-world {
   margin: 0;
   font: 700 22px/1.4 var(--font-serif);
   letter-spacing: 2px;
 }
 
-.river-version {
+.chapter-run {
   font-size: 12px;
   color: var(--accent);
   letter-spacing: 1px;
@@ -293,40 +293,66 @@ main {
 .line-btn:hover { background: var(--action-hover); }
 .line-btn:active { background: var(--action-press); transform: translateY(1px); }
 
-.river-summary {
+.chapter-summary {
   margin: 6px 0 0;
   font-size: 11px;
   line-height: 1.8;
   color: var(--muted);
 }
 
-.river-count {
-  margin: 2px 0 0;
-  font-size: 11px;
-  color: var(--accent);
+.chapter-head {
+  margin-top: 26px;
+  padding-top: 10px;
+  border-top: var(--heavy);
 }
 
-.era-block { margin-top: 34px; }
+.chapter-no {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: var(--accent);
+  letter-spacing: 1px;
+}
 
-.era-head {
+.chapter-title-line {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 12px;
-  padding-top: 8px;
-  border-top: var(--heavy);
 }
 
-.era-name {
+.chapter-name {
   margin: 0;
-  font: 700 20px/1.4 var(--font-serif);
+  font: 700 26px/1.4 var(--font-serif);
   letter-spacing: 3px;
 }
 
-.era-span {
+.chapter-span {
   font-size: 12px;
   color: var(--muted);
 }
+
+.chapter-subtitle {
+  margin: 4px 0 0;
+  font: 600 15px/1.6 var(--font-serif);
+  color: var(--muted);
+}
+
+.chapter-intro {
+  margin: 14px 0 0;
+  padding: 14px 16px;
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--ink);
+  font: 15px/1.9 var(--font-serif);
+}
+
+.chapter-count {
+  margin: 12px 0 0;
+  font-size: 11px;
+  color: var(--accent);
+}
+
+.chapter-body { margin-top: 8px; }
 
 .ev-card {
   margin: 14px 0;
@@ -442,7 +468,64 @@ main {
   color: var(--muted);
 }
 
-.river-foot { margin: 30px 0 0; }
+.chapter-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  background: var(--paper);
+  border-top: var(--double);
+}
+
+.nav-btn {
+  padding: 9px 16px;
+  background: var(--action);
+  color: var(--paper);
+  border: 0;
+  border-radius: 0;
+  font: 600 12px/1.4 var(--font-mono);
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+
+.nav-btn:hover { background: var(--action-hover); }
+.nav-btn:active { background: var(--action-press); transform: translateY(1px); }
+
+.nav-btn:disabled {
+  background: var(--paper-2);
+  color: var(--muted);
+  border: 1px solid var(--rule);
+  cursor: default;
+  transform: none;
+}
+
+.chapter-dots {
+  display: flex;
+  gap: 8px;
+}
+
+.dot {
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.dot.is-on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+body.on-chapter footer { padding-bottom: 96px; }
 
 /* ---------- 页脚 ---------- */
 
@@ -478,8 +561,12 @@ footer {
 
   .generate { padding: 15px 22px; font-size: 15px; }
 
-  .river-world { font-size: 19px; }
+  .chapter-world { font-size: 19px; }
+  .chapter-name { font-size: 22px; }
   .line-btn { padding: 10px 14px; }
+
+  .nav-btn { padding: 12px 14px; min-height: 40px; }
+  .chapter-nav { gap: 10px; }
 
   .ev-row { grid-template-columns: 1fr; gap: 2px; }
   .ev-label { padding-top: 0; }

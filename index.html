@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>世界规则修改器 · 长河两页式</title>
-<meta name="description" content="选一条现实规则，调四个参数，设三个世界假设，生成一条从原始到现代的长河：每件大事对照原来与现在。情景推演，不是史实。">
+<title>世界规则修改器 · 分版长河</title>
+<meta name="description" content="选一条现实规则，调四个参数，设三个世界假设，生成一条从原始到现代的分版长河：五个版逐页翻，每件大事对照原来与现在。情景推演，不是史实。">
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="styles.css?v=2.0.0">
-<script defer src="world-rule/data.js?v=2.0.0"></script>
-<script defer src="world-rule/engine.js?v=2.0.0"></script>
-<script defer src="river-data.js?v=2.0.0"></script>
-<script defer src="version.js?v=2.0.0"></script>
-<script defer src="setup.js?v=2.0.0"></script>
-<script defer src="river.js?v=2.0.0"></script>
-<script defer src="app.js?v=2.0.0"></script>
+<link rel="stylesheet" href="styles.css?v=2.1.0">
+<script defer src="world-rule/data.js?v=2.1.0"></script>
+<script defer src="world-rule/engine.js?v=2.1.0"></script>
+<script defer src="chapters.js?v=2.1.0"></script>
+<script defer src="version.js?v=2.1.0"></script>
+<script defer src="setup.js?v=2.1.0"></script>
+<script defer src="chapter.js?v=2.1.0"></script>
+<script defer src="app.js?v=2.1.0"></script>
 </head>
 <body>
 
@@ -21,7 +21,7 @@
   <div class="issue mono">号外 · 情景推演，不是史实</div>
   <div class="brand">
     <h1>世界规则修改器</h1>
-    <div class="latin mono">World Rule Modifier · 长河两页式</div>
+    <div class="latin mono">World Rule Modifier · 分版长河</div>
   </div>
 </header>
 
@@ -52,18 +52,34 @@
     <p id="appError" class="error" role="alert" hidden></p>
   </section>
 
-  <section id="river" class="river-page" aria-labelledby="riverWorld" hidden>
-    <div class="river-top">
-      <div class="river-top-line">
-        <h2 id="riverWorld" class="river-world" tabindex="-1"></h2>
-        <span id="riverVersion" class="river-version mono"></span>
+  <section id="chapter" class="chapter-page" aria-labelledby="chapterWorld" hidden>
+    <div class="chapter-top">
+      <div class="chapter-top-line">
+        <h2 id="chapterWorld" class="chapter-world" tabindex="-1"></h2>
+        <span id="chapterRun" class="chapter-run mono"></span>
         <button id="editAssumptions" class="line-btn" type="button">修改假设</button>
       </div>
-      <p id="riverSummary" class="river-summary mono"></p>
-      <p id="riverCount" class="river-count mono"></p>
+      <p id="chapterSummary" class="chapter-summary mono"></p>
     </div>
-    <div id="riverBody" class="river-body"></div>
-    <p class="note river-foot">长河只读。要换规则、拨参数、改假设，点上方「修改假设」回到设定页；再次生成，版本 +1。</p>
+
+    <header class="chapter-head">
+      <p id="chapterNo" class="chapter-no mono"></p>
+      <div class="chapter-title-line">
+        <h3 id="chapterName" class="chapter-name"></h3>
+        <span id="chapterSpan" class="chapter-span mono"></span>
+      </div>
+      <p id="chapterSubtitle" class="chapter-subtitle"></p>
+      <p id="chapterIntro" class="chapter-intro"></p>
+      <p id="chapterCount" class="chapter-count mono"></p>
+    </header>
+
+    <div id="chapterBody" class="chapter-body"></div>
+
+    <nav class="chapter-nav" aria-label="章节导航">
+      <button id="prevChapter" class="nav-btn" type="button">← 上一版</button>
+      <div id="chapterDots" class="chapter-dots" role="group" aria-label="章节圆点"></div>
+      <button id="nextChapter" class="nav-btn" type="button">下一版 →</button>
+    </nav>
   </section>
 
 </main>

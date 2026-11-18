@@ -20,12 +20,12 @@
     return p;
   }
 
-  function refreshVersion() {
+  function refreshVersion(ruleId) {
     const slot = document.getElementById("setupVersion");
     if (!slot) return;
     const v = global.WRM_VERSION;
     slot.textContent = v.current() > 0
-      ? "世界线 " + v.label() + " · " + v.semver()
+      ? "世界线 " + v.runId(ruleId) + " · 再生成编号 +1"
       : "世界线尚未生成 · 点下方按钮出第 1 版";
   }
 
@@ -45,6 +45,7 @@
         state.params = defaultParams(r);
         renderRules(state, hooks);
         renderParams(state, hooks);
+        refreshVersion(state.ruleId);
         hooks.onChange();
       });
       box.appendChild(card);
@@ -90,7 +91,7 @@
   function renderAssumptions(state, hooks) {
     const box = document.getElementById("assumeToggles");
     box.textContent = "";
-    global.WRM_RIVER.assumptions.forEach((a) => {
+    global.WRM_CHAPTERS.assumptions.forEach((a) => {
       box.appendChild(switchRow(a.label, a.note, state.assumptions[a.id] !== false, (next) => {
         state.assumptions[a.id] = next;
         hooks.onChange();
@@ -102,7 +103,7 @@
     renderRules(state, hooks);
     renderParams(state, hooks);
     renderAssumptions(state, hooks);
-    refreshVersion();
+    refreshVersion(state.ruleId);
     const btn = document.getElementById("generateBtn");
     btn.onclick = () => hooks.onGenerate();
   }

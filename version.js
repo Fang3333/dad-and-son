@@ -1,10 +1,13 @@
-/* 世界线版本号（两页式）：每次「生成这个世界」+1，localStorage 持久化。
-   不做历史条、不做旧版预览；第 2 页只显示当前版。兼容旧存储里的 current 字段。 */
+/* 世界线编号（分版长河）：每次「生成这个世界」编号 +1，localStorage 持久化。
+   runId = 字母(随规则 A/B/C) + "-" + 三位编号；翻章节不增编号，只有生成才增。
+   不做历史条、不做旧版预览。兼容旧存储里的 current 字段。 */
 (function (global) {
   "use strict";
 
   const LS = "wrm.worldVersion";
   const state = { current: 0, at: 0 };
+
+  const LETTER = { "no-exam": "A", "four-hour": "B", "free-goods": "C" };
 
   function save() {
     try { global.localStorage.setItem(LS, JSON.stringify(state)); } catch (e) { /* 存储不可用则只留内存 */ }
@@ -31,12 +34,25 @@
     return state.current;
   }
 
+  function pad3(n) {
+    return String(n).padStart(3, "0");
+  }
+
+  function letterFor(ruleId) {
+    return LETTER[ruleId] || "A";
+  }
+
+  function runId(ruleId) {
+    return letterFor(ruleId) + "-" + pad3(state.current);
+  }
+
   global.WRM_VERSION = {
     state: state,
     load: load,
     bump: bump,
     current: function () { return state.current; },
-    label: function () { return "第 " + state.current + " 版"; },
+    letterFor: letterFor,
+    runId: runId,
     semver: function () { return "v0." + state.current; }
   };
   if (typeof module !== "undefined" && module.exports) module.exports = global.WRM_VERSION;
