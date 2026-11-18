@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>世界规则修改器 · UI 方案</title>
+<style>
+/* ============ shared system: print / research institute ============ */
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);color:var(--ink);
+  font-family:var(--serif);font-size:15px;line-height:1.55;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+a{color:inherit;text-decoration:none}
+ul,ol{margin:0;padding:0;list-style:none}
+h1,h2,h3,h4,p{margin:0}
+button,input{font:inherit;color:inherit}
+::selection{background:var(--accent);color:var(--paper)}
+
+body[data-scheme="a"]{
+  --paper:#F2EDE3;--paper2:#E9E1D1;--ink:#1B1A17;--muted:#6B6558;--rule:#C9C0AE;
+  --accent:#B23A2A;--accent2:#2B5F7A;
+  --serif:"Source Han Serif SC","Noto Serif CJK SC","Songti SC",SimSun,serif;
+  --mono:"IBM Plex Mono","JetBrains Mono",Consolas,monospace;
+  --sans:"Source Han Sans SC","Microsoft YaHei",sans-serif;
+  --note:"Kaiti SC",KaiTi,STKaiti,serif;
+  background-image:repeating-linear-gradient(0deg,transparent,transparent 33px,rgba(27,26,23,.035) 34px);
+}
+body[data-scheme="b"]{
+  --paper:#F4F1E9;--paper2:#ECE6D8;--ink:#141414;--muted:#5A564C;--rule:#B9B2A2;
+  --accent:#A6231A;--accent2:#1F3A5F;
+  --serif:"Source Han Serif SC","Noto Serif CJK SC","Songti SC",SimSun,serif;
+  --mono:"IBM Plex Mono","JetBrains Mono",Consolas,monospace;
+  --sans:"Source Han Sans SC","Microsoft YaHei",sans-serif;
+  --note:"Kaiti SC",KaiTi,STKaiti,serif;
+  background-image:repeating-linear-gradient(0deg,transparent,transparent 29px,rgba(20,20,20,.03) 30px);
+}
+body[data-scheme="c"]{
+  --paper:#0E2A3C;--paper2:#123449;--ink:#E6F1F5;--muted:#B8CFDA;--rule:#2E566B;
+  --accent:#E0A33A;--accent2:#7FB6D0;
+  --serif:"Source Han Serif SC","Noto Serif CJK SC","Songti SC",SimSun,serif;
+  --mono:"IBM Plex Mono","JetBrains Mono",Consolas,monospace;
+  --sans:"Source Han Sans SC","Microsoft YaHei",sans-serif;
+  --note:"Kaiti SC",KaiTi,STKaiti,serif;
+  background-image:
+    linear-gradient(rgba(127,182,208,.07) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(127,182,208,.07) 1px,transparent 1px);
+  background-size:24px 24px;
+}
+body[data-scheme="d"]{
+  --paper:#EFE9D8;--paper2:#E6DFC9;--ink:#23241D;--muted:#6E6A57;--rule:#C9C0A6;
+  --accent:#5A6B3B;--accent2:#8A5A3B;
+  --serif:"Source Han Serif SC","Noto Serif CJK SC","Songti SC",SimSun,serif;
+  --mono:"IBM Plex Mono","JetBrains Mono",Consolas,monospace;
+  --sans:"Source Han Sans SC","Microsoft YaHei",sans-serif;
+  --note:"Kaiti SC",KaiTi,STKaiti,serif;
+  background-image:repeating-linear-gradient(0deg,transparent,transparent 31px,rgba(35,36,29,.09) 32px);
+}
+
+/* ============ masthead ============ */
+.masthead{
+  display:grid;grid-template-columns:1fr auto 1fr;gap:24px;align-items:end;
+  padding:22px 40px 14px;border-bottom:1px solid var(--rule);
+  position:relative;
+}
+.brand h1{font-size:24px;font-weight:600;letter-spacing:.02em;line-height:1.2}
+.brand .latin{font-family:var(--mono);font-size:9px;letter-spacing:.16em;color:var(--muted);margin-top:3px}
+.masthead nav{display:flex;gap:22px;font-family:var(--mono);font-size:10px;color:var(--muted);padding-bottom:3px}
+.masthead nav a:hover{color:var(--accent)}
+.issue{text-align:right;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.7}
+.issue b{font-weight:500;color:var(--ink)}
+
+/* ============ hero ============ */
+.hero{display:grid;grid-template-columns:1.35fr .9fr;gap:56px;align-items:start;padding:64px 40px 48px;border-bottom:1px solid var(--rule)}
+.kicker{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:.02em;margin-bottom:18px}
+.hero h2{font-size:clamp(56px,6vw,92px);line-height:.98;font-weight:600;letter-spacing:-.035em;margin-bottom:26px}
+.dek{max-width:520px;font-size:16px;line-height:1.75;color:var(--muted);margin-bottom:30px}
+.steps{display:flex;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);font-family:var(--mono);font-size:10px;color:var(--muted)}
+.steps span{padding:10px 18px;border-right:1px solid var(--rule)}
+.steps span:first-child{padding-left:0}
+.steps span:last-child{border-right:0}
+.steps b{color:var(--ink);font-weight:500}
+
+/* rule panel */
+.rule-panel{border:1px solid var(--ink);background:var(--paper2)}
+.panel-head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--ink);font-family:var(--mono);font-size:10px}
+.panel-head span{color:var(--muted)}
+.rule-list li{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--rule);cursor:pointer;transition:background .15s}
+.rule-list li:last-child{border-bottom:0}
+.rule-list li.active{background:var(--ink);color:var(--paper)}
+.rule-list li.active small{color:var(--paper);opacity:.75}
+.rule-list .icon{width:22px;height:22px;flex:0 0 22px}
+.rule-list b{display:block;font-size:13px;font-weight:500;line-height:1.4}
+.rule-list small{display:block;font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px}
+.rule-list .tick{margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--accent)}
+.rule-list li.active .tick{color:var(--accent2)}
+.custom{display:block;padding:13px 16px;font-family:var(--mono);font-size:9px;color:var(--muted);border-top:1px solid var(--ink)}
+.custom input{display:block;width:100%;margin-top:7px;border:0;border-bottom:1px solid var(--rule);background:transparent;font-family:var(--mono);font-size:11px;padding:5px 0;outline:none}
+.custom input:focus{border-bottom-color:var(--accent)}
+
+/* ============ params ============ */
+.params{padding:44px 40px 48px;border-bottom:1px solid var(--rule)}
+.section-head{display:flex;justify-content:space-between;align-items:baseline;gap:32px;margin-bottom:24px}
+.section-head h3{font-size:26px;font-weight:600;line-height:1.2}
+.section-head p{max-width:430px;font-family:var(--mono);font-size:9px;line-height:1.7;color:var(--muted);text-align:right}
+.param-grid{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--ink);border-left:1px solid var(--ink)}
+.param{position:relative;display:block;padding:15px 16px 16px;border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);cursor:pointer}
+.param input{position:absolute;opacity:0;pointer-events:none}
+.param .box{display:inline-block;position:relative;width:13px;height:13px;border:1px solid var(--ink);margin-right:8px;vertical-align:-2px}
+.param input:checked + .box::after{content:"";position:absolute;inset:2px;background:var(--accent)}
+.param b{font-size:13px;font-weight:500}
+.param small{display:block;margin-top:8px;font-family:var(--mono);font-size:9px;line-height:1.6;color:var(--muted)}
+.generate{display:inline-flex;align-items:center;gap:14px;margin-top:24px;padding:13px 22px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);font-family:var(--mono);font-size:11px;cursor:pointer}
+.generate span{color:var(--accent2);font-size:14px}
+.generate:hover{background:var(--accent);border-color:var(--accent);color:var(--paper)}
+
+/* ============ world ============ */
+.world{padding:48px 40px 52px;border-bottom:1px solid var(--rule)}
+.world-grid{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--ink);border-left:1px solid var(--ink)}
+.dim{position:relative;min-height:225px;padding:18px 18px 40px;border-right:1px solid var(--ink);border-bottom:1px solid var(--ink)}
+.dim h4{font-family:var(--mono);font-size:10px;font-weight:500;color:var(--accent);margin-bottom:12px}
+.dim p{font-size:13px;line-height:1.75;margin-bottom:12px}
+.dim ul li{border-top:1px dotted var(--rule);padding:7px 0;font-size:11px;line-height:1.55;color:var(--muted)}
+.dim .tag{position:absolute;right:12px;bottom:10px;border:1px solid var(--rule);padding:2px 5px;font-family:var(--mono);font-size:8px;color:var(--muted)}
+.causal-wrap{margin-top:28px;border:1px solid var(--ink);background:var(--paper2)}
+.causal-head{display:flex;justify-content:space-between;align-items:baseline;gap:20px;padding:11px 16px;border-bottom:1px solid var(--ink)}
+.causal-head h4{font-size:14px;font-weight:500}
+.causal-head p{font-family:var(--mono);font-size:9px;color:var(--muted)}
+.causal{display:block;width:100%;height:auto}
+.causal .node rect{fill:var(--paper);stroke:var(--ink);stroke-width:1}
+.causal .node text{fill:var(--ink);font-family:var(--mono);font-size:10px}
+.causal .node.assume rect{stroke-dasharray:4 3;stroke:var(--muted)}
+.causal .edge{fill:none;stroke:var(--ink);stroke-width:1.1}
+.causal .edge.assume{stroke:var(--muted);stroke-dasharray:4 4}
+.causal .edge.strong{stroke-width:2}
+.causal .elabel{fill:var(--muted);font-family:var(--mono);font-size:8px}
+.causal-list{display:none}
+.unexpected{display:grid;grid-template-columns:repeat(3,1fr);margin-top:24px;border-left:1px solid var(--rule)}
+.unexpected > div{padding:0 18px;border-right:1px solid var(--rule)}
+.unexpected .k{display:block;margin-bottom:6px;font-family:var(--mono);font-size:8px;color:var(--accent)}
+.unexpected h4{font-size:13px;font-weight:500;margin-bottom:6px}
+.unexpected p{font-size:11px;line-height:1.65;color:var(--muted)}
+
+/* ============ compare ============ */
+.compare{padding:48px 40px 52px;border-bottom:1px solid var(--rule)}
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--ink)}
+.world-col{padding:18px}
+.world-col + .world-col{border-left:1px solid var(--ink)}
+.world-col h4{font-size:18px;font-weight:600;margin-bottom:3px}
+.world-col .meta{font-family:var(--mono);font-size:9px;line-height:1.6;color:var(--muted);margin-bottom:16px}
+.metric{display:grid;grid-template-columns:58px 1fr 30px;gap:10px;align-items:center;margin:9px 0;font-family:var(--mono);font-size:9px}
+.metric .bar{position:relative;height:8px;border:1px solid var(--rule);background:var(--paper2)}
+.metric .bar i{display:block;height:100%;background:var(--accent);width:var(--v)}
+.metric strong{text-align:right;font-weight:500}
+.diff{margin-top:14px;padding-top:11px;border-top:1px solid var(--rule);font-family:var(--mono);font-size:9px;line-height:1.8;color:var(--muted)}
+.diff b{color:var(--accent);font-weight:500}
+
+/* ============ report ============ */
+.report{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:start;padding:48px 40px 64px}
+.report-card{position:relative;max-width:640px;border:1px solid var(--ink);background:var(--paper2);padding:28px}
+.report-card .stamp{position:absolute;right:16px;top:16px;transform:rotate(-8deg);border:2px solid var(--accent);color:var(--accent);padding:5px 7px;font-family:var(--mono);font-size:8px;line-height:1.35;text-align:center;opacity:.85}
+.report-card .kicker{margin-bottom:8px}
+.report-card h3{font-size:38px;line-height:1.05;font-weight:600;margin-bottom:4px}
+.report-card .rule{font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:16px}
+.timeline{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);margin:16px 0}
+.timeline div{padding:9px 7px;border-right:1px solid var(--rule);font-family:var(--mono);font-size:8px;line-height:1.5;color:var(--muted)}
+.timeline div:last-child{border-right:0}
+.timeline b{display:block;margin-bottom:3px;font-size:10px;color:var(--ink)}
+.report-card ul li{border-top:1px dotted var(--rule);padding:6px 0;font-size:11px;line-height:1.6}
+.report-card .foot{display:flex;justify-content:space-between;gap:12px;margin-top:16px;font-family:var(--mono);font-size:8px;color:var(--muted)}
+.report-side h3{font-size:24px;font-weight:600;line-height:1.25;margin-bottom:10px}
+.report-side p{font-size:12px;line-height:1.75;color:var(--muted);margin-bottom:12px}
+.kv{display:grid;grid-template-columns:74px 1fr;gap:7px;padding-top:11px;border-top:1px solid var(--rule);font-family:var(--mono);font-size:9px;line-height:1.6}
+.kv span{color:var(--muted)}
+.site-foot{display:flex;justify-content:space-between;gap:20px;padding:16px 40px;border-top:1px solid var(--rule);font-family:var(--mono);font-size:8px;line-height:1.7;color:var(--muted)}
+
+/* ============ switcher ============ */
+.switcher{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:50;display:flex;border:1px solid var(--ink);background:var(--paper)}
+.switcher button{border:0;border-right:1px solid var(--rule);background:transparent;padding:8px 11px;font-family:var(--mono);font-size:9px;cursor:pointer}
+.switcher button:last-child{border-right:0}
+.switcher button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+
+/* ============ scheme A: dossier ============ */
+body[data-scheme="a"] .masthead{border-bottom:3px double var(--ink)}
+body[data-scheme="a"] .brand h1{letter-spacing:.04em}
+body[data-scheme="a"] .rule-panel{position:relative;border-width:1px;background:var(--paper2)}
+body[data-scheme="a"] .rule-panel::before{content:"规则卡 / 教育";position:absolute;left:-1px;top:-24px;padding:4px 10px;background:var(--ink);color:var(--paper);font-family:var(--mono);font-size:8px;letter-spacing:.05em}
+body[data-scheme="a"] .hero h2::after{content:"";display:block;width:64px;height:3px;background:var(--accent);margin-top:24px}
+body[data-scheme="a"] .section-head h3{border-left:4px solid var(--accent);padding-left:12px}
+body[data-scheme="a"] .report-card::before{content:"社会规则实验室 / 档案";position:absolute;left:0;top:0;transform:translateY(-100%);padding:3px 8px;background:var(--accent);color:var(--paper);font-family:var(--mono);font-size:8px}
+
+/* ============ scheme B: broadsheet ============ */
+body[data-scheme="b"] .masthead{grid-template-columns:1fr;justify-items:center;gap:8px;padding:24px 40px 12px;border-bottom:4px double var(--ink)}
+body[data-scheme="b"] .brand{text-align:center}
+body[data-scheme="b"] .brand h1{font-size:40px;letter-spacing:.08em}
+body[data-scheme="b"] .brand .latin{font-size:8px;letter-spacing:.3em}
+body[data-scheme="b"] .masthead nav{order:3;border-top:1px solid var(--ink);width:100%;justify-content:center;padding:8px 0 0;font-size:9px}
+body[data-scheme="b"] .issue{position:absolute;right:40px;top:24px;text-align:right;font-size:8px}
+body[data-scheme="b"] .hero{grid-template-columns:1.1fr .9fr .95fr;gap:0;padding:44px 40px 40px}
+body[data-scheme="b"] .hero-copy{grid-column:span 2;padding-right:36px;border-right:1px solid var(--ink)}
+body[data-scheme="b"] .hero h2{font-size:clamp(60px,7.4vw,108px);letter-spacing:-.05em;line-height:.92}
+body[data-scheme="b"] .dek{columns:2;column-gap:28px;max-width:none;font-size:12px;line-height:1.9}
+body[data-scheme="b"] .steps{margin-top:24px;border-top:3px solid var(--ink);border-bottom:0;font-size:9px}
+body[data-scheme="b"] .rule-panel{border:0;border-left:1px solid var(--ink);background:transparent;padding-left:26px}
+body[data-scheme="b"] .rule-list li{padding:11px 0;border-bottom:1px solid var(--rule)}
+body[data-scheme="b"] .rule-list li.active{background:transparent;color:var(--ink);border-bottom:2px solid var(--accent)}
+body[data-scheme="b"] .rule-list li.active .tick{color:var(--accent)}
+body[data-scheme="b"] .rule-list li.active small{color:var(--muted);opacity:1}
+body[data-scheme="b"] .rule-list .tick{color:var(--muted)}
+body[data-scheme="b"] .custom{border-top:1px solid var(--ink)}
+body[data-scheme="b"] .world-grid{grid-template-columns:1fr 1fr;border-top:3px solid var(--ink)}
+body[data-scheme="b"] .dim h4{color:var(--accent);font-size:9px}
+body[data-scheme="b"] .section-head h3{font-size:30px;letter-spacing:-.01em}
+body[data-scheme="b"] .compare-grid{border-top:3px solid var(--ink);border-bottom:3px solid var(--ink)}
+body[data-scheme="b"] .report-card{background:transparent;border:0;border-top:3px solid var(--ink);border-bottom:1px solid var(--ink);padding:22px 0 18px}
+body[data-scheme="b"] .report-card .stamp{border-color:var(--accent)}
+
+/* ============ scheme C: blueprint ============ */
+body[data-scheme="c"] .masthead{border-bottom:2px solid var(--accent2)}
+body[data-scheme="c"] .brand h1{font-family:var(--mono);font-size:20px;letter-spacing:.06em}
+body[data-scheme="c"] .brand .latin{color:var(--accent2)}
+body[data-scheme="c"] .hero h2{font-family:var(--mono);font-size:clamp(44px,4.8vw,70px);font-weight:500;letter-spacing:-.04em;line-height:1.02}
+body[data-scheme="c"] .kicker{color:var(--accent)}
+body[data-scheme="c"] .dek{color:var(--muted);font-family:var(--sans);font-size:13px}
+body[data-scheme="c"] .rule-panel{background:rgba(18,52,73,.72);border-color:var(--accent2)}
+body[data-scheme="c"] .panel-head{border-bottom-color:var(--accent2)}
+body[data-scheme="c"] .rule-list li.active{background:var(--accent2);color:var(--paper)}
+body[data-scheme="c"] .rule-list li.active small{color:var(--paper)}
+body[data-scheme="c"] .param-grid{border-color:var(--accent2)}
+body[data-scheme="c"] .param{border-right-color:var(--accent2);border-bottom-color:var(--accent2)}
+body[data-scheme="c"] .param .box{border-color:var(--accent2)}
+body[data-scheme="c"] .generate{background:var(--accent);border-color:var(--accent);color:var(--paper)}
+body[data-scheme="c"] .generate span{color:var(--paper)}
+body[data-scheme="c"] .world-grid{border-color:var(--accent2)}
+body[data-scheme="c"] .dim{border-right-color:var(--accent2);border-bottom-color:var(--accent2)}
+body[data-scheme="c"] .dim h4{color:var(--accent)}
+body[data-scheme="c"] .causal-wrap{border-color:var(--accent2);background:rgba(18,52,73,.6)}
+body[data-scheme="c"] .causal-head{border-bottom-color:var(--accent2)}
+body[data-scheme="c"] .causal .node rect{fill:var(--paper);stroke:var(--accent2)}
+body[data-scheme="c"] .causal .edge{stroke:var(--accent2)}
+body[data-scheme="c"] .causal .edge.assume{stroke:var(--muted)}
+body[data-scheme="c"] .causal .edge.strong{stroke:var(--accent)}
+body[data-scheme="c"] .compare-grid{border-color:var(--accent2)}
+body[data-scheme="c"] .world-col + .world-col{border-left-color:var(--accent2)}
+body[data-scheme="c"] .report-card{background:rgba(18,52,73,.72);border-color:var(--accent2)}
+body[data-scheme="c"] .section-head h3{border-bottom:1px solid var(--accent2);padding-bottom:8px}
+
+/* ============ scheme D: field notes ============ */
+body[data-scheme="d"] .masthead{border-bottom:1px dashed var(--ink)}
+body[data-scheme="d"] .brand h1{font-family:var(--note);font-size:28px;letter-spacing:.02em}
+body[data-scheme="d"] .hero h2{font-family:var(--note);font-size:clamp(58px,6.4vw,94px);font-weight:400;letter-spacing:0;line-height:1.06}
+body[data-scheme="d"] .kicker{color:var(--accent2)}
+body[data-scheme="d"] .rule-panel{position:relative;border:1px solid var(--ink);background:var(--paper2);box-shadow:4px 4px 0 rgba(35,36,29,.12)}
+body[data-scheme="d"] .rule-panel::before,body[data-scheme="d"] .rule-panel::after{content:"";position:absolute;width:44px;height:14px;background:rgba(138,90,59,.28);top:-8px}
+body[data-scheme="d"] .rule-panel::before{left:14px;transform:rotate(-2deg)}
+body[data-scheme="d"] .rule-panel::after{right:14px;transform:rotate(1.5deg)}
+body[data-scheme="d"] .section-head h3{font-family:var(--note);font-size:30px;font-weight:400}
+body[data-scheme="d"] .dim{background:rgba(247,241,223,.45)}
+body[data-scheme="d"] .dim h4{font-family:var(--note);font-size:13px;color:var(--accent);font-weight:400}
+body[data-scheme="d"] .report-card{background:#F7F1DF;box-shadow:5px 5px 0 rgba(35,36,29,.1)}
+body[data-scheme="d"] .stamp{border-color:var(--accent2);color:var(--accent2)}
+body[data-scheme="d"] .generate{background:var(--accent);border-color:var(--accent)}
+
+/* ============ responsive ============ */
+@media (max-width:1000px){
+  .masthead{grid-template-columns:1fr;align-items:start;gap:10px}
+  .masthead nav{order:3}
+  .issue{position:static;text-align:left}
+  body[data-scheme="b"] .issue{position:static;text-align:center}
+  .hero{grid-template-columns:1fr;gap:34px;padding:40px 22px 34px}
+  body[data-scheme="b"] .hero{grid-template-columns:1fr}
+  body[data-scheme="b"] .hero-copy{grid-column:auto;border-right:0;padding-right:0}
+  body[data-scheme="b"] .dek{columns:1}
+  .params,.world,.compare,.report{padding-left:22px;padding-right:22px}
+  .param-grid{grid-template-columns:1fr 1fr}
+  .world-grid{grid-template-columns:1fr 1fr}
+  body[data-scheme="b"] .world-grid{grid-template-columns:1fr}
+  .unexpected{grid-template-columns:1fr}
+  .unexpected > div{padding:12px 0;border-right:0;border-bottom:1px solid var(--rule)}
+  .compare-grid{grid-template-columns:1fr}
+  .world-col + .world-col{border-left:0;border-top:1px solid var(--ink)}
+  .report{grid-template-columns:1fr}
+  .report-card{max-width:none}
+  .section-head{flex-direction:column;gap:8px}
+  .section-head p{text-align:left}
+  .masthead{padding:18px 22px 12px}
+  .brand h1{font-size:22px}
+  body[data-scheme="b"] .brand h1{font-size:30px}
+  .site-foot{padding:14px 22px;flex-direction:column;gap:6px}
+  .causal{display:none}
+  .causal-list{display:block;padding:8px 16px 14px}
+  .causal-list li{display:grid;grid-template-columns:1fr auto 1.25fr;gap:8px;align-items:baseline;padding:9px 0;border-top:1px dotted var(--rule);font-size:11px}
+  .causal-list b{font-weight:500}
+  .causal-list em{font-style:normal;color:var(--muted);line-height:1.5}
+  .causal-list .arr{color:var(--accent);font-family:var(--mono)}
+  body[data-scheme="b"] .dim{min-height:0}
+}
+@media (max-width:620px){
+  .timeline{grid-template-columns:1fr 1fr}
+  .report-card h3{font-size:30px}
+  .hero h2{font-size:50px}
+}
+</style>
+</head>
+<body data-scheme="a">
+
+<svg style="display:none" aria-hidden="true">
+  <symbol id="i-cap" viewBox="0 0 24 24"><path d="M3 9l9-4 9 4-9 4-9-4z"/><path d="M7 11v4c0 1.1 2.2 2 5 2s5-.9 5-2v-4"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v9M9.5 10.2c0-1 1.1-1.7 2.5-1.7s2.5.7 2.5 1.7-1.1 1.8-2.5 1.8-2.5.7-2.5 1.7 1.1 1.7 2.5 1.7 2.5-.7 2.5-1.7"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/></symbol>
+</svg>
+
+<header class="masthead">
+  <div class="brand">
+    <h1>世界规则修改器</h1>
+    <div class="latin">World Rule Modifier · 社会规则实验室</div>
+  </div>
+  <nav>
+    <a href="#">规则库</a><a href="#">实验台</a><a href="#">方法</a><a href="#">档案</a>
+  </nav>
+  <div class="issue">试刊 00 · 2026<br><b>情景推演，不是预测</b></div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="hero-copy">
+      <p class="kicker">规则实验 / 教育制度</p>
+      <h2>如果大学<br>不再有考试</h2>
+      <p class="dek">选一条规则，调四个参数，看它在十年后把教育、经济、社会和普通人的生活改成什么样。结果可能和你想的相反。</p>
+      <div class="steps"><span><b>1</b> 选规则</span><span><b>2</b> 调参数</span><span><b>3</b> 生成世界</span></div>
+    </div>
+
+    <aside class="rule-panel">
+      <div class="panel-head"><span>选择一条规则</span><span>已选 1 / 4</span></div>
+      <ul class="rule-list">
+        <li class="active"><svg class="icon"><use href="#i-cap"/></svg><div><b>取消大学考试</b><small>教育规则</small></div><span class="tick">已选</span></li>
+        <li><svg class="icon"><use href="#i-clock"/></svg><div><b>每天只工作四小时</b><small>时间规则</small></div><span class="tick">选择</span></li>
+        <li><svg class="icon"><use href="#i-coin"/></svg><div><b>商品不再有价格</b><small>经济规则</small></div><span class="tick">选择</span></li>
+        <li><svg class="icon"><use href="#i-moon"/></svg><div><b>人类不需要睡觉</b><small>生理规则</small></div><span class="tick">选择</span></li>
+      </ul>
+      <label class="custom">或者，写一条自己的规则
+        <input type="text" placeholder="如果每个人每天只能说 100 个字……">
+      </label>
+    </aside>
+  </section>
+
+  <section class="params">
+    <div class="section-head">
+      <h3>设定这个世界的四个参数</h3>
+      <p>参数会改变推演方向。同一条规则，不同的设定会走向完全不同的十年。</p>
+    </div>
+    <div class="param-grid">
+      <label class="param"><input type="checkbox" checked><span class="box"></span><b>仍发毕业证</b><small>没有考试，证书还代表什么？</small></label>
+      <label class="param"><input type="checkbox" checked><span class="box"></span><b>允许自由选课</b><small>学生自己决定学什么。</small></label>
+      <label class="param"><input type="checkbox"><span class="box"></span><b>教师保留评价权</b><small>课堂表现、项目、推荐信算数。</small></label>
+      <label class="param"><input type="checkbox"><span class="box"></span><b>企业仍看学历</b><small>招聘时，学校名字还有用吗？</small></label>
+    </div>
+    <button class="generate">生成这个世界 <span>→</span></button>
+  </section>
+
+  <section class="world">
+    <div class="section-head">
+      <h3>无考场社会 · 第十年</h3>
+      <p>规则：取消大学考试 · 参数：发毕业证 / 自由选课 / 无教师评价 / 企业不看学历</p>
+    </div>
+    <div class="world-grid">
+      <article class="dim">
+        <h4>教育</h4>
+        <p>课程改成项目制，毕业看作品集和长期学习记录。</p>
+        <ul><li>补习班开始教“怎么包装项目”</li><li>跨校选课变多，课程质量更难比较</li></ul>
+        <span class="tag">推算</span>
+      </article>
+      <article class="dim">
+        <h4>经济</h4>
+        <p>企业用实习、作品和第三方认证筛人，学历溢价下降。</p>
+        <ul><li>出现“能力认证”新机构</li><li>实习竞争提前到大二</li></ul>
+        <span class="tag">推算</span>
+      </article>
+      <article class="dim">
+        <h4>社会</h4>
+        <p>评价标准分裂，资源好的学生更容易做出漂亮作品。</p>
+        <ul><li>教育公平争议上升</li><li>“推荐信”变成硬通货</li></ul>
+        <span class="tag">假设</span>
+      </article>
+      <article class="dim">
+        <h4>个人</h4>
+        <p>自律的人得到更多自由，迷茫的人失去坐标。</p>
+        <ul><li>睡眠时间重新分配</li><li>“我到底会什么”成为新焦虑</li></ul>
+        <span class="tag">不确定</span>
+      </article>
+    </div>
+
+    <div class="causal-wrap">
+      <div class="causal-head">
+        <h4>它是怎么走到这里的</h4>
+        <p>实线＝规则导致　虚线＝带假设的推断　编号只标时间顺序</p>
+      </div>
+      <svg class="causal" viewBox="0 0 930 300" role="img" aria-label="取消考试后的因果链">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0 0L10 5L0 10z" fill="var(--ink)"></path>
+          </marker>
+        </defs>
+        <g class="node"><rect x="30" y="122" width="150" height="52"></rect><text x="105" y="152" text-anchor="middle">取消大学考试</text></g>
+        <g class="node"><rect x="240" y="42" width="150" height="52"></rect><text x="315" y="72" text-anchor="middle">课程项目制</text></g>
+        <g class="node"><rect x="240" y="202" width="150" height="52"></rect><text x="315" y="232" text-anchor="middle">作品集竞争</text></g>
+        <g class="node"><rect x="470" y="42" width="160" height="52"></rect><text x="550" y="72" text-anchor="middle">能力认证机构</text></g>
+        <g class="node"><rect x="470" y="202" width="160" height="52"></rect><text x="550" y="232" text-anchor="middle">学历溢价下降</text></g>
+        <g class="node assume"><rect x="720" y="122" width="170" height="52"></rect><text x="805" y="152" text-anchor="middle">公平争议上升</text></g>
+
+        <path class="edge" d="M180 148 C205 148 215 68 240 68"></path>
+        <path class="edge" d="M180 148 C205 148 215 228 240 228"></path>
+        <path class="edge" d="M390 68 L470 68"></path>
+        <path class="edge" d="M390 228 L470 228"></path>
+        <path class="edge" d="M630 68 C665 68 685 148 720 148"></path>
+        <path class="edge assume" d="M630 228 C665 228 685 148 720 148"></path>
+
+        <text class="elabel" x="190" y="106">转移竞争</text>
+        <text class="elabel" x="404" y="60">导致</text>
+        <text class="elabel" x="640" y="96">假设</text>
+        <text class="elabel" x="646" y="212">放大</text>
+      </svg>
+      <ol class="causal-list">
+        <li><b>取消大学考试</b><span class="arr">→</span><em>课程项目制 / 作品集竞争</em></li>
+        <li><b>课程项目制</b><span class="arr">→</span><em>能力认证机构出现</em></li>
+        <li><b>作品集竞争</b><span class="arr">→</span><em>学历溢价下降</em></li>
+        <li><b>学历溢价下降</b><span class="arr">→</span><em>公平争议上升（假设）</em></li>
+        <li><b>能力认证机构</b><span class="arr">→</span><em>公平争议上升（假设）</em></li>
+      </ol>
+    </div>
+
+    <div class="unexpected">
+      <div><span class="k">意外 01</span><h4>作品集补习班</h4><p>考试没了，新的“提分”产业变成了教你怎么把项目讲得漂亮。</p></div>
+      <div><span class="k">意外 02</span><h4>毕业证通胀</h4><p>人人都有毕业证，证书本身不再说明能力，企业转向自己的测试。</p></div>
+      <div><span class="k">意外 03</span><h4>推荐信黑市</h4><p>教师评价权被取消后，私人推荐信成了更难监管的通行证。</p></div>
+    </div>
+  </section>
+
+  <section class="compare">
+    <div class="section-head">
+      <h3>同一条规则，两个世界</h3>
+      <p>只改了“是否发毕业证”和“企业是否看学历”，十年后的差距。</p>
+    </div>
+    <div class="compare-grid">
+      <div class="world-col">
+        <h4>世界 A · 无证社会</h4>
+        <div class="meta">不发毕业证 / 自由选课 / 教师无评价权 / 企业不看学历</div>
+        <div class="metric"><span>公平</span><div class="bar"><i style="--v:64%"></i></div><strong>64</strong></div>
+        <div class="metric"><span>效率</span><div class="bar"><i style="--v:71%"></i></div><strong>71</strong></div>
+        <div class="metric"><span>自由</span><div class="bar"><i style="--v:82%"></i></div><strong>82</strong></div>
+        <div class="metric"><span>稳定</span><div class="bar"><i style="--v:48%"></i></div><strong>48</strong></div>
+      </div>
+      <div class="world-col">
+        <h4>世界 B · 证书社会</h4>
+        <div class="meta">发毕业证 / 统一课程 / 教师评价 / 企业看学历</div>
+        <div class="metric"><span>公平</span><div class="bar"><i style="--v:42%"></i></div><strong>42</strong></div>
+        <div class="metric"><span>效率</span><div class="bar"><i style="--v:58%"></i></div><strong>58</strong></div>
+        <div class="metric"><span>自由</span><div class="bar"><i style="--v:66%"></i></div><strong>66</strong></div>
+        <div class="metric"><span>稳定</span><div class="bar"><i style="--v:61%"></i></div><strong>61</strong></div>
+      </div>
+    </div>
+    <div class="diff">差异最大：<b>自由 +16</b>　<b>公平 +22</b>　稳定 −13。世界 A 更自由，也更不稳定；世界 B 更稳，但公平更低。</div>
+  </section>
+
+  <section class="report">
+    <div class="report-card">
+      <div class="stamp">情景推演<br>不是预测</div>
+      <p class="kicker">世界线档案 / A-014</p>
+      <h3>无考场社会</h3>
+      <div class="rule">规则：取消大学考试　参数：发证 / 自由选课 / 无教师评价 / 企业不看学历</div>
+      <div class="timeline">
+        <div><b>第 1 年</b>考试取消，课堂先乱了一阵</div>
+        <div><b>第 3 年</b>项目制课程成为主流</div>
+        <div><b>第 5 年</b>作品集竞争白热化</div>
+        <div><b>第 10 年</b>能力认证机构出现</div>
+      </div>
+      <ul>
+        <li>教育：从“考什么”变成“做过什么”。</li>
+        <li>经济：学历溢价下降，实习和作品提前到大学前两年。</li>
+        <li>社会：评价标准分裂，新的不公平从资源差异里长出来。</li>
+      </ul>
+      <div class="foot"><span>社会规则实验室 · 2026</span><span>世界线 #A-014</span></div>
+    </div>
+    <div class="report-side">
+      <h3>一个没有考场的社会，最后用作品集和推荐信重新造了考场。</h3>
+      <p>这不是对未来的预测，而是一次把“规则”当变量的推演。你能改参数，也就能看到：同一个口号，落到不同制度里，会长出不同的代价。</p>
+      <div class="kv">
+        <span>规则</span><span>取消大学考试</span>
+        <span>参数</span><span>4 项，已改 2 项</span>
+        <span>置信度</span><span>中 · 关键节点依赖假设</span>
+        <span>可复核</span><span>因果链 6 节点 / 6 条边</span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-foot">
+  <span>世界规则修改器 · 社会规则实验室 · 2026 Qoder 高校创造力大赛</span>
+  <span>情景推演，不是对真实未来的预测。所有变化均标注推算 / 假设 / 不确定。</span>
+</footer>
+
+<div class="switcher" id="switcher" role="group" aria-label="UI 方案">
+  <button data-s="a" aria-pressed="true">A 档案</button>
+  <button data-s="b" aria-pressed="false">B 报纸</button>
+  <button data-s="c" aria-pressed="false">C 蓝图</button>
+  <button data-s="d" aria-pressed="false">D 笔记</button>
+</div>
+
+<script>
+(function(){
+  var p = new URLSearchParams(location.search);
+  var s = (p.get('scheme') || 'a').toLowerCase();
+  if (['a','b','c','d'].indexOf(s) < 0) s = 'a';
+  document.body.dataset.scheme = s;
+  var sw = document.getElementById('switcher');
+  if (p.get('clean') === '1') sw.style.display = 'none';
+  Array.prototype.forEach.call(sw.querySelectorAll('button'), function(b){
+    b.setAttribute('aria-pressed', String(b.dataset.s === s));
+    b.addEventListener('click', function(){
+      location.search = '?scheme=' + b.dataset.s + (p.get('clean') === '1' ? '&clean=1' : '');
+    });
+  });
+})();
+</script>
+</body>
+</html>

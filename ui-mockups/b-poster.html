@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1080">
+<title>世界线档案 · 无考场社会</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  width:1080px;min-height:1440px;background:#F4F1E9;color:#141414;
+  font-family:"Source Han Serif SC","Noto Serif CJK SC","Songti SC",SimSun,serif;
+  -webkit-font-smoothing:antialiased;
+  background-image:repeating-linear-gradient(0deg,transparent,transparent 29px,rgba(20,20,20,.028) 30px);
+}
+.poster{width:1080px;min-height:1440px;padding:54px 60px 44px;position:relative;overflow:hidden;display:flex;flex-direction:column}
+.poster::before{content:"";position:absolute;left:60px;right:60px;top:0;height:6px;border-top:3px solid #141414;border-bottom:1px solid #141414}
+.head{display:flex;justify-content:space-between;align-items:flex-start;padding-top:12px;border-bottom:1px solid #B9B2A2;padding-bottom:12px}
+.brand{font-size:18px;letter-spacing:.06em;line-height:1.2}
+.brand span{display:block;font-family:"IBM Plex Mono",Consolas,monospace;font-size:8px;letter-spacing:.28em;color:#5A564C;margin-top:3px}
+.issue{text-align:right;font-family:"IBM Plex Mono",Consolas,monospace;font-size:8px;line-height:1.8;color:#5A564C}
+.issue b{color:#A6231A;font-weight:500}
+.ruleline{display:flex;justify-content:space-between;padding:7px 0;border-bottom:4px double #141414;font-family:"IBM Plex Mono",Consolas,monospace;font-size:8px;letter-spacing:.08em;color:#5A564C}
+.kicker{margin:30px 0 12px;font-family:"IBM Plex Mono",Consolas,monospace;font-size:9px;color:#A6231A}
+h1{margin:0;font-size:132px;line-height:.9;letter-spacing:-.06em;font-weight:600}
+h1::after{content:"";display:block;width:120px;height:6px;background:#A6231A;margin-top:18px}
+.dek{max-width:820px;margin:20px 0 0;font-size:16px;line-height:1.8;color:#3F3B34}
+.rulebar{margin-top:22px;padding:12px 0;border-top:1px solid #141414;border-bottom:1px solid #141414;font-family:"IBM Plex Mono",Consolas,monospace;font-size:9px;line-height:1.8;color:#5A564C}
+.rulebar b{color:#141414;font-weight:500}
+.body{display:grid;grid-template-columns:1.35fr 1fr;gap:38px;margin-top:26px;border-top:1px solid #B9B2A2;padding-top:18px}
+.dims{display:grid;grid-template-columns:1fr 1fr;border-left:1px solid #141414;border-top:1px solid #141414}
+.dim{border-right:1px solid #141414;border-bottom:1px solid #141414;padding:14px 14px 16px;min-height:168px}
+.dim h3{margin:0 0 8px;font-family:"IBM Plex Mono",Consolas,monospace;font-size:8px;color:#A6231A;font-weight:500;letter-spacing:.08em}
+.dim p{margin:0;font-size:11px;line-height:1.75;color:#2C2924}
+.dim small{display:block;margin-top:8px;font-family:"IBM Plex Mono",Consolas,monospace;font-size:8px;line-height:1.6;color:#6B6558}
+.side{display:flex;flex-direction:column;gap:14px}
+.timeline{border-top:3px solid #141414}
+.timeline div{display:grid;grid-template-columns:52px 1fr;gap:8px;padding:8px 0;border-bottom:1px solid #B9B2A2;font-size:9px;line-height:1.55}
+.timeline b{font-family:"IBM Plex Mono",Consolas,monospace;font-size:8px;color:#A6231A;font-weight:500}
+.unexpected{border-top:1px solid #141414;padding-top:10px}
+.unexpected h3{margin:0 0 6px;font-family:"IBM Plex Mono",Consolas,monospace;font-size:8px;color:#5A564C;font-weight:500}
+.unexpected p{margin:0 0 6px;font-size:9px;line-height:1.6;color:#3F3B34}
+.unexpected p b{color:#141414;font-weight:500}
+.chain{grid-column:1/-1;margin-top:8px;padding:10px 0;border-top:1px solid #141414;border-bottom:1px solid #B9B2A2;font-family:"IBM Plex Mono",Consolas,monospace;font-size:8px;line-height:1.9;color:#5A564C}
+.chain b{color:#141414;font-weight:500}
+.quote{grid-column:1/-1;margin-top:18px;border-top:4px double #141414;border-left:6px solid #A6231A;padding:14px 0 0 16px;font-size:25px;line-height:1.5;font-weight:600;letter-spacing:-.01em}
+
+.legend{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:22px;border-top:1px solid #141414;padding-top:10px;font-family:"IBM Plex Mono",Consolas,monospace;font-size:8px;line-height:1.7;color:#5A564C}
+.legend b{display:block;color:#141414;font-weight:500;margin-bottom:3px}
+.foot{display:flex;justify-content:space-between;align-items:flex-end;margin-top:auto;padding-top:10px;border-top:1px solid #B9B2A2;font-family:"IBM Plex Mono",Consolas,monospace;font-size:7px;line-height:1.8;color:#5A564C}
+.stamp{position:absolute;right:58px;bottom:98px;transform:rotate(-7deg);border:3px solid #A6231A;color:#A6231A;padding:8px 12px;font-family:"IBM Plex Mono",Consolas,monospace;font-size:9px;line-height:1.4;text-align:center;opacity:.9}
+.barcode{display:flex;gap:2px;align-items:flex-end;height:20px}
+.barcode i{display:block;width:2px;background:#141414;height:var(--h,14px)}
+</style>
+</head>
+<body>
+<div class="poster">
+  <div class="head">
+    <div class="brand">世界规则修改器<span>World Rule Modifier</span></div>
+    <div class="issue">号外 · 世界线档案 <b>A-014</b><br>2026.11 · 社会规则实验室</div>
+  </div>
+  <div class="ruleline"><span>规则实验 / 教育制度</span><span>情景推演，不是预测</span></div>
+
+  <p class="kicker">取消大学考试 · 第十年</p>
+  <h1>无考场<br>社会</h1>
+  <p class="dek">一条规则取消之后，教育、经济、社会和普通人的生活都被重新编排。最初看起来是学生的解放，十年后却长出了新的考场。</p>
+  <div class="rulebar"><b>规则</b> 取消大学考试　　<b>参数</b> 发毕业证 / 自由选课 / 无教师评价 / 企业不看学历</div>
+
+  <div class="body">
+    <div class="dims">
+      <div class="dim"><h3>教育</h3><p>课程改成项目制，毕业看作品集和长期学习记录。</p><small>补习班开始教“怎么包装项目”</small></div>
+      <div class="dim"><h3>经济</h3><p>企业用实习、作品和第三方认证筛人，学历溢价下降。</p><small>“能力认证”新机构出现</small></div>
+      <div class="dim"><h3>社会</h3><p>评价标准分裂，资源好的学生更容易做出漂亮作品。</p><small>公平争议上升；“推荐信”变成硬通货</small></div>
+      <div class="dim"><h3>个人</h3><p>自律的人得到更多自由，迷茫的人失去坐标。</p><small>“我到底会什么”成为新焦虑</small></div>
+    </div>
+
+    <div class="side">
+      <div class="timeline">
+        <div><b>第 1 年</b><span>考试取消，课堂先乱了一阵</span></div>
+        <div><b>第 3 年</b><span>项目制课程成为主流</span></div>
+        <div><b>第 5 年</b><span>作品集竞争白热化</span></div>
+        <div><b>第 10 年</b><span>能力认证机构出现</span></div>
+      </div>
+      <div class="unexpected">
+        <h3>三个没人预料到的后果</h3>
+        <p><b>作品集补习班</b>　新的“提分”产业出现了。</p>
+        <p><b>毕业证通胀</b>　人人都有证，证书不再说明能力。</p>
+        <p><b>推荐信黑市</b>　教师评价权取消后，私人推荐信更难监管。</p>
+      </div>
+    </div>
+
+    <div class="chain"><b>因果链</b>　取消考试 → 课程项目制 / 作品集竞争 → 能力认证机构 → 学历溢价下降 → 公平争议上升（假设）</div>
+    <div class="quote">一个没有考场的社会，最后用作品集和推荐信重新造了考场。</div>
+    <div class="legend">
+      <div><b>读法</b>实线＝规则导致；虚线＝带假设的推断</div>
+      <div><b>置信度</b>中：关键节点依赖假设，不作精确预测</div>
+      <div><b>可复核</b>6 个事件节点 / 6 条因果边 / 4 个参数</div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div>世界规则修改器 · 社会规则实验室 · 2026 Qoder 高校创造力大赛<br>所有变化均标注推算 / 假设 / 不确定；不构成对真实未来的预测。</div>
+    <div class="barcode" aria-hidden="true"><i style="--h:12px"></i><i style="--h:18px"></i><i style="--h:9px"></i><i style="--h:16px"></i><i style="--h:20px"></i><i style="--h:11px"></i><i style="--h:15px"></i><i style="--h:8px"></i><i style="--h:19px"></i><i style="--h:13px"></i><i style="--h:17px"></i><i style="--h:10px"></i><i style="--h:20px"></i><i style="--h:12px"></i></div>
+  </div>
+  <div class="stamp">世界线<br>#A-014</div>
+</div>
+</body>
+</html>
