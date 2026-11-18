@@ -4,7 +4,7 @@
   "use strict";
 
   const $ = (id) => document.getElementById(id);
-  const APP_VERSION = "1.2.0";
+  const APP_VERSION = "1.3.0";
   const APP_UPDATED = "2026-11-18";
   const LS_STATE = "wrm.state";
   const LS_HOT = "wrm.hotPicks";
@@ -16,7 +16,7 @@
 
   const state = {
     ruleId: null, paramsA: null, paramsB: null, resultA: null, resultB: null,
-    page: 1, hotFilter: "all", hotWindow: 0, hotPicks: [], causalExpanded: false
+    page: 1, hotFilter: "all", hotPicks: [], causalExpanded: false
   };
   let narrativeSeq = 0;
 
@@ -195,7 +195,6 @@
   function selectRule(id) {
     state.ruleId = id;
     state.hotFilter = "all";
-    state.hotWindow = 0;
     state.causalExpanded = false;
     const r = rule();
     state.paramsA = engine().defaultParams(r);
@@ -262,14 +261,7 @@
 
   function renderDimPage(container, items) {
     container.replaceChildren();
-    container.appendChild(dimBlock(items[0]));
-    if (items[1]) {
-      const det = document.createElement("details");
-      det.className = "more-dim";
-      det.appendChild(node("summary", "more-summary mono", "还有一条"));
-      det.appendChild(dimBlock(items[1]));
-      container.appendChild(det);
-    }
+    items.forEach((item) => container.appendChild(dimBlock(item)));
   }
 
   function renderPage4() {
@@ -318,6 +310,7 @@
   };
   const hotForRule = () => hotCards().filter((c) => c.ruleFit.indexOf(state.ruleId) !== -1);
   const hotFiltered = () => hotForRule().filter((c) => state.hotFilter === "all" || c.category === state.hotFilter);
+  const hotByHeat = (list) => list.slice().sort((a, b) => (b.heatScore || 0) - (a.heatScore || 0));
 
   function readHotPicks() {
     try {
@@ -357,6 +350,7 @@
     head.appendChild(node("span", "hot-code mono", card.code));
     head.appendChild(node("span", "hot-cat mono", card.category));
     head.appendChild(node("span", "hot-safety mono", hotSafetyLabel(card.safety)));
+    if (card.heatScore) head.appendChild(node("span", "hot-heat mono", "热度 " + card.heatScore));
     el.appendChild(head);
     el.appendChild(node("h4", null, card.title));
     const real = node("p", "hot-real");
@@ -400,7 +394,6 @@
       btn.setAttribute("aria-pressed", String(state.hotFilter === key));
       btn.addEventListener("click", () => {
         state.hotFilter = key;
-        state.hotWindow = 0;
         renderPage6();
       });
       wrap.appendChild(btn);
@@ -414,22 +407,18 @@
 
   function renderPage6() {
     renderHotFilters();
-    const cards = hotFiltered();
+    const cards = hotByHeat(hotFiltered());
     const grid = $("hotGrid");
     grid.replaceChildren();
-    const pages = Math.max(1, Math.ceil(cards.length / 2));
-    if (state.hotWindow >= pages) state.hotWindow = 0;
-    const start = state.hotWindow * 2;
-    const slice = cards.slice(start, start + 2);
-    if (!slice.length) {
-      grid.appendChild(node("p", "note hot-empty", "这条规则下没有该分类的改写卡。换个分类看看。"));
+    const top = cards.slice(0, 3);
+    if (!top.length) {
+      grid.appendChild(node("p", "note hot-empty", "这个世界没有上头条。换个分类看看。"));
     } else {
-      slice.forEach((c) => grid.appendChild(buildHotCard(c)));
+      top.forEach((c) => grid.appendChild(buildHotCard(c)));
     }
     $("hotWindowNote").textContent = cards.length
-      ? "第 " + (start + 1) + "–" + Math.min(start + 2, cards.length) + " 张 / 共 " + cards.length + " 张 · 一次只看两张。"
+      ? "本规则可挂靠 " + cards.length + " 张 · 按热度取前 " + top.length + " 张，直接读完，不需再点。"
       : "共 0 张。";
-    $("hotMore").disabled = cards.length <= 2;
   }
 
   function renderHotArchive() {
@@ -539,7 +528,6 @@
   function generate(scroll) {
     state.resultA = engine().evaluate(state.ruleId, state.paramsA);
     state.causalExpanded = false;
-    state.hotWindow = 0;
     renderStrip();
     renderPage1();
     renderDimPage($("p2Body"), state.resultA.dimensions.education);
@@ -569,7 +557,7 @@
       renderParams($("paramGridB"), state.paramsB, runCompare);
     }
     const savedPicks = readHotPicks();
-    state.hotPicks = savedPicks !== null ? savedPicks : hotForRule().slice(0, 2).map((c) => c.id);
+    state.hotPicks = savedPicks !== null ? savedPicks : hotByHeat(hotForRule()).slice(0, 2).map((c) => c.id);
     saveHotPicks();
 
     bindPager();
@@ -583,11 +571,6 @@
     $("causalToggle").addEventListener("click", () => {
       state.causalExpanded = !state.causalExpanded;
       renderPage5();
-    });
-    $("hotMore").addEventListener("click", () => {
-      const pages = Math.max(1, Math.ceil(hotFiltered().length / 2));
-      state.hotWindow = (state.hotWindow + 1) % pages;
-      renderPage6();
     });
     $("editToggle").addEventListener("click", () => {
       const desk = $("editDesk");

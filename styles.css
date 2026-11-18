@@ -1,5 +1,5 @@
 /* 世界规则修改器 · B 报纸/编辑部版式 · 八版翻页
-   0 圆角 / 0 阴影 / 0 渐变 / 单一深红强调；唯一动效 = 翻页 180ms。 */
+   0 圆角 / 0 阴影 / 0 渐变；编辑强调深红，交互主按钮用蓝（--action）；唯一动效 = 翻页 180ms。 */
 
 :root {
   --paper: #F4F1E9;
@@ -11,6 +11,9 @@
   --accent-2: #1F3A5F;
   --success: #3F5B3A;
   --warn: #8A5A3B;
+  --action: #1F5FA8;
+  --action-hover: #174A82;
+  --action-press: #123B68;
 
   --font-serif: "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC", SimSun, serif;
   --font-mono: "IBM Plex Mono", "JetBrains Mono", Consolas, monospace;
@@ -170,17 +173,23 @@ footer {
 .strip-chip.is-on .chip-dot { background: var(--ink); }
 
 .edit-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   margin-top: 2px;
-  padding: 5px 18px;
-  border: 1px solid var(--ink);
-  background: var(--paper);
-  font: 12px/1.5 var(--font-sans);
-  letter-spacing: .04em;
-  color: var(--ink);
+  padding: 8px 14px;
+  border: 1px solid var(--action-press);
+  border-radius: 0;
+  background: var(--action);
+  color: #fff;
+  font: 11px/1.5 var(--font-mono);
+  letter-spacing: .02em;
   cursor: pointer;
 }
-
-.edit-toggle:hover { border-color: var(--accent); color: var(--accent); }
+.edit-toggle::after { content: "→"; font-size: 13px; }
+.edit-toggle:hover { background: var(--action-hover); }
+.edit-toggle:active { background: var(--action-press); transform: translateY(1px); }
+.edit-toggle:focus-visible { outline: 2px solid var(--action); outline-offset: 3px; }
 
 .badge {
   flex: none;
@@ -302,15 +311,18 @@ details[open] > .edit-summary::before { content: "− "; }
 
 .generate {
   padding: 12px 30px;
-  border: 1px solid var(--ink);
-  background: var(--ink);
-  color: var(--paper);
+  border: 1px solid var(--action-press);
+  border-radius: 0;
+  background: var(--action);
+  color: #fff;
   font: 700 15px/1.4 var(--font-sans);
   letter-spacing: .06em;
   cursor: pointer;
 }
 
-.generate:hover { background: var(--accent); border-color: var(--accent); }
+.generate:hover { background: var(--action-hover); }
+.generate:active { background: var(--action-press); transform: translateY(1px); }
+.generate:focus-visible { outline: 2px solid var(--action); outline-offset: 3px; }
 
 /* ---------- 翻页器 ---------- */
 
@@ -441,6 +453,7 @@ details[open] > .edit-summary::before { content: "− "; }
 .dim-page { max-width: 46em; }
 
 .dim-block { padding: 4px 0 18px; }
+.dim-block + .dim-block { border-top: var(--hairline); padding-top: 16px; }
 
 .dim-head {
   display: flex;
@@ -479,23 +492,6 @@ details[open] > .edit-summary::before { content: "− "; }
   line-height: 1.7;
   color: var(--muted);
 }
-
-.more-dim { border-top: var(--hairline); margin-top: 6px; }
-
-.more-summary {
-  cursor: pointer;
-  padding: 13px 0;
-  font-size: 12px;
-  letter-spacing: .06em;
-  color: var(--accent);
-  list-style: none;
-}
-
-.more-summary::-webkit-details-marker { display: none; }
-.more-summary::before { content: "+ "; }
-.more-dim[open] > .more-summary::before { content: "− "; }
-.more-dim .dim-block { padding-top: 2px; }
-.more-dim .dim-head h3 { font-size: 20px; }
 
 .dual-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
 .dual-col { border-top: var(--heavy); padding-top: 16px; }
@@ -577,7 +573,7 @@ details[open] > .edit-summary::before { content: "− "; }
 .hotpress-note { margin: 0 0 18px; }
 .hotpress-foot { margin-top: 18px; }
 
-.hot-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 40px; row-gap: 24px; }
+.hot-grid { display: grid; grid-template-columns: repeat(3, 1fr); column-gap: 28px; row-gap: 24px; }
 
 .hotcard { border-top: 2px solid var(--ink); padding-top: 12px; }
 .hotcard-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 10px; }
@@ -585,6 +581,7 @@ details[open] > .edit-summary::before { content: "− "; }
 .hot-code { padding: 1px 7px; border: 1px solid var(--accent); color: var(--accent); font-size: 11px; line-height: 1.5; }
 .hot-cat { font-size: 11px; color: var(--muted); }
 .hot-safety { margin-left: auto; padding: 1px 7px; border: 1px solid var(--rule); font-size: 11px; color: var(--muted); }
+.hot-heat { padding: 1px 7px; border: 1px solid var(--accent-2); font-size: 11px; color: var(--accent-2); }
 .hotcard h4 { margin: 10px 0 8px; font: 700 19px/1.4 var(--font-serif); }
 
 .hot-real,
@@ -747,7 +744,7 @@ footer { padding-top: 28px; padding-bottom: 52px; }
   .dual-grid { grid-template-columns: 1fr; gap: 28px; }
   .causal { display: none; }
   .causal-list { display: block; }
-  .hot-grid { grid-template-columns: 1fr; }
+  .hot-grid { grid-template-columns: repeat(2, 1fr); column-gap: 24px; }
   .report-grid { grid-template-columns: 1fr; gap: 28px; }
   .report-side { border-left: 0; padding-left: 0; border-top: var(--hairline); padding-top: 20px; }
   .page-title { font-size: 44px; }
@@ -767,6 +764,8 @@ footer { padding-top: 28px; padding-bottom: 52px; }
   .masthead .brand h1 { font-size: 28px; }
   .strip-rule { font-size: 17px; }
   .param-grid { grid-template-columns: 1fr; }
+  .edit-toggle { min-height: 40px; }
+  .hot-grid { grid-template-columns: 1fr; }
 
   .pager {
     position: fixed;
