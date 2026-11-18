@@ -7,7 +7,7 @@
   const LS = "wrm.worldVersion";
   const state = { current: 0, at: 0 };
 
-  const LETTER = { "no-exam": "A", "four-hour": "B", "free-goods": "C" };
+  const LETTER = { "no-exam": "A", "four-hour": "B", "free-goods": "C", "custom": "D" };
 
   function save() {
     try { global.localStorage.setItem(LS, JSON.stringify(state)); } catch (e) { /* 存储不可用则只留内存 */ }

@@ -1,7 +1,8 @@
 /* 第 2–6 页 · 一屏一章（只读）：100dvh 不滚动。
    只渲染 changed 事件；不足 2 件显示空态。卡片左「原来」右「现在」，点击开 fixed 浮层看 detail。
-   本页不允许出现 input/select/toggle；唯一按钮是导航（上一版/下一版/圆点）、「修改假设」与浮层关闭。
-   改写判定来自 WRM_CHAPTERS.resolve；世界线编号来自 WRM_VERSION.runId。 */
+   本页不允许出现 input/select/toggle；按钮只有导航、「修改假设」、「重新生成」（AI _run）与浮层关闭。
+   run.kind=local 时改写判定来自 WRM_CHAPTERS.resolve；run.kind=ai 时渲染归一后的 AI 章节。
+   干预时间之前的章节不渲染：导航圆点只摆 run.ns。 */
 (function (global) {
   "use strict";
 
@@ -53,7 +54,8 @@
     document.getElementById("ovFiction").hidden = !ev.hot;
     document.getElementById("ovDetail").textContent = view.detail || view.alternate;
     document.getElementById("ovWhy").textContent = view.why;
-    document.getElementById("ovChain").textContent = view.chain;
+    document.getElementById("ovChain").textContent = view.chain || "";
+    document.getElementById("ovChainBlock").hidden = !view.chain;
     document.getElementById("evOverlay").hidden = false;
     document.getElementById("ovClose").focus();
   }
@@ -93,6 +95,7 @@
     top.appendChild(el("span", "ev-year mono", ev.yearLabel));
     top.appendChild(el("h3", "ev-title", ev.title));
     top.appendChild(el("span", "ev-domain mono", ev.domain));
+    if (ev.track === "personal") top.appendChild(el("span", "ev-track mono", "个人线"));
     c.appendChild(top);
     c.appendChild(el("span", "stamp stamp-change", "已改写"));
 
@@ -137,67 +140,102 @@
 
   /* ---------- 导航 ---------- */
 
-  function renderNav(chapter, hooks) {
-    const total = global.WRM_CHAPTERS.chapters.length;
-    const n = chapter.n;
+  function renderNav(n, ns, hooks) {
+    const first = ns[0];
+    const last = ns[ns.length - 1];
 
     const prev = document.getElementById("prevChapter");
     prev.textContent = "← 上一版";
-    prev.disabled = n <= 1;
-    prev.onclick = () => { if (n > 1) hooks.onPrev(); };
+    prev.disabled = n <= first;
+    prev.onclick = () => { if (n > first) hooks.onPrev(); };
 
     const next = document.getElementById("nextChapter");
-    next.textContent = n >= total ? "回到第 1 版 ↺" : "下一版 →";
+    next.textContent = n >= last ? "回到第 1 版 ↺" : "下一版 →";
     next.onclick = () => hooks.onNext();
 
     const dots = document.getElementById("chapterDots");
     dots.textContent = "";
-    global.WRM_CHAPTERS.chapters.forEach((c) => {
-      const b = el("button", "dot" + (c.n === n ? " is-on" : ""));
+    ns.forEach((k) => {
+      const b = el("button", "dot" + (k === n ? " is-on" : ""));
       b.type = "button";
-      b.setAttribute("aria-label", "第 " + c.n + " 版 · " + c.name);
-      if (c.n === n) b.setAttribute("aria-current", "step");
-      b.onclick = () => hooks.onDot(c.n);
+      b.setAttribute("aria-label", "第 " + k + " 版");
+      if (k === n) b.setAttribute("aria-current", "step");
+      b.onclick = () => hooks.onDot(k);
       dots.appendChild(b);
     });
   }
 
   /* ---------- 渲染 ---------- */
 
-  function render(state, chapterN, hooks, direction) {
+  function render(state, chapterN, hooks, direction, run) {
     closeOverlay();
 
-    const chapter = global.WRM_CHAPTERS.chapters.find((c) => c.n === chapterN)
-      || global.WRM_CHAPTERS.chapters[0];
-    const total = global.WRM_CHAPTERS.chapters.length;
+    const ns = run.ns;
+    let name, subtitle, span, personal = "", items;
+    if (run.kind === "ai") {
+      const ch = run.chapters.find((c) => c.n === chapterN) || run.chapters[0];
+      name = ch.name;
+      subtitle = ch.subtitle;
+      span = ch.span;
+      personal = ch.personal || "";
+      items = ch.events;
+    } else {
+      const ch = global.WRM_CHAPTERS.chapters.find((c) => c.n === chapterN)
+        || global.WRM_CHAPTERS.chapters[0];
+      name = ch.name;
+      subtitle = ch.subtitle;
+      span = ch.span;
+      items = [];
+      ch.events.forEach((ev) => {
+        const view = global.WRM_CHAPTERS.resolve(ev, state.ruleId, state.params, state.assumptions);
+        if (view.changed) items.push({ ev: ev, view: view });
+      });
+    }
 
     document.getElementById("chapterRun").textContent =
       "世界线 " + global.WRM_VERSION.runId(state.ruleId);
-    document.getElementById("chapterNo").textContent = "第 " + chapter.n + " 版 / " + total;
-    document.getElementById("chapterBig").textContent = pad2(chapter.n);
-    document.getElementById("chapterName").textContent = chapter.name;
-    document.getElementById("chapterSubtitle").textContent = chapter.subtitle;
-    document.getElementById("chapterSpan").textContent = chapter.span;
+    document.getElementById("chapterNo").textContent = "第 " + chapterN + " 版 / 5";
+    document.getElementById("chapterSource").textContent =
+      run.kind === "ai" ? "由 " + run.model + " 生成" : "本地模板";
+    const regen = document.getElementById("regenBtn");
+    regen.hidden = run.kind !== "ai";
+    regen.disabled = false;
+    regen.onclick = () => hooks.onRegen();
 
-    const changed = [];
-    chapter.events.forEach((ev) => {
-      const view = global.WRM_CHAPTERS.resolve(ev, state.ruleId, state.params, state.assumptions);
-      if (view.changed) changed.push({ ev: ev, view: view });
-    });
+    document.getElementById("chapterBig").textContent = pad2(chapterN);
+    document.getElementById("chapterName").textContent = name;
+    document.getElementById("chapterSubtitle").textContent = subtitle;
+    document.getElementById("chapterSpan").textContent = span;
+
+    const showIntervention = !!run.intervention && ns[0] > 1;
+    const iv = document.getElementById("chapterIntervention");
+    iv.hidden = !showIntervention;
+    const recap = document.getElementById("chapterRecap");
+    recap.hidden = !showIntervention;
+    document.getElementById("chapterSpan").hidden = showIntervention;
+    if (showIntervention) {
+      const era = global.WRM_AI.eraById(run.intervention.era);
+      iv.textContent = "干预点：" + (run.intervention.yearLabel || era.start) + " · " + era.name;
+      recap.textContent = "前情：" + (run.recap || "");
+    }
+
+    const ps = document.getElementById("chapterPersonal");
+    ps.hidden = !personal;
+    ps.textContent = personal;
 
     document.getElementById("chapterCount").textContent =
-      "本版改写 " + changed.length + " 件 · " + global.WRM_CHAPTERS.meta.disclaimer;
+      "本版改写 " + items.length + " 件 · " + global.WRM_CHAPTERS.meta.disclaimer;
 
     const body = document.getElementById("chapterBody");
     body.textContent = "";
-    body.dataset.count = String(changed.length);
-    if (changed.length < 2) {
+    body.dataset.count = String(items.length);
+    if (items.length < 2) {
       body.appendChild(emptyState());
     } else {
-      changed.forEach((item, i) => body.appendChild(card(item.ev, item.view, i)));
+      items.forEach((item, i) => body.appendChild(card(item.ev, item.view, i)));
     }
 
-    renderNav(chapter, hooks);
+    renderNav(chapterN, ns, hooks);
     document.getElementById("editAssumptions").onclick = () => hooks.onEdit();
 
     const sec = document.getElementById("chapter");
