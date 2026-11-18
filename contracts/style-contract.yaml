@@ -1,0 +1,170 @@
+# 世界规则修改器 · B 报纸/编辑部 视觉契约（单一事实来源）
+# 依据 skills/game-ui-specification（tokens 优先）+ skills/frontend-design（brief 已钉死 B 方向）。
+# 本文件锁定 tokens；styles.css 的 :root 与组件必须与此一致。改契约先改这里，再标受影响资源 stale。
+status: approved
+version: 1.4.1
+updated: 2026-11-18
+subject: 社会规则实验室 · 报纸号外（情景推演，不是预测）
+
+platform:
+  target: 纯前端静态页（file:// 与静态服务器均可，断网可玩）
+  orientation: 竖屏优先，桌面横屏增强
+  reference_sizes: [1440x900, 390x844]
+  breakpoints:
+    tablet: 1000
+    mobile: 620
+  safe_area:
+    top: 0
+    right: var(--gutter)
+    bottom: "calc(76px + env(safe-area-inset-bottom))  # 仅 ≤620，底部固定操作条"
+    left: var(--gutter)
+  layout:
+    max_width: 1100
+    gutter_desktop: 40
+    gutter_mobile: 22
+    masthead: 居中报头 + 左上世界线 badge + 右上期号
+    pager: "桌面 sticky-top；≤620 fixed-bottom（含 safe-area）"
+    pages: 一次只显一版（8 版），切版回顶 + 焦点移本版标题
+
+colors:
+  paper: "#F4F1E9"        # 新闻纸底
+  paper-2: "#ECE6D8"      #  raised 面 / 未改写节点 / 输入底
+  ink: "#141414"          # 墨
+  muted: "#5A564C"        # 次级文字
+  rule: "#B9B2A2"         # 细线
+  accent: "#A6231A"       # 编辑深红（唯一编辑强调）
+  accent-2: "#1F3A5F"     # 数据/梗源/预览 蓝黑
+  success: "#3F5B3A"      # 推算
+  warn: "#8A5A3B"         # 假设
+  action: "#1F5FA8"       # 交互主蓝（仅交互，不作编辑强调）
+  action-hover: "#174A82"
+  action-press: "#123B68"
+  on-action: "#FFFFFF"
+  era-primitive: "#E4D8C0"
+  era-ancient: "#DCCBA6"
+  era-earlymodern: "#C7D0D6"
+  era-industrial: "#D6D2C6"
+  era-modern: "#E2C8C2"
+
+tokens:
+  color:
+    surface-page: "{colors.paper}"
+    surface-raised: "{colors.paper-2}"
+    text-primary: "{colors.ink}"
+    text-secondary: "{colors.muted}"
+    border-hairline: "{colors.rule}"
+    border-heavy: "{colors.ink}"
+    editorial-accent: "{colors.accent}"
+    data-accent: "{colors.accent-2}"
+    semantic-success: "{colors.success}"
+    semantic-warning: "{colors.warn}"
+    semantic-danger: "{colors.accent}"
+    action-primary: "{colors.action}"
+    action-primary-hover: "{colors.action-hover}"
+    action-primary-press: "{colors.action-press}"
+    action-on-primary: "{colors.on-action}"
+    focus-ring: "{colors.action}"
+    changed-node: "{colors.accent}"
+    unchanged-node: "{colors.paper-2}"
+  spacing:
+    xs: 6
+    sm: 8
+    md: 16
+    lg: 24
+    xl: 40
+  motion:
+    page-turn-ms: 180
+    page-turn-easing: "cubic-bezier(.2,.75,.2,1)"
+    reduced-motion: "prefers-reduced-motion: reduce → 全部 animation/transition none"
+
+typography:
+  families:
+    serif: '"Source Han Serif SC","Noto Serif CJK SC","Songti SC",SimSun,serif'   # 标题/正文
+    mono: '"IBM Plex Mono","JetBrains Mono",Consolas,monospace'                  # 数据/标签/按钮
+    sans: '"Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif' # 注记
+  scale:
+    masthead-h1: { size: 40, weight: 700, family: serif, tracking: .08em, mobile: 28 }
+    page-title: { size: 56, weight: 700, family: serif, line: 1.05, tracking: -.02em, tablet: 44, mobile: 34 }
+    page-kicker: { size: 11, family: mono, tracking: .16em, color: editorial-accent }
+    page-lead: { size: 20, family: serif, mobile: 18 }
+    small-head: { size: 18, weight: 700, family: serif }
+    hotcard-h4: { size: 19, weight: 700, family: serif }
+    body: { size: 16, line: 1.75, family: serif, mobile: 14 }
+    note: { size: 12, line: 1.6, family: sans, color: text-secondary }
+    metric-value: { size: 16, weight: 700, family: mono }
+    button-primary: { size: 11, family: mono, color: on-action }
+    button-line: { size: 12, family: mono }
+  rules:
+    - 中文标题宋体、数据等宽，两套 families 明确分工
+    - 正文行宽 < 80 字符（serif 略宽允许），注记 max-width 42em
+    - 小字号 ≥ 10px；等宽小标签不 ALL-CAPS 中文（无大小写）
+
+geometry:
+  radius: 0            # 全组件 0 圆角
+  shadow: none         # 0 阴影
+  gradient: none       # 0 渐变（时代色带为纯色平涂）
+  borders:
+    hairline: "1px solid {colors.rule}"
+    heavy: "3px solid {colors.ink}"
+    double: "4px double {colors.ink}"
+    changed-node: "2px solid {colors.accent}"
+    branch: "1px dashed {colors.accent}"
+    proof: "1px dashed {colors.rule}"
+  buttons:
+    primary_height_mobile_min: 40
+    primary_padding: "8px 14px"
+    line_padding: "6px 14px"
+    focus: "2px solid {colors.action}, offset 3px"
+    active: "translateY(1px) + action-press"
+  scrollbar:
+    width: 10
+    track: "{colors.paper-2}"
+    thumb: "{colors.ink}"
+    thumb_hover: "{colors.accent}"
+
+effects:
+  material: 新闻纸平涂 + 墨线；无玻璃拟态、无 emoji、无外部图片
+  light: 无方向光（纸面均匀）；印章静态 rotate(-8deg)
+  stamp:
+    press: "3px solid accent, rotate(-8deg), 700 14px serif"
+    mini-changed: "accent 底白字 10px mono, 节点右上角"
+
+components:
+  primary-button:
+    states:
+      default: { bg: action, fg: on-action, border: action-press, suffix: "→" }
+      hover: { bg: action-hover }
+      active: { bg: action-press, translate: 1px }
+      focus-visible: { outline: focus-ring }
+      disabled: { opacity: .35 }
+  line-button:
+    states:
+      default: { bg: surface-page, border: ink, fg: ink }
+      hover: { border: editorial-accent, fg: editorial-accent }
+      disabled: { opacity: .35 }
+  version-badge:
+    current: { number_bg: editorial-accent, number_fg: on-action, frame: ink, radius: 0 }
+    preview: { number_bg: data-accent }
+    history-button: { border: hairline, current_bg: editorial-accent, current_fg: on-action, preview_fg: data-accent }
+    rule: 不做彩色胶囊
+  river-node:
+    changed: { border: changed-node, bg: surface-page, fg: text-primary, stamp: 已改写 }
+    unchanged: { border: hairline, bg: unchanged-node, fg: text-secondary }
+    open: 展开三层（锚点/本世界线/因果后果）
+  hotcard:
+    level: { bg: editorial-accent, fg: paper }
+    safety: { border: hairline, fg: text-secondary }
+    heat: { border: data-accent, fg: data-accent }
+    proof: { border: proof, bg: surface-raised }
+  metric-bar:
+    track: { border: ink, bg: surface-raised, height: 10 }
+    fill: { bg: ink }
+
+image_generation:
+  rule: 生产页面不引用任何外部/生成图片；静态长河/海报为独立 design/ 产物（canvas-design），不回灌应用布局
+  poster: 1080x1440 Canvas，系统宋体/等宽，先换行再绘制
+
+conflicts:
+  - game-ui-specification tokens 优先于 frontend-design 即兴建议
+  - brief 钉死 B 报纸方向：broadsheet/hairline/0-radius 在此为合法选择而非默认 tell
+  - 蓝色仅交互色；编辑强调仍唯一深红
