@@ -1,11 +1,11 @@
-/* 世界规则修改器 · 分版长河编排
-   第 1 页 #setup 唯一可编辑；第 2–6 页 #chapter/1..5 只读，hash 路由、浏览器前进后退可用。
+/* 世界规则修改器 · 一屏一章编排
+   第 1 页 #setup 唯一可编辑；第 2–6 页 #chapter/1..5 只读且不滚动，hash 路由、浏览器前进后退可用。
    状态（规则/参数/假设）存 localStorage，回到设定页原样恢复；每次生成世界线编号 +1 并回第 1 版。
    不改 world-rule/data.js 与 engine.js 的结构；引擎只用来取世界名。 */
 (function (global) {
   "use strict";
 
-  const APP_VERSION = "2.1.0";
+  const APP_VERSION = "2.2.0";
   const APP_UPDATED = "2026-11-18";
   const LS = "wrm.setup";
 
@@ -59,18 +59,19 @@
   }
 
   function showChapter(n) {
+    const direction = n >= view.chapter ? "next" : "prev";
     view.chapter = n;
     global.WRM_CHAPTER_PAGE.render(state, n, {
       onEdit: backToSetup,
       onPrev: () => goChapter(n - 1),
       onNext: () => goChapter(n >= chapterCount() ? 1 : n + 1),
       onDot: (k) => goChapter(k)
-    });
+    }, direction);
     document.getElementById("setup").hidden = true;
     document.getElementById("chapter").hidden = false;
     document.body.classList.add("on-chapter");
     global.scrollTo(0, 0);
-    const t = document.getElementById("chapterWorld");
+    const t = document.getElementById("chapterName");
     if (t) t.focus();
   }
 

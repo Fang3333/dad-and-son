@@ -2,6 +2,25 @@
 
 本格式遵循 Keep a Changelog，版本号遵循 semver。
 
+## [2.2.0] - 2026-11-18
+
+### 变更
+- 章节页改「一屏一章」：.chapter 高 100dvh、overflow:hidden，grid 三行（顶栏 / 标题+卡片 / 导航），1440×900 与 390×844 均无滚动条、无横向溢出；字号全 clamp，文字宁短勿溢。章节页隐藏报头与页脚。
+- 只渲染 changed 事件：没变的不渲染、不占位、不写「未改写」；每章 2–4 件，不足 2 件显示空态「这一版没有改动」。默认改写数改为取消考试 11（2/2/3/2/2）、四小时 13（2/2/2/4/3）、商品免费 11（2/2/2/2/3）。
+- 事件卡改左右对半：左「原来」灰纸灰字 + 细斜线（SVG 纹理，非渐变），右「现在」纸色黑字 + 3px 深红右边；右上角「已改写」红章；只给「现在」的关键词深红（keywords 字段），不整段红。
+- 标题区：巨大空心描边版号 01–05（clamp 96–240px，-webkit-text-stroke）+ 时代名 + subtitle + span + 「本版改写 N 件」。世界切片 intro 保留在数据里，不再上屏。
+- 页面左侧一条锯齿状深红裂痕（clip-path，顶到底），只在章节页出现；手机 10px、桌面 18px。
+- 翻页 translateX 300ms（next 从右、prev 从左），卡片错峰 40ms 入场、只播一次；prefers-reduced-motion 全关。底部导航改 grid 行内（不再 fixed），仍含 safe-area 与 ≥40px 按钮。
+- 点击事件卡开 fixed 浮层：detail（60–100 字）+ 为什么 + 连锁反应；Esc / 点遮罩 / × 关闭，浮层不撑高页面；热点卡浮层带「代号人物 · 虚构改写，勿对号入座」。
+
+### 新增
+- chapters.js 补 14 条改写变体（火/语言/埋葬/文字/铁器/印刷/火器/电力/铁路/农业/城市/亮哥等挂上第二、三条规则），每条变体带 detail 与 keywords；resolve() 返回值增加 detail/keywords。科学革命新增 teacherEval=false 默认变体（学会自己立规矩）。
+- 空态组件 .chapter-empty；浮层 #evOverlay（ovMeta/ovTitle/ovFiction/ovDetail/ovWhy/ovChain）。
+
+### 验证
+- test22_data 372/372（每章 2–4 件、detail 60–100 字、keywords 命中、alternate ≤44 字、门控与参数变体、空态可达、禁词清零、数据契约 v0.1.0 不动）。
+- test22_ui 491/491 与 Playwright accept22 320/320（1440×900 与 390×844 × 3 规则 × 5 章）：scrollHeight ≤ innerHeight+2、无横溢、卡片完整在屏内且文字无裁切、3 件 3 列 / 4 件 2×2 / 手机单列、只出现 changed、浮层开闭不撑高、翻页动画与错峰、空态、修改假设保留选择、零 console 错误。
+
 ## [2.1.0] - 2026-11-18
 
 ### 变更

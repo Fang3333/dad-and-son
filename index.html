@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>世界规则修改器 · 分版长河</title>
-<meta name="description" content="选一条现实规则，调四个参数，设三个世界假设，生成一条从原始到现代的分版长河：五个版逐页翻，每件大事对照原来与现在。情景推演，不是史实。">
+<title>世界规则修改器 · 一屏一章</title>
+<meta name="description" content="选一条现实规则，调四个参数，设三个世界假设，生成一条从原始到现代的分版长河：一屏一章，只看被改写的大事，点卡片看细节。情景推演，不是史实。">
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="styles.css?v=2.1.0">
-<script defer src="world-rule/data.js?v=2.1.0"></script>
-<script defer src="world-rule/engine.js?v=2.1.0"></script>
-<script defer src="chapters.js?v=2.1.0"></script>
-<script defer src="version.js?v=2.1.0"></script>
-<script defer src="setup.js?v=2.1.0"></script>
-<script defer src="chapter.js?v=2.1.0"></script>
-<script defer src="app.js?v=2.1.0"></script>
+<link rel="stylesheet" href="styles.css?v=2.2.0">
+<script defer src="world-rule/data.js?v=2.2.0"></script>
+<script defer src="world-rule/engine.js?v=2.2.0"></script>
+<script defer src="chapters.js?v=2.2.0"></script>
+<script defer src="version.js?v=2.2.0"></script>
+<script defer src="setup.js?v=2.2.0"></script>
+<script defer src="chapter.js?v=2.2.0"></script>
+<script defer src="app.js?v=2.2.0"></script>
 </head>
 <body>
 
@@ -21,7 +21,7 @@
   <div class="issue mono">号外 · 情景推演，不是史实</div>
   <div class="brand">
     <h1>世界规则修改器</h1>
-    <div class="latin mono">World Rule Modifier · 分版长河</div>
+    <div class="latin mono">World Rule Modifier · 一屏一章</div>
   </div>
 </header>
 
@@ -52,28 +52,26 @@
     <p id="appError" class="error" role="alert" hidden></p>
   </section>
 
-  <section id="chapter" class="chapter-page" aria-labelledby="chapterWorld" hidden>
+  <section id="chapter" class="chapter" aria-labelledby="chapterName" hidden>
     <div class="chapter-top">
-      <div class="chapter-top-line">
-        <h2 id="chapterWorld" class="chapter-world" tabindex="-1"></h2>
-        <span id="chapterRun" class="chapter-run mono"></span>
-        <button id="editAssumptions" class="line-btn" type="button">修改假设</button>
-      </div>
-      <p id="chapterSummary" class="chapter-summary mono"></p>
+      <span id="chapterRun" class="chapter-run mono"></span>
+      <span id="chapterNo" class="chapter-no mono"></span>
+      <button id="editAssumptions" class="line-btn" type="button">修改假设</button>
     </div>
 
-    <header class="chapter-head">
-      <p id="chapterNo" class="chapter-no mono"></p>
-      <div class="chapter-title-line">
-        <h3 id="chapterName" class="chapter-name"></h3>
-        <span id="chapterSpan" class="chapter-span mono"></span>
+    <div class="chapter-main">
+      <div class="chapter-title">
+        <div id="chapterBig" class="chapter-bignum" aria-hidden="true">01</div>
+        <div class="chapter-headtext">
+          <h2 id="chapterName" class="chapter-name" tabindex="-1"></h2>
+          <p id="chapterSubtitle" class="chapter-subtitle"></p>
+          <p id="chapterSpan" class="chapter-span mono"></p>
+          <p id="chapterCount" class="chapter-count mono"></p>
+        </div>
       </div>
-      <p id="chapterSubtitle" class="chapter-subtitle"></p>
-      <p id="chapterIntro" class="chapter-intro"></p>
-      <p id="chapterCount" class="chapter-count mono"></p>
-    </header>
 
-    <div id="chapterBody" class="chapter-body"></div>
+      <div id="chapterBody" class="chapter-cards" data-count="0"></div>
+    </div>
 
     <nav class="chapter-nav" aria-label="章节导航">
       <button id="prevChapter" class="nav-btn" type="button">← 上一版</button>
@@ -83,6 +81,27 @@
   </section>
 
 </main>
+
+<div class="rift" aria-hidden="true"></div>
+
+<div id="evOverlay" class="overlay" hidden>
+  <div class="overlay-backdrop" data-close="1"></div>
+  <div class="overlay-panel" role="dialog" aria-modal="true" aria-labelledby="ovTitle">
+    <button id="ovClose" class="ov-close" type="button" aria-label="关闭">×</button>
+    <p id="ovMeta" class="ov-meta mono"></p>
+    <h3 id="ovTitle" class="ov-title"></h3>
+    <p id="ovFiction" class="ov-fiction mono" hidden>代号人物 · 虚构改写，勿对号入座</p>
+    <p id="ovDetail" class="ov-detail"></p>
+    <div class="ov-why">
+      <span class="ov-label mono">为什么</span>
+      <p id="ovWhy"></p>
+    </div>
+    <div class="ov-chain">
+      <span class="ov-label mono">连锁反应</span>
+      <p id="ovChain"></p>
+    </div>
+  </div>
+</div>
 
 <footer>
   <p id="disclaimer" class="disclaimer"></p>
