@@ -1,6 +1,4 @@
-/* 第 1 页 · 设定：选规则（3 内置 + 自定义）/ 调四参数 / 干预时间 / 设三假设 / API 设置弹窗。
-   全站唯一有表单控件的页面。只渲染与回调，不持有状态；状态由 app.js 保管并写 localStorage。
-   Key 只经 WRM_AI 存浏览器；弹窗里 Key 输入框留空表示沿用已保存的 Key，DOM 文本只出现后 4 位掩码。 */
+/* Key 输入框留空表示沿用已保存的 Key；普通文本只显示掩码。 */
 (function (global) {
   "use strict";
 
@@ -17,7 +15,7 @@
     if (id === "custom") {
       return { id: "custom", title: "自定义规则", category: "AI 规则", premise: "自己写一条规则，AI 推演世界线", params: [], question: "" };
     }
-    return global.WRM_DATA.rules.find((r) => r.id === id) || global.WRM_DATA.rules[0];
+    return global.WRM_PRESETS.byId(id) || global.WRM_PRESETS.all[0];
   }
 
   function defaultParams(rule) {
@@ -41,31 +39,98 @@
       : "世界线尚未生成 · 点下方按钮出第 1 版";
   }
 
+  function selectPreset(state, id, hooks) {
+    const p = global.WRM_PRESETS.byId(id);
+    state.ruleId = p.id;
+    state.params = defaultParams(p);
+    state.assumptions = Object.assign({}, p.assumptions);
+    state.intervention = Object.assign({}, p.intervention);
+    state.mechanisms = p.mechanisms.slice();
+    render(state, hooks);
+    hooks.onChange();
+  }
+
   function renderRules(state, hooks) {
     const box = document.getElementById("ruleCards");
     box.textContent = "";
-    const rules = global.WRM_DATA.rules.concat([ruleById("custom")]);
+    const library = { id: "library", title: "本地剧本", category: "18 套 · 全部离线", premise: "太阳熄灭，月球坠落，或让芹菜开口。" };
+    const rules = global.WRM_PRESETS.all.slice(0, 3).concat([library, ruleById("custom")]);
     rules.forEach((r) => {
-      const card = el("button", "rule-card" + (r.id === state.ruleId ? " is-on" : ""));
+      const selected = r.id === "library" ? !!state.libraryOpen : r.id === state.ruleId;
+      const card = el("button", "rule-card" + (selected ? " is-on" : ""));
       card.type = "button";
       card.dataset.rule = r.id;
-      card.setAttribute("aria-pressed", r.id === state.ruleId ? "true" : "false");
+      card.setAttribute("aria-pressed", String(selected));
       card.appendChild(el("span", "rule-cat mono", r.category));
       card.appendChild(el("strong", "rule-title", r.title));
-      card.appendChild(el("span", "rule-premise", r.premise));
-      card.addEventListener("click", () => {
-        if (state.ruleId === r.id) return;
-        state.ruleId = r.id;
-        state.params = r.id === "custom" ? customParamMap(state) : defaultParams(r);
-        renderRules(state, hooks);
-        renderCustom(state, hooks);
-        renderParams(state, hooks);
-        refreshVersion(state.ruleId);
-        refreshGen(state);
+      card.appendChild(el("span", "rule-premise", r.hook || r.premise));
+      card.onclick = () => {
+        if (r.id === "library") {
+          state.libraryOpen = !state.libraryOpen;
+          render(state, hooks);
+        } else if (r.id === "custom") {
+          state.ruleId = "custom";
+          state.params = customParamMap(state);
+          render(state, hooks);
+        } else {
+          selectPreset(state, r.id, hooks);
+          return;
+        }
         hooks.onChange();
-      });
+      };
       box.appendChild(card);
     });
+  }
+
+  function renderPresets(state, hooks) {
+    document.getElementById("presetDesk").hidden = !state.libraryOpen;
+    const box = document.getElementById("presetCards");
+    box.textContent = "";
+    global.WRM_PRESETS.all.forEach((p) => {
+      const card = el("button", "preset-card rule-card" + (p.id === state.ruleId ? " is-on" : ""));
+      card.type = "button";
+      card.dataset.preset = p.id;
+      card.setAttribute("aria-pressed", String(p.id === state.ruleId));
+      card.appendChild(el("span", "rule-cat mono", String(p.index).padStart(2, "0") + " / 18"));
+      card.appendChild(el("strong", "rule-title", p.name));
+      card.appendChild(el("span", "rule-premise", p.hook));
+      card.onclick = () => selectPreset(state, p.id, hooks);
+      box.appendChild(card);
+    });
+    document.getElementById("randomPreset").onclick = () => {
+      const choices = global.WRM_PRESETS.all.filter((p) => p.id !== state.ruleId);
+      selectPreset(state, choices[Math.floor(Math.random() * choices.length)].id, hooks);
+    };
+    const p = global.WRM_PRESETS.byId(state.ruleId);
+    document.getElementById("selectedPreset").textContent = p ? "已选「" + p.name + "」 · " + p.hook : "自定义规则 · 只在生成时调用你配置的模型";
+  }
+
+  function renderMechanisms(state, hooks) {
+    const ids = state.mechanisms;
+    ["trisolaran", "film"].forEach((group) => {
+      const box = document.getElementById(group === "film" ? "filmChoices" : "trisolaranChoices");
+      box.textContent = "";
+      global.WRM_PRESETS.mechanisms.filter((m) => m.group === group).forEach((m) => {
+        const selected = ids.includes(m.id);
+        const b = el("button", "mechanism-btn era-btn" + (selected ? " is-on" : ""), m.name);
+        b.type = "button";
+        b.dataset.mechanism = m.id;
+        b.title = m.note;
+        b.setAttribute("aria-pressed", String(selected));
+        b.onclick = () => {
+          if (!selected && state.mechanisms.length >= 3) {
+            document.getElementById("mechanismNote").textContent = "最多选三个；先取消一项，再选新的。";
+            return;
+          }
+          state.mechanisms = selected ? state.mechanisms.filter((id) => id !== m.id) : state.mechanisms.concat(m.id);
+          renderMechanisms(state, hooks);
+          refreshGen(state);
+          hooks.onChange();
+        };
+        box.appendChild(b);
+      });
+    });
+    document.getElementById("mechanismNote").textContent = global.WRM_PRESETS.configurationError(state) || "已选 " + ids.length + " / 3 · 只借机制，全部是虚构推演。";
   }
 
   function customParamMap(state) {
@@ -175,7 +240,7 @@
     const era = global.WRM_AI.eraById(state.intervention.era);
     const slot = document.getElementById("interventionNote");
     slot.textContent = era.n === 1
-      ? "从原始起改写；五个版本全显示。"
+      ? "从原始起改写；八个版本全显示。"
       : "从" + era.name + "（" + (state.intervention.yearLabel || era.start) + "）起改写；之前的章节不显示。";
   }
 
@@ -183,8 +248,11 @@
     const box = document.getElementById("assumeToggles");
     box.textContent = "";
     global.WRM_CHAPTERS.assumptions.forEach((a) => {
-      box.appendChild(switchRow(a.label, a.note, state.assumptions[a.id] !== false, (next) => {
+      const notes = { tech: "关闭后，学习改用旧工具，进度靠手工补。", resources: "关闭后，领用改为排队登记，不保证余量。", cooperate: "关闭后，办事须留下担保，口头约定不再算数。" };
+      box.appendChild(switchRow(a.label, notes[a.id], state.assumptions[a.id] !== false, (next) => {
         state.assumptions[a.id] = next;
+        renderMechanisms(state, hooks);
+        refreshGen(state);
         hooks.onChange();
       }));
     });
@@ -199,13 +267,21 @@
     const valid = customValid(state);
     const ai = document.getElementById("aiGenerateBtn");
     const local = document.getElementById("localBtn");
-    ai.disabled = custom && (!has || !valid);
-    local.disabled = custom;
+    const error = global.WRM_PRESETS.configurationError(state);
+    ai.hidden = !custom;
+    ai.disabled = !custom || !has || !valid || !!error;
+    local.hidden = custom;
+    local.disabled = custom || !!error;
+    local.textContent = "生成这个世界 → · 本地剧本";
+    const regen = document.getElementById("regenBtn");
+    regen.hidden = !custom || !state.hasAIRun;
+    regen.disabled = ai.disabled;
     const note = document.getElementById("genNote");
-    if (custom && !has) note.textContent = "自定义规则需要 API Key";
+    if (error) note.textContent = error;
+    else if (custom && !has) note.textContent = "自定义规则需要 API Key";
     else if (custom && !valid) note.textContent = "填好规则名称和四个参数名，才能用 AI 生成";
-    else if (custom) note.textContent = "自定义规则只走 AI；生成失败会提示改用内置规则";
-    else note.textContent = "";
+    else if (custom) note.textContent = "自定义规则只走 AI；生成失败可改用本地剧本";
+    else note.textContent = "八版各五件 · 全部离线 · 不调用 API";
     document.getElementById("apiPill").textContent = has
       ? s.model + " · " + global.WRM_AI.masked(s.apiKey)
       : "未配置 API Key";
@@ -219,15 +295,17 @@
     document.getElementById("fallbackBtn").hidden = !on;
   }
 
+  let busyControls = [];
   function busy(on) {
     const ai = document.getElementById("aiGenerateBtn");
-    const local = document.getElementById("localBtn");
-    ai.textContent = on ? "生成中…（最长 30 秒）" : "用 AI 生成这个世界 →";
+    ai.textContent = on ? "生成中…（单次请求 30 秒）" : "用 AI 生成这个世界 →";
     if (on) {
-      ai.disabled = true;
-      local.disabled = true;
-    } else if (currentState) {
-      refreshGen(currentState);
+      busyControls = Array.from(document.querySelectorAll("#setup button,#setup input,#setup select")).filter((n) => !n.disabled);
+      busyControls.forEach((n) => { n.disabled = true; });
+    } else {
+      busyControls.forEach((n) => { n.disabled = false; });
+      busyControls = [];
+      if (currentState) refreshGen(currentState);
     }
   }
 
@@ -334,7 +412,7 @@
       dlg = global.WRM_AI.clearKey(dlg || global.WRM_AI.loadSettings());
       document.getElementById("apiKey").value = "";
       document.getElementById("apiKey").placeholder = "sk-…";
-      testMsg("已清除本机保存的 Key", true);
+      testMsg("已清除本机保存的 Key", null);
       refreshGen(state);
       hooks.onChange();
     };
@@ -347,9 +425,17 @@
       const btn = document.getElementById("apiRefreshModels");
       btn.disabled = true;
       btn.textContent = "刷新中…";
-      const r = await global.WRM_AI.listModels(collect());
+      const dialog = dlg;
+      const settings = collect();
+      const r = await global.WRM_AI.listModels(settings);
       btn.disabled = false;
       btn.textContent = "刷新模型列表";
+      if (!apiOpen() || dlg !== dialog) return;
+      const current = collect();
+      if (current.baseUrl !== settings.baseUrl || current.apiKey !== settings.apiKey || current.provider !== settings.provider) {
+        document.getElementById("apiModelNote").textContent = "接口或 Key 已更改，请重新刷新模型列表";
+        return;
+      }
       const sel = document.getElementById("apiModel");
       const manual = document.getElementById("apiModelManual");
       const noteEl = document.getElementById("apiModelNote");
@@ -370,9 +456,17 @@
       const btn = document.getElementById("apiTest");
       btn.disabled = true;
       testMsg("测试中…", null);
-      const r = await global.WRM_AI.testConnection(collect());
+      const dialog = dlg;
+      const settings = collect();
+      const r = await global.WRM_AI.testConnection(settings);
       btn.disabled = false;
-      testMsg(r.ok ? r.message : r.message, r.ok);
+      if (!apiOpen() || dlg !== dialog) return;
+      const current = collect();
+      if (current.baseUrl !== settings.baseUrl || current.apiKey !== settings.apiKey || current.model !== settings.model || current.provider !== settings.provider) {
+        testMsg("连接设置已更改，请重新测试", null);
+        return;
+      }
+      testMsg(r.message, r.ok);
     };
 
     document.getElementById("apiSave").onclick = () => {
@@ -386,14 +480,17 @@
   function render(state, hooks) {
     currentState = state;
     renderRules(state, hooks);
+    renderPresets(state, hooks);
     renderCustom(state, hooks);
     renderParams(state, hooks);
     renderIntervention(state, hooks);
     renderAssumptions(state, hooks);
+    renderMechanisms(state, hooks);
     refreshVersion(state.ruleId);
     refreshGen(state);
     document.getElementById("aiGenerateBtn").onclick = () => hooks.onGenerateAI();
     document.getElementById("localBtn").onclick = () => hooks.onGenerateLocal();
+    document.getElementById("regenBtn").onclick = () => hooks.onRegenerate();
     document.getElementById("fallbackBtn").onclick = () => hooks.onFallback();
     bindApi(state, hooks);
   }

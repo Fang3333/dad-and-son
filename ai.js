@@ -1,8 +1,4 @@
-/* API 适配层（v2.3）：OpenAI 兼容协议，浏览器直连。
-   Key 只存浏览器（localStorage wrm.api 或 sessionStorage wrm.api），不进 URL、不进日志、不进错误文案。
-   listModels / testConnection / generateWorld；30 秒超时；仅 JSON 解析失败重试 1 次。
-   结果缓存 wrm.aiCache：按 规则+干预+假设+模型 哈希，避免重复扣费；「重新生成」绕过缓存。
-   本文件不 console 任何内容；错误信息只含静态中文与状态码。 */
+/* Key 仅存浏览器；错误只用静态文案，不能回显服务商响应。 */
 (function (global) {
   "use strict";
 
@@ -19,33 +15,23 @@
     remember: true
   };
 
-  const ERAS = [
-    { id: "primitive", n: 1, name: "原始", start: "约 100 万年前", span: "约 100 万年前—前 3000" },
-    { id: "ancient", n: 2, name: "古代", start: "前 3000", span: "前 3000—公元 1000" },
-    { id: "earlymodern", n: 3, name: "近代早期", start: "1000", span: "1000—1750" },
-    { id: "industrial", n: 4, name: "工业", start: "1750", span: "1750—1950" },
-    { id: "modern", n: 5, name: "现代", start: "1950", span: "1950—现在" }
-  ];
-
-  /* 干预点之前的「前情」，本地确定性文案，≤30 字 */
-  const RECAP = {
-    2: "火种留住了，话学会了，种子埋进土里。",
-    3: "文字、钱币和道路都照旧来过。",
-    4: "印刷和帆船先把世界连了起来。",
-    5: "蒸汽和电灯先亮过了夜。"
-  };
+  const ERAS = global.WRM_PRESETS.ERAS;
+  const RECAP = global.WRM_PRESETS.RECAP;
 
   const SYSTEM = [
     "你是世界线生成器。只输出 JSON 对象，不要 markdown、不要解释。",
     "结构：{runId, intervention:{era,yearLabel,mode}, chapters:[{n,era,name,headline,changedCount,events:[{track:\"world\"|\"personal\",title,yearLabel,domain,before,after,why,detail,hot}],personalSummary}]}",
     "规则：",
-    "1 只生成 intervention 及之后的章节；era 取 primitive/ancient/earlymodern/industrial/modern，n 对应 1–5。",
-    "2 每章 2–3 件 world + 2–3 件 personal，全部是 changed；changedCount = world + personal 数量。",
-    "3 before/after ≤18 字，why ≤16 字，detail 60–100 字，headline ≤18 字。",
-    "4 个人线用第二人称「你」，覆盖学习/恋爱/工作，每章至少一件学习、一件恋爱。",
+    "1 只生成 intervention 及之后的全部章节，不得缺章。时代编号：" + ERAS.map((e) => e.n + "=" + e.id + "（" + e.name + "）").join("，") + "。",
+    "2 每章恰好 5 件：3 件 world + 2 件 personal，changedCount=5。before 与 after 必须有实质变化，未变化的事件换成真正改写的事件。",
+    "3 title≤8字，before/after≤18字，why≤16字，detail为80–120字，headline≤18字。",
+    "4 个人线用第二人称「你」，两件domain分别为学习、恋爱；均为虚构成年人的生活，每版是独立人生切片。",
     "5 声线像老周：短句、具体物件、冷收尾；不解释笑点，不堆网络梗；黑色幽默只向上扎。",
     "6 不写真实人物私生活、真实学校与公司名、未成年人；热点只用代号 亮哥/猎鹰/不烧心，并标 hot:true。",
-    "7 不确定的历史标 certainty:\"推算\"，不编具体统计数字。"
+    "7 不确定的历史标 certainty:\"推算\"，改写与未来标\"假设\"，不编具体统计数字。",
+    "8 科幻只借机制，不出现电影人物、台词、具体情节；机制与参数必须实际影响事件。",
+    "9 2050、2100、2200分别写设备维护、异地生活、副本人格等具体细节；原始不能出现现代设备。",
+    "10 不用让我们一起、赋能、颠覆、未来已来、在这个时代、总而言之、值得注意的是、综上所述、随着、首先、其次。"
   ].join("\n");
 
   function ls() { try { return global.localStorage; } catch (e) { return null; } }
@@ -128,26 +114,24 @@
       if (signal.aborted) ctrl.abort();
       else signal.addEventListener("abort", onAbort);
     }
-    let res;
     try {
-      res = await fetch(base(s) + path, {
+      const res = await fetch(base(s) + path, {
         method: body ? "POST" : "GET",
         headers: headers(s),
         body: body ? JSON.stringify(body) : undefined,
         signal: ctrl.signal
       });
+      if (!res.ok) return { ok: false, code: "http-" + res.status, message: errFor(res.status) };
+      const json = await res.json();
+      return { ok: true, json: json };
     } catch (e) {
+      if (ctrl.signal.aborted && !(signal && signal.aborted)) return { ok: false, code: "timeout", message: TIMEOUT_MSG };
+      if (e instanceof SyntaxError) return { ok: false, code: "parse", message: "服务返回的不是 JSON" };
+      return { ok: false, code: "network", message: CORS_MSG };
+    } finally {
       clearTimeout(timer);
       if (signal) signal.removeEventListener("abort", onAbort);
-      if (ctrl.signal.aborted && !(signal && signal.aborted)) return { ok: false, code: "timeout", message: TIMEOUT_MSG };
-      return { ok: false, code: "network", message: CORS_MSG };
     }
-    clearTimeout(timer);
-    if (signal) signal.removeEventListener("abort", onAbort);
-    if (!res.ok) return { ok: false, code: "http-" + res.status, message: errFor(res.status) };
-    let json = null;
-    try { json = await res.json(); } catch (e) { return { ok: false, code: "parse", message: "服务返回的不是 JSON" }; }
-    return { ok: true, json: json };
   }
 
   async function listModels(s) {
@@ -178,7 +162,8 @@
       "\n参数：" + params +
       "\n干预时间：" + p.intervention.era + " / " + (p.intervention.yearLabel || "") +
       "\n假设：技术累积=" + !!p.assumptions.tech + "，资源足够=" + !!p.assumptions.resources + "，愿意合作=" + !!p.assumptions.cooperation +
-      "\n请生成 intervention 及之后的章节。";
+      "\n叠加机制：" + (p.mechanisms || []).map((m) => m.name + "：" + m.description).join("；") +
+      "\n请生成 intervention 及之后的全部章节，每章恰好3世界+2个人。";
   }
 
   function stripFences(text) {
@@ -189,7 +174,7 @@
     return t.trim();
   }
 
-  async function callOnce(s, p) {
+  async function callOnce(s, p, signal) {
     const r = await request(s, "/chat/completions", {
       model: s.model,
       temperature: s.temperature,
@@ -198,7 +183,7 @@
         { role: "system", content: SYSTEM },
         { role: "user", content: userMessage(p) }
       ]
-    });
+    }, signal);
     if (!r.ok) return r;
     const content = r.json && r.json.choices && r.json.choices[0] && r.json.choices[0].message
       ? r.json.choices[0].message.content : "";
@@ -210,8 +195,8 @@
   /* 仅 JSON 解析失败重试 1 次；401/403/429/CORS 不重试 */
   async function generateWorld(s, p, signal) {
     if (!hasKey(s)) return { ok: false, code: "nokey", message: "自定义规则需要 API Key" };
-    let r = await callOnce(s, p);
-    if (!r.ok && r.code === "parse") r = await callOnce(s, p);
+    let r = await callOnce(s, p, signal);
+    if (!r.ok && r.code === "parse" && !(signal && signal.aborted)) r = await callOnce(s, p, signal);
     if (!r.ok) return r;
     return { ok: true, json: r.json, model: s.model };
   }
@@ -224,64 +209,32 @@
     return typeof v === "string" ? v.trim() : "";
   }
 
-  /* 校验并归一 AI JSON：只留 intervention 及之后、每章 ≥2 件；字段截断防溢出 */
   function normalize(json, eraId) {
-    if (!json || !Array.isArray(json.chapters)) throw new Error("AI 返回的结构不对");
-    const startN = eraById(eraId).n;
-    const seen = {};
-    const out = [];
-    json.chapters.forEach((ch) => {
-      if (!ch || typeof ch !== "object") return;
-      const era = eraById(str(ch.era));
-      if (!ERAS.some((e) => e.id === str(ch.era)) || era.n < startN || seen[era.n]) return;
-      const raw = Array.isArray(ch.events) ? ch.events : [];
-      const events = [];
-      raw.forEach((e) => {
-        if (!e || typeof e !== "object") return;
-        const title = str(e.title);
-        const before = str(e.before);
-        const after = str(e.after);
-        const why = str(e.why);
-        if (!title || !before || !after || !why || events.length >= 6) return;
-        const certainty = str(e.certainty) || "推算";
-        events.push({
-          ev: {
-            id: "ai-" + era.n + "-" + events.length,
-            yearLabel: str(e.yearLabel) || era.start,
-            title: title.slice(0, 14),
-            domain: str(e.domain) || "社会",
-            baseline: before.slice(0, 44),
-            alternate: after.slice(0, 44),
-            track: e.track === "personal" ? "personal" : "world",
-            hot: !!e.hot,
-            certainty: certainty
-          },
-          view: {
-            changed: true,
-            alternate: after.slice(0, 44),
-            why: why.slice(0, 40),
-            chain: str(e.chain),
-            detail: str(e.detail) || after,
-            keywords: [],
-            certainty: certainty
-          }
-        });
+    const invalid = () => { throw new Error("AI 返回的章节不完整或不符合五卡格式"); };
+    if (!json || !Array.isArray(json.chapters)) return invalid();
+    const expected = ERAS.filter((e) => e.n >= eraById(eraId).n);
+    if (json.chapters.length !== expected.length) return invalid();
+    return expected.map((era) => {
+      const matches = json.chapters.filter((c) => c && c.era === era.id && c.n === era.n);
+      if (matches.length !== 1) return invalid();
+      const ch = matches[0];
+      if (!Array.isArray(ch.events) || ch.events.length !== 5) return invalid();
+      const world = ch.events.filter((e) => e && e.track === "world");
+      const personal = ch.events.filter((e) => e && e.track === "personal");
+      if (world.length !== 3 || personal.length !== 2 || !personal.some((e) => e.domain === "学习") || !personal.some((e) => e.domain === "恋爱")) return invalid();
+      const events = world.concat(personal).map((e, i) => {
+        const limits = { title: 8, before: 18, after: 18, why: 16 };
+        if (Object.keys(limits).some((k) => !str(e[k]) || Array.from(str(e[k])).length > limits[k])) return invalid();
+        if (str(e.before) === str(e.after) || Array.from(str(e.detail)).length < 80 || Array.from(str(e.detail)).length > 120) return invalid();
+        const certainty = era.n > 5 ? "假设" : str(e.certainty) === "推算" ? "推算" : "假设";
+        return {
+          ev: { id: "ai-" + era.n + "-" + i, title: str(e.title), yearLabel: str(e.yearLabel).slice(0, 16) || era.start,
+            domain: str(e.domain).slice(0, 8) || "生活", baseline: str(e.before), track: e.track, hot: !!e.hot },
+          view: { changed: true, alternate: str(e.after), why: str(e.why), detail: str(e.detail), chain: str(e.chain).slice(0, 160), keywords: [], certainty }
+        };
       });
-      if (events.length < 2) return;
-      seen[era.n] = true;
-      out.push({
-        n: era.n,
-        era: era.id,
-        name: str(ch.name) || era.name,
-        span: era.span,
-        subtitle: (str(ch.headline) || era.name).slice(0, 24),
-        personal: str(ch.personalSummary).slice(0, 60),
-        events: events
-      });
+      return { n: era.n, era: era.id, name: era.name, span: era.span, subtitle: (str(ch.headline) || era.name).slice(0, 18), personal: events.slice(3).map((e) => e.view.alternate).join("；"), events };
     });
-    out.sort((a, b) => a.n - b.n);
-    if (!out.length) throw new Error("AI 没返回可用章节");
-    return out;
   }
 
   /* ---------- 结果缓存 ---------- */

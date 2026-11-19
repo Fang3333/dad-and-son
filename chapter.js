@@ -1,251 +1,250 @@
-/* 第 2–6 页 · 一屏一章（只读）：100dvh 不滚动。
-   只渲染 changed 事件；不足 2 件显示空态。卡片左「原来」右「现在」，点击开 fixed 浮层看 detail。
-   本页不允许出现 input/select/toggle；按钮只有导航、「修改假设」、「重新生成」（AI _run）与浮层关闭。
-   run.kind=local 时改写判定来自 WRM_CHAPTERS.resolve；run.kind=ai 时渲染归一后的 AI 章节。
-   干预时间之前的章节不渲染：导航圆点只摆 run.ns。 */
 (function (global) {
   "use strict";
 
+  const $ = (id) => document.getElementById(id);
+
   function el(tag, cls, text) {
-    const n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (text != null) n.textContent = text;
-    return n;
+    const node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text != null) node.textContent = text;
+    return node;
   }
 
-  function pad2(n) {
-    return String(n).padStart(2, "0");
-  }
-
-  /* 只把 keywords 命中的词包成深红 <em>，其余保持墨色 */
-  function markKeywords(text, kws) {
+  function markKeywords(text, keywords) {
     const frag = document.createDocumentFragment();
-    let rest = text;
+    const words = (Array.isArray(keywords) ? keywords : []).filter((word) => typeof word === "string" && word);
+    let rest = String(text || "");
     while (rest.length) {
       let best = null;
-      (kws || []).forEach((k) => {
-        const idx = rest.indexOf(k);
-        if (k && idx >= 0 && (!best || idx < best.idx)) best = { idx: idx, k: k };
+      words.forEach((word) => {
+        const index = rest.indexOf(word);
+        if (index >= 0 && (!best || index < best.index || (index === best.index && word.length > best.word.length))) {
+          best = { index: index, word: word };
+        }
       });
       if (!best) {
         frag.appendChild(document.createTextNode(rest));
         break;
       }
-      if (best.idx > 0) frag.appendChild(document.createTextNode(rest.slice(0, best.idx)));
-      frag.appendChild(el("em", "kw", best.k));
-      rest = rest.slice(best.idx + best.k.length);
+      if (best.index) frag.appendChild(document.createTextNode(rest.slice(0, best.index)));
+      frag.appendChild(el("em", "kw", best.word));
+      rest = rest.slice(best.index + best.word.length);
     }
     return frag;
   }
 
-  /* ---------- 详情浮层 ---------- */
-
+  /* 详情浮层：保留原焦点，关闭后归还；Tab 与程序焦点均不能跑到背景。 */
   let lastFocus = null;
+  let backgroundState = [];
 
   function overlayOpen() {
-    return !document.getElementById("evOverlay").hidden;
+    const overlay = $("evOverlay");
+    return !!overlay && !overlay.hidden;
+  }
+
+  function focusableInOverlay() {
+    return Array.from($("evOverlay").querySelectorAll(
+      'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )).filter((node) => !node.closest("[hidden]") && node.getClientRects().length > 0);
   }
 
   function openOverlay(ev, view) {
-    lastFocus = document.activeElement;
-    document.getElementById("ovMeta").textContent =
-      ev.yearLabel + " · " + ev.domain + " · " + view.certainty;
-    document.getElementById("ovTitle").textContent = ev.title;
-    document.getElementById("ovFiction").hidden = !ev.hot;
-    document.getElementById("ovDetail").textContent = view.detail || view.alternate;
-    document.getElementById("ovWhy").textContent = view.why;
-    document.getElementById("ovChain").textContent = view.chain || "";
-    document.getElementById("ovChainBlock").hidden = !view.chain;
-    document.getElementById("evOverlay").hidden = false;
-    document.getElementById("ovClose").focus();
+    if (!overlayOpen()) {
+      lastFocus = document.activeElement;
+      backgroundState = Array.from(document.querySelectorAll("main, header.masthead, footer")).map((node) => {
+        const wasInert = node.inert;
+        node.inert = true;
+        return { node: node, wasInert: wasInert };
+      });
+    }
+    $("ovMeta").textContent = [
+      ev.track === "personal" ? "个人小事" : "世界大事", ev.yearLabel, ev.domain, view.certainty
+    ].filter(Boolean).join(" · ");
+    $("ovTitle").textContent = ev.title || "事件详情";
+    $("ovFiction").hidden = !ev.hot;
+    $("ovDetail").textContent = view.detail || view.alternate || "";
+    $("ovWhy").textContent = view.why || "";
+    $("ovChain").textContent = view.chain || "";
+    $("ovChainBlock").hidden = !view.chain;
+    $("evOverlay").hidden = false;
+    $("evOverlay").querySelector(".overlay-panel").scrollTop = 0;
+    $("ovClose").focus({ preventScroll: true });
   }
 
   function closeOverlay() {
-    const ov = document.getElementById("evOverlay");
-    if (ov.hidden) return;
-    ov.hidden = true;
-    if (lastFocus && typeof lastFocus.focus === "function") lastFocus.focus();
+    if (!overlayOpen()) return;
+    $("evOverlay").hidden = true;
+    backgroundState.forEach((entry) => { entry.node.inert = entry.wasInert; });
+    backgroundState = [];
+    const target = lastFocus;
     lastFocus = null;
+    if (target && target.isConnected && !target.closest("[hidden]") && typeof target.focus === "function") {
+      target.focus({ preventScroll: true });
+    }
   }
 
   function bindOverlay() {
-    document.getElementById("ovClose").addEventListener("click", closeOverlay);
-    document.getElementById("evOverlay").addEventListener("click", (e) => {
-      if (e.target && e.target.dataset && e.target.dataset.close) closeOverlay();
+    $("ovClose").addEventListener("click", closeOverlay);
+    $("evOverlay").addEventListener("click", (event) => {
+      if (event.target.dataset && event.target.dataset.close) closeOverlay();
     });
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && overlayOpen()) {
-        e.stopPropagation();
+    document.addEventListener("keydown", (event) => {
+      if (!overlayOpen()) return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopImmediatePropagation();
         closeOverlay();
+      } else if (event.key === "Tab") {
+        const nodes = focusableInOverlay();
+        const first = nodes[0] || $("ovClose");
+        const last = nodes[nodes.length - 1] || first;
+        const active = document.activeElement;
+        if (!nodes.includes(active) || (event.shiftKey ? active === first : active === last)) {
+          event.preventDefault();
+          (event.shiftKey ? last : first).focus({ preventScroll: true });
+        }
+      }
+    }, true);
+    document.addEventListener("focusin", (event) => {
+      if (overlayOpen() && !$("evOverlay").contains(event.target)) {
+        $("ovClose").focus({ preventScroll: true });
       }
     });
   }
 
-  /* ---------- 事件卡 ---------- */
-
   function card(ev, view, index) {
-    const c = el("div", "ev-card");
-    c.setAttribute("role", "button");
-    c.setAttribute("tabindex", "0");
-    c.dataset.event = ev.id;
-    c.setAttribute("aria-label", ev.title + " · 已改写 · 查看详情");
-    c.style.animationDelay = (index * 40) + "ms";
+    const personal = ev.track === "personal";
+    const node = el("div", "ev-card");
+    node.setAttribute("role", "button");
+    node.setAttribute("tabindex", "0");
+    node.setAttribute("aria-haspopup", "dialog");
+    node.setAttribute("aria-controls", "evOverlay");
+    node.setAttribute("aria-label", (personal ? "个人小事" : "世界大事") + " · " + ev.title + " · 查看改写详情");
+    node.dataset.event = ev.id;
+    node.dataset.track = personal ? "personal" : "world";
+    node.style.animationDelay = (index * 40) + "ms";
 
     const top = el("div", "ev-top");
-    top.appendChild(el("span", "ev-year mono", ev.yearLabel));
+    const meta = el("div", "ev-meta");
+    meta.appendChild(el("span", "ev-year mono", ev.yearLabel));
+    meta.appendChild(el("span", "ev-domain mono", ev.domain));
+    const track = el("span", "ev-track mono", personal ? "私" : "世界");
+    track.setAttribute("aria-label", personal ? "个人线" : "世界线");
+    meta.appendChild(track);
+    meta.appendChild(el("span", "stamp stamp-change", "已改写"));
+    top.appendChild(meta);
     top.appendChild(el("h3", "ev-title", ev.title));
-    top.appendChild(el("span", "ev-domain mono", ev.domain));
-    if (ev.track === "personal") top.appendChild(el("span", "ev-track mono", "个人线"));
-    c.appendChild(top);
-    c.appendChild(el("span", "stamp stamp-change", "已改写"));
+    node.appendChild(top);
 
     const halves = el("div", "ev-halves");
-
     const before = el("div", "ev-before");
-    const bl = el("div", "ev-half-label");
-    bl.appendChild(el("span", "mono", "原来"));
-    before.appendChild(bl);
+    before.appendChild(el("span", "ev-half-label mono", "原来"));
     before.appendChild(el("p", "ev-text", ev.baseline));
-    halves.appendChild(before);
-
     const now = el("div", "ev-now");
-    const nl = el("div", "ev-half-label");
-    nl.appendChild(el("span", "mono", "现在"));
-    nl.appendChild(el("span", "ev-more mono", "详情 ↗"));
-    now.appendChild(nl);
-    const nowText = el("p", "ev-text");
-    nowText.appendChild(markKeywords(view.alternate, view.keywords));
-    now.appendChild(nowText);
+    now.appendChild(el("span", "ev-half-label mono", "现在"));
+    const after = el("p", "ev-text");
+    after.appendChild(markKeywords(view.alternate, view.keywords));
+    now.appendChild(after);
+    halves.appendChild(before);
     halves.appendChild(now);
-
-    c.appendChild(halves);
+    node.appendChild(halves);
 
     const open = () => openOverlay(ev, view);
-    c.addEventListener("click", open);
-    c.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
+    node.addEventListener("click", open);
+    node.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
         open();
       }
     });
-    return c;
+    return node;
   }
 
-  function emptyState() {
-    const box = el("div", "chapter-empty");
-    box.appendChild(el("p", "chapter-empty-title", "这一版没有改动"));
-    box.appendChild(el("p", "chapter-empty-note mono", "规则没够着这个时代，或假设被关掉了 · 情景推演，不是史实"));
-    return box;
+  function renderTrack(id, items, offset) {
+    const box = $(id);
+    box.replaceChildren();
+    items.forEach((item, index) => box.appendChild(card(item.ev, item.view, offset + index)));
+    if (!items.length) {
+      box.appendChild(el("p", "track-empty", "本轨暂无事件"));
+    }
   }
-
-  /* ---------- 导航 ---------- */
 
   function renderNav(n, ns, hooks) {
-    const first = ns[0];
-    const last = ns[ns.length - 1];
+    const index = ns.indexOf(n);
+    const last = index === ns.length - 1;
+    const prev = $("prevChapter");
+    prev.disabled = index <= 0;
+    prev.onclick = () => { if (!prev.disabled) hooks.onPrev(); };
 
-    const prev = document.getElementById("prevChapter");
-    prev.textContent = "← 上一版";
-    prev.disabled = n <= first;
-    prev.onclick = () => { if (n > first) hooks.onPrev(); };
-
-    const next = document.getElementById("nextChapter");
-    next.textContent = n >= last ? "回到第 1 版 ↺" : "下一版 →";
+    const next = $("nextChapter");
+    next.textContent = last ? (ns[0] === 1 ? "回到第 1 版 ↺" : "回到起始版 ↺") : "下一版 →";
+    next.setAttribute("aria-label", last ? "回到起始版，第 " + ns[0] + " 版" : "下一版，第 " + ns[index + 1] + " 版");
     next.onclick = () => hooks.onNext();
 
-    const dots = document.getElementById("chapterDots");
-    dots.textContent = "";
+    const dots = $("chapterDots");
+    dots.replaceChildren();
     ns.forEach((k) => {
-      const b = el("button", "dot" + (k === n ? " is-on" : ""));
-      b.type = "button";
-      b.setAttribute("aria-label", "第 " + k + " 版");
-      if (k === n) b.setAttribute("aria-current", "step");
-      b.onclick = () => hooks.onDot(k);
-      dots.appendChild(b);
+      const button = el("button", "dot" + (k === n ? " is-on" : ""));
+      button.type = "button";
+      button.dataset.page = String(k);
+      button.setAttribute("aria-label", "第 " + k + " 版");
+      if (k === n) button.setAttribute("aria-current", "step");
+      button.onclick = () => hooks.onDot(k);
+      dots.appendChild(button);
     });
+
+    const poster = $("posterBtn");
+    poster.classList.toggle("is-last", last);
+    poster.textContent = last ? "生成本期海报" : "生成海报";
+    poster.disabled = typeof hooks.onPoster !== "function";
+    poster.onclick = () => { if (!poster.disabled) hooks.onPoster(); };
   }
 
-  /* ---------- 渲染 ---------- */
-
-  function render(state, chapterN, hooks, direction, run) {
+  function render(state, n, hooks, direction, run) {
     closeOverlay();
-
     const ns = run.ns;
-    let name, subtitle, span, personal = "", items;
-    if (run.kind === "ai") {
-      const ch = run.chapters.find((c) => c.n === chapterN) || run.chapters[0];
-      name = ch.name;
-      subtitle = ch.subtitle;
-      span = ch.span;
-      personal = ch.personal || "";
-      items = ch.events;
-    } else {
-      const ch = global.WRM_CHAPTERS.chapters.find((c) => c.n === chapterN)
-        || global.WRM_CHAPTERS.chapters[0];
-      name = ch.name;
-      subtitle = ch.subtitle;
-      span = ch.span;
-      items = [];
-      ch.events.forEach((ev) => {
-        const view = global.WRM_CHAPTERS.resolve(ev, state.ruleId, state.params, state.assumptions);
-        if (view.changed) items.push({ ev: ev, view: view });
-      });
-    }
+    const chapterN = ns.includes(Number(n)) ? Number(n) : ns[0];
+    const chapter = run.chapters.find((entry) => entry.n === chapterN);
+    if (!chapter) return;
+    const firstChapter = run.chapters.find((entry) => entry.n === ns[0]) || chapter;
+    const items = chapter.events.filter((item) => item.view.changed);
+    const world = items.filter((item) => item.ev.track !== "personal");
+    const personal = items.filter((item) => item.ev.track === "personal");
 
-    document.getElementById("chapterRun").textContent =
-      "世界线 " + global.WRM_VERSION.runId(state.ruleId);
-    document.getElementById("chapterNo").textContent = "第 " + chapterN + " 版 / 5";
-    document.getElementById("chapterSource").textContent =
-      run.kind === "ai" ? "由 " + run.model + " 生成" : "本地模板";
-    const regen = document.getElementById("regenBtn");
-    regen.hidden = run.kind !== "ai";
-    regen.disabled = false;
-    regen.onclick = () => hooks.onRegen();
+    $("chapterRun").textContent = "世界线 " + run.runId;
+    $("chapterRule").textContent = run.ruleName;
+    $("chapterNo").textContent = "第 " + chapterN + " 版 / 8";
+    $("chapterSource").textContent = run.kind === "ai" ? "由 " + run.model + " 生成" : "本地剧本";
+    $("chapterBig").textContent = String(chapterN).padStart(2, "0");
+    $("chapterName").textContent = chapter.name;
+    $("chapterSubtitle").textContent = chapter.subtitle || "";
+    $("chapterSpan").textContent = chapter.span || "";
+    $("chapterCount").textContent = "本版改写 " + items.length + " 件 · 世界 " + world.length + " / 个人 " + personal.length + " · 情景推演";
 
-    document.getElementById("chapterBig").textContent = pad2(chapterN);
-    document.getElementById("chapterName").textContent = name;
-    document.getElementById("chapterSubtitle").textContent = subtitle;
-    document.getElementById("chapterSpan").textContent = span;
+    const intervention = run.intervention || {};
+    $("chapterIntervention").hidden = false;
+    $("chapterIntervention").textContent = "干预点：" + [intervention.yearLabel, firstChapter.name].filter(Boolean).join(" · ");
+    const recap = $("chapterRecap");
+    recap.hidden = chapterN !== ns[0] || !run.recap;
+    recap.textContent = recap.hidden ? "" : "前情：" + run.recap;
+    $("chapterPersonal").hidden = !chapter.personal;
+    $("chapterPersonal").textContent = chapter.personal || "";
 
-    const showIntervention = !!run.intervention && ns[0] > 1;
-    const iv = document.getElementById("chapterIntervention");
-    iv.hidden = !showIntervention;
-    const recap = document.getElementById("chapterRecap");
-    recap.hidden = !showIntervention;
-    document.getElementById("chapterSpan").hidden = showIntervention;
-    if (showIntervention) {
-      const era = global.WRM_AI.eraById(run.intervention.era);
-      iv.textContent = "干预点：" + (run.intervention.yearLabel || era.start) + " · " + era.name;
-      recap.textContent = "前情：" + (run.recap || "");
-    }
-
-    const ps = document.getElementById("chapterPersonal");
-    ps.hidden = !personal;
-    ps.textContent = personal;
-
-    document.getElementById("chapterCount").textContent =
-      "本版改写 " + items.length + " 件 · " + global.WRM_CHAPTERS.meta.disclaimer;
-
-    const body = document.getElementById("chapterBody");
-    body.textContent = "";
-    body.dataset.count = String(items.length);
-    if (items.length < 2) {
-      body.appendChild(emptyState());
-    } else {
-      items.forEach((item, i) => body.appendChild(card(item.ev, item.view, i)));
-    }
-
+    $("chapterBody").dataset.count = String(items.length);
+    renderTrack("worldCards", world, 0);
+    renderTrack("personalCards", personal, world.length);
     renderNav(chapterN, ns, hooks);
-    document.getElementById("editAssumptions").onclick = () => hooks.onEdit();
+    $("editAssumptions").onclick = () => hooks.onEdit();
 
-    const sec = document.getElementById("chapter");
-    sec.classList.remove("turn-next", "turn-prev");
+    const section = $("chapter");
+    section.dataset.era = chapter.era || "";
+    section.classList.remove("turn-next", "turn-prev");
     if (direction) {
-      void sec.offsetWidth;
-      sec.classList.add(direction === "prev" ? "turn-prev" : "turn-next");
+      void section.offsetWidth;
+      section.classList.add(direction === "prev" ? "turn-prev" : "turn-next");
     }
   }
 
   bindOverlay();
-  global.WRM_CHAPTER_PAGE = { render: render, closeOverlay: closeOverlay };
+  global.WRM_CHAPTER_PAGE = { render: render, closeOverlay: closeOverlay, overlayOpen: overlayOpen };
 })(typeof window !== "undefined" ? window : globalThis);

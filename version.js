@@ -39,7 +39,9 @@
   }
 
   function letterFor(ruleId) {
-    return LETTER[ruleId] || "A";
+    if (LETTER[ruleId]) return LETTER[ruleId];
+    const preset = global.WRM_PRESETS && global.WRM_PRESETS.byId(ruleId);
+    return preset ? String.fromCharCode(65 + preset.index) : "A";
   }
 
   function runId(ruleId) {
