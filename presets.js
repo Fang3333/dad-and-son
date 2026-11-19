@@ -81,26 +81,6 @@
     "falling-moon": "海岸住处常年用", "offline-world": "资料沿网络送来", "talking-plants": "根部需求靠猜测",
     "thirty-years": "长约可订到晚年", "no-borders": "过界先查来处", "live-exams": "实作关起门考"
   };
-  const ruleCosts = {
-    "no-exam": "老师傅推荐的人先到桌边，没熟人的就得把活再做一遍。",
-    "four-hour": "工具只一套，前手没放下，后手的四小时已经开始算。",
-    "free-goods": "东西不要钱，搬运和等候还占两只手；零元没有多添一条队。",
-    "sun-off": "食物由地热养菌兜住，照明另占能量，灯下的位置不跟着免费。",
-    "science-lock": "越界试验仍回旧结果，修理工只好在旧零件的接缝处省料。",
-    "dark-forest": "门朝外的缝得遮严；能量还能用，漏出去的位置不能撤回。",
-    "flat-world": "路不能互相跨过；前车停在窄口，后车没有楼上可以绕。",
-    "inherited-memory": "旧记忆带来旧手法，眼前的材料还得亲手试；祖辈不替你上手。",
-    "fast-time": "成人身体先赶了十倍路，器材仍走老钟；课程只好拆短。",
-    "half-gravity": "东西轻了，惯性没有变小；提得动还得有地方刹停。",
-    "immortality": "人不老，住处却不会自己长大；先来的人得腾开用完的桌面。",
-    "no-language": "文字、暗号都不管用，只能把实物递到手边重做，沉默不是答应。",
-    "falling-moon": "避潮住处人人有份，搬进去的东西仍要有人扛，路不替你抬脚。",
-    "offline-world": "远处的数据只能随实物送来；送到之前，工具得先空出位置等它。",
-    "talking-plants": "根只报自己脚下的事，远处水管还得另验；一株苗不替整片地作证。",
-    "thirty-years": "成人学习得拆成可交接的短段，换壳也不把三十年的限额重新开始算。",
-    "no-borders": "过得了旧关口，进私人的门仍须同意；山路和搬运没有跟着消失。",
-    "live-exams": "旁观者只能看成年人做活，不能提示，也不拿人气当成绩。"
-  };
   const endEffects = {
     "10B": "修舱获岗|航班四时|舱货排号|堆灯养菌|旧机启航|星船静默|平面航道|祖图校星|生身短航|异星测重|殖居轮席|实物领航|带避潮舱|数据舱邮|活根测舱|航程限寿|落点验权|舱内公考".split("|"),
     "10C": "田头验作|农忙短班|谷仓配额|地热养菌|育种守界|地灯遮光|田垄让路|祖农法实测|短季耕作|农具加锚|地权轮耕|实作分田|高地修堤|村口递件|听根验土|短契交田|迁田验权|田头公考".split("|")
@@ -215,24 +195,13 @@
     return groups;
   }
 
-  const scenes = [
-    ["洞口", "肉先归熟手", "石斧随手借", "共住不问退路", "肉要在洞口分，背回家的那块也占一双手。", "石斧先在同一截木头上试过，才轮到下个人。", "洞口得留出转身的地，靠近不是挤住退路。"],
-    ["粮仓", "粮先归旧户", "量器各用各的", "田契一直续", "仓门只能过一车粮，排在前头不等于有多一张嘴。", "量器放在同一袋谷子旁试，手快不能把容量变大。", "门里有住户，门外有行李；搬来不等于拿走钥匙。"],
-    ["城邦", "官署凭门第进", "城门挤车马", "议席不换人", "官道的车抵达城门还得卸货，通行不替人搬石头。", "引水渠要按坡度试流，城邦的新办法也得先过这道窄口。", "庭院留给成年人当面示范，围观的人不能替当事人伸手。"],
-    ["船坞", "工坊靠名帖进", "船靠老尺寸造", "长航约不停", "货进船坞还得过窄跳板，先登船的人也不能替旁人点头。", "船模摆到水里试，码头上的尺寸到了海上才知道够不够。", "岸上留一间能独住的屋，远航回来不自动取得那把钥匙。"],
-    ["车间", "岗位按旧班分", "机具整批领", "长约套住工位", "车间交接先交出手边的料，空着手也要留下能接班的人。", "零件先在同一台架上试，能动的轮子不保证能停下来。", "下班的人各有一条出厂的路，约好同行也不能锁住另一扇门。"],
-    ["变电所", "值班归老师傅", "电压各厂自定", "电话说完算数", "电话能催人到场，配电柜却只能一组人伸手维修。", "电表在同一负载下对照，灯亮了不代表邻厂接口也能接。", "电车有末班，约会得给双方留下各自回住处的车程。"],
-    ["街区", "证件先筛人", "设备随时换新", "住址默认相通", "维修窗口一次只接一件实物，手机里的催促不算另一双手。", "工具在同一负载下交接，维修占用的桌面不能同时拿来上课。", "屋门各留一把独立钥匙，一起住不等于随时可以闯进去。"],
-    ["住区", "排班由旧岗定", "机器按旧单领", "照护约一直续", "维修和照护争同一个时段，安排服务的人也得把等候算进去。", "设备停下来才能换件，课程里会操作不等于手里已有那件工具。", "成年人把照护和相处分开约，帮过忙也没有下一次的默认许可。"],
-    ["轨道站", "舱位归先来者", "备件整舱占位", "长途约不校时", "气闸一次只容一批行李，先到的人也得给回程留出位置。", "备件和口粮争舱位，换下来的旧件还要有人接着运回去。", "探访得算上返程物资，想念不能充进气瓶里替人多留一天。"],
-    ["新住地", "资源由旧户续领", "工具按旧额分", "旧关系跟着迁", "新人带来的行李占真实的地方，老住户的习惯不会替它腾位。", "工具和食物都要落到实处，迁了住址也没有多出一双手。", "相处要留下独自离开的通道，搬得再远也不把拒绝搬掉。"]
-  ];
   function effectFor(p, era, s) {
     const c = content[p.id];
     let text = c.effects[era.n - 1];
     let learn = c.learn, love = c.love, conflict = false;
     const has = (id) => s.ids.has(id);
-    const dormant = p.id === "offline-world" && era.n < 7;
+    const ceiling = !s.world.tech || has("science-lock") || s.mechanisms.some((m) => m.id === "science-lock");
+    const dormant = p.id === "offline-world" && (era.n < 7 || (ceiling && s.start < 7));
     if (era.n === 10 && endEffects[s.path[3]]) text = endEffects[s.path[3]][c.index];
     const override = (value) => { text = value; conflict = true; };
     if (p.id === "live-exams") {
@@ -290,11 +259,19 @@
     }[m.id];
     return { name: m.name, text, personal, conflict };
   }
-  function conditions(s, i) {
-    const p = s.params, w = s.world;
-    if (i === 0) return [p.publicRules ? "公开示范" : "私下示范", p.review ? "到期复核" : "旧例不改"];
-    if (i === 1) return [p.sharedCost ? "共筹物料" : "自筹物料", w.resources ? "底料有份" : "缺料候补", w.tech ? "工具可改" : "旧器不换"];
-    return [p.exceptions ? "可求特批" : "不许特批", w.cooperate ? "交接互认" : "押物交接"];
+  // 技术锁定时不能仅因年份推进而获得新工具。
+  function newsroom(era, s) {
+    const locked = s.ids.has("science-lock") || s.mechanisms.some((m) => m.id === "science-lock");
+    const level = locked || !s.world.tech ? s.start : era.n;
+    const stage = level < 2 ? "stone" : level < 5 ? "craft" : level < 6 ? "mill" : level < 8 ? "electric" : level < 9 ? "automated" : "habitat";
+    const ending = era.n === 10 ? (s.path[3] === "10C" ? "land" : level >= 10 ? (s.path[3] === "10A" ? "uploaded" : "voyage") : "unavailable") : "";
+    return { level, stage, ending, locked, has: (id) => s.ids.has(id),
+      silent: s.ids.has("no-language"),
+      heat: s.ids.has("sun-off") ? "geothermal" : s.path[0] === "1A" ? "fire" : "cold",
+      heatBranch: branchEffects(era, s, 0)[0],
+      drive: level >= 5 ? branchEffects(era, s, 1)[0] : "",
+      automation: level >= 8 ? branchEffects(era, s, 2)[0] : ""
+    };
   }
   function branchEffects(era, s, i) {
     const words = [];
@@ -304,111 +281,240 @@
     if (era.n === 10) words.push(s.path[3] === "10A" ? "意识上传" : s.path[3] === "10B" ? "装舱殖星" : "留身耕地");
     return words;
   }
-  function place(era, s, i) {
-    if (era.n === 10) return { "10A": "上传", "10B": "殖星", "10C": "耕地" }[s.path[3]];
-    if (i === 0) return s.path[0] === "1A" ? "火灶" : "冷作";
-    if (i === 1 && era.n >= 5) return s.path[1] === "5A" ? "汽机" : "水轮";
-    if (i === 2 && era.n >= 8) return s.path[2] === "8A" ? "审机" : "放机";
-    return scenes[era.n - 1][0];
+
+  function detail(parts) {
+    const text = parts.filter(Boolean).join("");
+    if (size(text) < 40 || size(text) > 360) throw new Error("新闻详情须为40至360字");
+    return text;
   }
 
-  // 只在完整规则项、完整句之间换段，不裁字，也不靠省略号吞掉冲突。
-  function paragraphs(parts) {
-    const lines = [""];
-    parts.forEach((part) => {
-      const last = lines.length - 1;
-      if (size(lines[last] + part) > 76 && lines[last]) lines.push(part);
-      else lines[last] += part;
-    });
-    return lines.join("\n");
-  }
-  function detail(parts, expansions) {
-    let result = paragraphs(parts);
-    if (size(result) > 120) throw new Error("本地文案超出120字，请检查组合内容");
-    for (const sentence of expansions) {
-      if (size(result) >= 80) break;
-      const next = paragraphs(parts.concat(sentence));
-      if (size(next) <= 120) { parts.push(sentence); result = next; }
+  // 后果指纹不含年代装饰、标题或无关配方开关。
+  function ruleReport(e, era, s, ctx) {
+    const id = e.p.id, h = ctx.has;
+    function fact(topic, theme, title, after, why, body, state) {
+      return { id, topic, theme, title, before: ruleBefore[id], after, why, body,
+        state, dormant: e.dormant, conflict: e.conflict };
     }
-    if (size(result) < 80) throw new Error("本地文案不足80字，请检查组合内容");
-    return result;
+    if (e.dormant) return fact("network-delivery", "通信观察", "断网尚无网可断",
+      "互联网尚未出现，无网可断。当面来往照常，本期未省脚程。", "网络尚未进入生活，断网没有执行对象。",
+      "全球断网处于休眠：可用工具尚未形成互联网，不能把原有的当面往来算成断网带来的改写。", { network: "absent" });
+    const food = h("sun-off") ? "菌食" : ctx.heat === "cold" ? "果干" : ctx.level < 2 ? "烤肉" : ctx.level < 5 ? "熟谷" : "面包";
+    const uploaded = ctx.ending === "uploaded";
+    const supply = uploaded ? "算力配额" : food;
+    const shortSupply = h("four-hour") && h("free-goods");
+    const sampleKind = ctx.ending === "land" ? "farm-tools" : ctx.ending === "uploaded" ? "body-maintenance" : ctx.stage;
+    const sample = { stone: "石斧成品", craft: "手工作品", mill: "试制零件", electric: "维修实物", automated: "设备实修", habitat: "舱内修件", "farm-tools": "农具实修", "body-maintenance": "载体实修" }[sampleKind];
+    switch (id) {
+      case "no-exam": return fact("hiring", "招工新规", "手艺合格岗位未空",
+        "招工现场验" + sample + "。成品过关，人等空位。手艺不能多变出一个岗位。", "取消的是考试排名，不是岗位限额。",
+        "取消考试后，招工改验" + sample + "；没有熟人推荐的求职者也能现场做给经手人看。",
+        { admission: "work-not-score", sample: sampleKind });
+      case "four-hour": {
+        const driveKind = ctx.drive === "水轮替汽" ? "water-powered" : ctx.drive === "蒸汽推机" ? "fire-steam" : "geothermal-steam";
+        const workKind = ctx.ending === "land" ? "farming" : ctx.ending === "uploaded" ? "shared-copies" : ctx.level < 2 ? "guarding" : ctx.level < 5 ? "handwork" : ctx.level < 6 ? driveKind : ctx.level < 9 ? "maintenance" : "habitat-service";
+        const work = { farming: "田间", "shared-copies": "副本合计", guarding: "守洞", handwork: "作坊", "water-powered": "水磨工人", "fire-steam": "蒸汽机房", "geothermal-steam": "地热机房", maintenance: "维修", "habitat-service": "舱务" }[workKind];
+        const machine = ctx.automation ? (s.path[2] === "8A" ? "机器排班仍须人审。排得再满，人也只做四小时。" : "机器自己排班。空位再多，也不能把人的四小时拉长。") : "";
+        const after = ctx.automation ? (shortSupply ? "免费" + supply + "等接单。" : work + "四小时换班。") + machine : shortSupply ? "供餐者做满四小时，准点收工。免费" + food + "不再续做，等候不算生产。" : work + "四小时换班。工具交给下一班，没做完的活也一并交接。";
+        return fact("shift-service", "工时快讯", shortSupply ? "零元服务准点收工" : "活没做完人先交班", after,
+          "生产和服务合计限时，免费不增加产能。",
+          (uploaded ? "上传后的副本劳动合计四小时，额外算力服务等下一班接单。" : shortSupply ? "免费供应遇上四小时停工，" + food + "领完不续做；基本口粮另行留足。" : work + "劳动每日合计四小时，工具须交下一班，基本口粮不随工时缩减。") + machine,
+          Object.assign({ labor: uploaded ? "four-hours-across-copies" : "four-hours-total", work: shortSupply ? (uploaded ? "compute-service" : "food-service") : workKind }, shortSupply && !uploaded ? { food, heat: ctx.heat } : {}, ctx.automation ? { scheduling: s.path[2] } : {}));
+      }
+      case "free-goods": return fact("ration-supply", "物资行情", uploaded ? "零元任务排在队尾" : shortSupply ? "零元加餐已领完" : "价格没了队还在",
+        uploaded ? "算力免费，基本运行份额先留足。额外任务排队，零元也不能插队。" : shortSupply ? (ctx.heat === "cold" ? "免费" + food + "午前领完，供餐者准点收工。下午等下一批，等候也免费。" : "免费" + food + "午前领完，供餐者准点收工。下午来的人可继续领取香味。") : food + "免费，基本口粮先留足。余量领空后继续排队，价格已无下降空间。",
+        shortSupply ? "商品零价与工时上限叠加，剩余需求不能催成加班。" : "价格取消了，现有产量没有增加。",
+        (uploaded ? "商品免费延伸到算力，基本运行份额优先，额外任务仍须轮候，复制身份不增加份额。" : "商品免费后，" + food + "先保基本口粮，余量按人轮候" + (ctx.silent ? "，不用姓名符号，人在实物前候领。" : "，不能多报名字多领一份。")) + (shortSupply ? "四小时后不再续做。" : ""),
+        Object.assign({ supply: "ration-first", resource: uploaded ? "compute" : food, shift: shortSupply ? "four-hours" : "normal", queue: uploaded ? "identity-deduplicated" : ctx.silent ? "physical" : "identity" }, uploaded ? {} : { heat: ctx.heat }));
+      case "sun-off": return fact("heat-food", "能源民生", "饭有了天还没亮",
+        h("talking-plants") ? "菌食照常供应，活根补光另占能源。饭已备齐，太阳仍未到场。" : "菌食保住口粮，照明另按能量配给。吃饱以后，天也不会亮。",
+        "太阳不再供光，地热保温不能代替所有照明。",
+        "太阳熄灭后，地热与可食菌毯保障温饱，额外照明另耗能源；" + (h("talking-plants") ? "植物也不能靠表达需求长出光。" : "领到口粮不等于领到照明额度。"),
+        { energy: "geothermal-food", light: h("talking-plants") ? "plant-light-budget" : "separate-budget" });
+      case "science-lock": return fact("tool-ceiling", "工场实况", "突破未到修补照常",
+        "新实验又得旧结果。" + sample + "修补后继续用，目前最新成果是修好了。", "基础原理锁定，改良只能用已验证的办法。",
+        "智子锁死基础实验，" + sample + "可修补但不能靠换年份升级；" + (ctx.silent ? "上限只能反复实做验证。" : "维修接单，越界试验不接单。"),
+        { ceiling: ctx.stage, verification: ctx.silent ? "demonstration" : "recorded" });
+      case "dark-forest": {
+        const mode = ctx.level >= 6 && !ctx.silent && !(h("offline-world") && era.n >= 7) ? "shielded-signal" : ctx.heat === "fire" ? "covered-fire" : "concealed-delivery";
+        const after = mode === "shielded-signal" ? "通信移进屏蔽区。货到以前不公开定位，送到不含广而告之。" : mode === "covered-fire" ? "炊火藏进遮蔽处，领食的人改到近处找。饭照做，烟不负责指路。" : "物资藏在遮蔽处，领货人须走近核对。货备好了，远看仍像没这回事。";
+        return fact("location-secrecy", "配送须知", "货已备好位置保密", after,
+          "可定位的外泄会招来静默，遮蔽处仍能正常用能。",
+          "黑暗森林下，" + after + "地热菌食兜住温饱，配送仍需保密。", { exposure: mode });
+      }
+      case "flat-world": return fact("single-lane-freight", "通行快讯", "前面停下全队休息",
+        "搬运者过完窄口，下一人才动身。前面停下歇脚，后面同步休息。上方已无路可借。", "厚度归零后不能跨越，排队不是新增的一层空间。",
+        "降维后，人和货不能重叠或翻越；同一路口逐人通行，搬运暂停时后方也得停下，不能搭桥越过去。",
+        { geometry: "planar", crossing: "serial" });
+      case "inherited-memory": return fact("inherited-skill", "手艺消息", "祖辈会做后人试做",
+        ctx.silent ? "祖辈的手艺还能照做，记忆里的字句读不出了。手会了，眼前的材料还得重试。" : "祖辈手艺直接想起，新材料仍须上手试。经验几代同堂，返工由在场的人完成。",
+        "记忆保留原主视角，不会自动适应眼前的材料。",
+        "记忆继承省去了回忆手法的时间，却不替人验材料；" + (ctx.silent ? "失语滤掉词句，只剩动作与感受可试用。" : "旧经验须在眼前的实物上重做。"),
+        { inheritance: ctx.silent ? "motor-only" : "perspective-bound" });
+      case "fast-time": {
+        const arrested = h("immortality"), capped = h("thirty-years");
+        const upload = !arrested && ctx.ending === "uploaded";
+        return fact("career-duration", "用工观察", arrested ? "人不老工具照旧磨损" : upload ? "上传不能催交货" : "人先交班活照旧慢",
+          arrested ? (capped ? "长生止住衰老，三十岁前仍须交班。工具能接着用，任期不能接着算。" : "长生止住衰老，岗位不再因年老空出。工具倒是照常磨损，先换工具。") : upload ? (capped ? "上传避开身体衰老，三十年限额照算。换了载体，没换起算日。" : "上传避开身体衰老，外部订单仍走原钟。人已上传，货还在路上。") : "身体衰老加快十倍，交班提前。工具照旧慢慢做，并未随人赶工。",
+          arrested ? "长生优先阻止衰老；它不取消另设的寿命上限。" : "改变的是身体衰老，不是思考速度和生产时钟。",
+          arrested ? "时间加速的衰老效应被长生阻断；" + (capped ? "三十年硬上限仍要求到期交接。" : "器材照常磨损，旧岗位须另安排接任。") : upload ? "上传者不再按生身衰老，但外部生产仍走原钟；" + (capped ? "三十年上限对上传者照算。" : "订单不能按主观时间提前交付。") : "时间加速只催老身体，成人任期拆短交接，工具仍按原速生产" + (capped ? "，也不能越过三十年上限。" : "，不能借此十倍交货。"),
+          { aging: arrested ? "arrested" : upload ? "nonbiological" : "tenfold", lifespan: capped ? "thirty" : "uncapped" });
+      }
+      case "half-gravity": return fact("freight-braking", "搬运提醒", "提得起还得拦得住",
+        ctx.ending === "voyage" ? "异星卸货先测重力，再定搬法。地球上的省力经验随船到了，此地尚未验收。" : "货物轻了一半，制动距离仍须留足。提起来省力，停下来按原份量办。",
+        "重量改变，质量与惯性不变；规则只覆盖地表及近地。",
+        "重力减半不减惯性，搬得动的货仍可能停不住；" + (ctx.ending === "voyage" ? "殖居地先实测重力，再定卸货办法。" : "接货者先留制动距离，再接手搬运。"),
+        { gravity: ctx.ending === "voyage" ? "remeasure-off-earth" : "half-earth", inertia: "unchanged" });
+      case "immortality": return fact("housing-turnover", "住处消息", h("thirty-years") ? "长生不附无限住期" : "人可长生住处轮用",
+        h("thirty-years") ? "长生挡住衰老，挡不住三十年硬上限。住处仍须到期交接，长住不作无限期处理。" : "旧住户不再自然退出，公共住处改为轮住。人能一直住，不能一直住这儿。",
+        h("thirty-years") ? "三十年是硬上限，长生只保留此前的不衰老。" : "人数不靠衰老减少，住处面积也没有增加。",
+        h("thirty-years") ? "全民长生遇到三十年硬上限，只在限额内停止衰老，不能订无限住期；住处仍需到期交接。" : "全民长生让旧住户长期留下，住房不会同步增加；公共住处改轮住，旧住户不能永久占用空位。",
+        { tenure: h("thirty-years") ? "thirty-year-cap" : "rotating-use" });
+      case "no-language": return fact("physical-consent", "办理须知", "双方都得带着东西来",
+        "双方带实物到场，当面重做操作。点头不算约定，站着没走也不算同意。", "词语和约定符号失效，只能直接观察、模仿和核对。",
+        "语言消失后，文字与暗号都不能代办；交易双方须在实物前重做操作，沉默不被当作同意。",
+        { communication: "non-symbolic", consent: "direct" });
+      case "falling-moon": return fact("tidal-access", "住区通告", "住处已备好潮还没退",
+        "安全住处全员有份，搬行李须等潮窗。住处已经腾好，路还要等海腾出来。", "避难区保障安全，外面的潮汐仍限制搬运。",
+        "月球缓慢下坠扰乱潮汐，安全住处全员有份；行李只能趁潮窗搬入，错过窗口先留在安全区。",
+        { shelter: "guaranteed", access: "tidal-window" });
+      case "offline-world": return fact("network-delivery", "通信快讯", "更新正在赶路",
+        ctx.silent ? "远程网络停用，工具样品由人送来，当场示范。新做法来得快不快，先看脚程。" : "远程网络停用，新资料随存储载体送来。更新尚在路上，催得再急也要算运程。",
+        "单机仍可工作，远方的更新不能隔空到达。",
+        "全球断网后，单机工具照用；" + (ctx.silent ? "失语又使文字无效，收件人须等实物示范。" : "资料随载体运输，抵达前只能用手边的旧版。"),
+        { delivery: ctx.silent ? "physical-demonstration" : "storage-carrier" });
+      case "talking-plants": return fact("root-irrigation", "灌溉消息", ctx.silent ? "浇水仍得蹲下看土" : "根部消息仅限本株",
+        ctx.silent ? "植物的话无人听懂，浇水仍看根土和叶色。站着听不出结果，最后还是蹲下摸土。" : h("sun-off") ? "植物能报缺光，补光仍须另供能源。需求已经说清，光不会自行前来。" : "植物只报脚下缺水，邻地仍须另查。根扎得再深，也不替邻地作证。",
+        ctx.silent ? "语言消失优先，会说话不等于有人能听懂。" : "植物只感知自身，不能代替整片地的检查。",
+        ctx.silent ? "植物会说话被失语阻断，人不能理解根部话音，灌溉退回实测根土；叶色不是新暗号。" : h("sun-off") ? "太阳熄灭后植物报缺光，补光仍另耗能量；活根不能移动，也不能用说话代替光照。" : "植物会说话后可报自身缺水，灌溉按根部实况调整；它不知道邻地的干湿，不能代远处作证。",
+        { sensing: ctx.silent ? "speech-blocked" : h("sun-off") ? "light-deficit" : "local-water" });
+      case "thirty-years": return fact("contract-horizon", "合约须知", "工具可接班寿限不续",
+        ctx.ending === "uploaded" ? "上传后仍按原起点算三十年，手头服务须提前交接。搬进新载体，不赠新任期。" : ctx.ending === "voyage" ? "远航须在当事人三十岁前完成。行程先按寿限排，路远不算延期理由。" : "手头的活须在当事人三十岁前完成，工具留给接任者。能传下去的是工具，不是余下的任期。",
+        "寿命限额不可延长，换身体和换住处都不重新计时。",
+        "三十年寿命上限约束每名签约者，" + (ctx.ending === "uploaded" ? "上传不续寿，" : ctx.ending === "voyage" ? "远航不豁免，" : "") + "工具及非人格资料可以交接，不能把接任者当成原人续约。",
+        { limit: "thirty", service: ctx.ending === "uploaded" ? "identity-not-reset" : ctx.ending === "voyage" ? "voyage-within-life" : "handover" });
+      case "no-borders": return fact("migration-access", "迁居新规", "边界撤了山还在",
+        "迁居不查国籍，进私人住处仍须本人同意。山没搬走，别人家也没变成近路。", "取消的是国界限制，不是地形和私人空间。",
+        "国界消失后，迁居免去身份关卡，山路仍须自己走；" + (ctx.silent ? "不能靠符号授权，屋主须在场直接核对。" : "本人授权不等于拿到了沿途每扇门的钥匙。"),
+        { border: "removed", permission: ctx.silent ? "in-person" : "personal" });
+      case "live-exams": {
+        const canceled = h("no-exam"), hidden = h("dark-forest") || s.mechanisms.some((m) => m.id === "dark-forest");
+        const channel = hidden ? "enclosed" : ctx.silent || h("offline-world") || ctx.level < 7 ? "onsite" : "broadcast";
+        const venue = channel === "enclosed" ? "遮蔽场内" : channel === "onsite" ? "现场" : "直播画面内";
+        return fact("public-assessment", "实作消息", canceled ? "围观热闹不折算岗位" : "观众到齐分数不加",
+          canceled ? "考试取消，" + venue + "改展实作。围观人气不排录用名次，热闹不折算岗位。" : "成年技能考核在" + venue + "进行，旁观者不得提示。人多只算围观多，不给成绩添分。",
+          canceled ? "取消考试优先，公开要求转为展示过程。" : "公开的是作答过程，观众不获得评分权。",
+          (canceled ? "取消考试压过直播考试，" : "成年技能考试公开，") + venue + (canceled ? "改作实作展演，人气不换录用名次。" : "可看操作但不得提示，围观人数不计入成绩。"),
+          { assessment: canceled ? "exhibition" : "exam", channel });
+      }
+    }
+    throw new Error("缺少规则新闻：" + id);
   }
-  function worldCard(group, i, era, s, effects, mechanism) {
-    const scene = scenes[era.n - 1];
-    const active = effects.filter((e) => !e.dormant);
-    const lead = active[0] || effects[0];
-    const knobs = conditions(s, i);
-    const branches = branchEffects(era, s, i);
-    const parts = effects.map((e) => e.p.name + (e.dormant ? "尚无网可断" : e.text) + "；");
-    // 全组休眠就承接其它组的实物需求，不产出“无事发生”的独立空卡。
-    if (!active.length) parts.push("改为共用实物交接台；");
-    parts.push(knobs.join("，") + "。");
-    if (branches.length) parts.push(branches.join("，") + "。");
-    if (mechanism) parts.push(mechanism.name + mechanism.text + "。");
-    parts.push(["队还在。", "料没多。", "门各留。"][i]);
-    let cost = ruleCosts[lead.p.id];
-    if (lead.dormant) cost = "互联网还没出现；先把别组的工具送上实物台，成年人当面接着学。";
-    if (lead.p.id === "fast-time" && s.ids.has("immortality")) cost = "长生先截住衰老，旧课仍要为换岗重练；年纪不再替人腾位。";
-    if (lead.p.id === "talking-plants" && s.ids.has("no-language")) cost = "话音被失语挡住，只剩叶色与根部变化可验；植物没有因此变成路标。";
-    if (lead.p.id === "live-exams" && s.ids.has("no-exam")) cost = "考试名额被取消，围观改成看实作；人气不能替旁人排出高低。";
-    const brief = active.length ? active.map((e) => e.conflict ? e.learn : e.text).filter((t) => size(t) <= 6) : ["实物交接"];
-    const action = brief[0] || lead.learn;
-    const nextAction = brief[1];
-    let after = place(era, s, i) + "：" + action;
-    if (nextAction && size(after + "、" + nextAction) <= 18) after += "、" + nextAction;
-    else if (!nextAction && size(after + "，" + knobs[0]) <= 18) after += "，" + knobs[0];
-    const cross = s.selected.find((p) => !group.some((own) => own.id === p.id));
-    const crossEffect = effectFor(cross, era, s);
-    return {
-      theme: THEMES[i], title: s.selected.length === 18 ? THEMES[i] + "过载" : active.length ? lead.p.name : "实物交接台",
-      ruleTags: group.map((p) => p.id), before: place(era, s, i) + "前，" + (active.length ? ruleBefore[lead.p.id] : "各组器材各自送"), after,
-      why: effects.some((e) => e.conflict) || (mechanism && mechanism.conflict) ? "硬约束先行，余项改道" : !active.length ? "网络未生，先接别组实物" : "几条规则共用一份物料",
-      detail: detail(parts, [
-        cost,
-        scene[i + 4],
-        "成年人学艺得" + lead.learn + "，相处时还得" + lead.love + "。",
-        "另一头的" + cross.name + "要" + crossEffect.learn + "，共用的器材得错开。"
-      ]),
-      conflict: effects.some((e) => e.conflict) || !!(mechanism && mechanism.conflict),
-      dormant: effects.filter((e) => e.dormant).map((e) => e.p.id), changed: true
-    };
+
+  function mechanismReport(m, era, s, ctx) {
+    if (!m) return null;
+    const effect = mechanismFor(m, era, s);
+    const entry = {
+      "dark-forest": ["concealed", "外泄位置会招来静默，本次交付转入遮蔽处。"],
+      "science-lock": ["known-tools", "基础实验被锁住，本次只能用已验证的工具。"],
+      dimension: ["single-layer", "物品不能叠放，领取者须先腾出平面再接货。"],
+      "wall-plan": ["purpose-withheld", ctx.silent ? "计划藏在心里，执行者只见待用实物，须另留备料。" : "用途不向执行者公开，备料者须给未知工序留余量。"],
+      "tech-burst": [effect.conflict ? "retrofit-only" : "rapid-replacement", effect.conflict ? "工具更新受上限限制，只能换已验证的部件。" : "工具刚练熟就换版，交活前须重做操作示范。"],
+      suspicion: ["collateral", "对方是否守约无法确认，交付前须押实物作保。"],
+      "time-dilation": ["two-clocks", "两地钟速不同，领取期限须按交付地的钟重算。"],
+      "time-view": ["observe-not-repair", "旧交付可以回看但不能改，领错的物资仍须重送。"],
+      "wandering-earth": ["heat-priority", "行星迁移使保温优先，普通用能须等迁居供暖后安排。"],
+      simulation: ["body-separate", "模拟体验不抵真实消耗，身体的口粮和住处另行保障。"],
+      "mars-survival": ["closed-budget", "补给不能随时从外部取得，本次用水须回收后再分配。"],
+      "language-time": [effect.conflict ? "language-blocked" : "anticipation-not-delivery", effect.conflict ? "语言已失效，语言引起的时间预感不能启动。" : "语言使人先感到交付结束，实物却仍须等到送达。"]
+    }[m.id];
+    const redundant = (m.id === "dark-forest" && ctx.has("dark-forest")) || (m.id === "science-lock" && ctx.has("science-lock")) || (m.id === "dimension" && ctx.has("flat-world"));
+    return { id: m.id, state: { effect: entry[0] }, body: entry[1], conflict: effect.conflict,
+      effective: !redundant && !(m.id === "language-time" && effect.conflict) };
   }
-  function personalCard(kind, era, s, worldCards, effectGroups, mechanismEffects) {
-    const isLove = kind === 1;
-    const leads = effectGroups.map((group) => group.find((e) => !e.dormant) || group[0]);
-    const actions = leads.map((e) => isLove ? e.love : e.learn);
-    const parts = leads.map((e, i) => THEMES[i] + "因" + e.p.name + (e.dormant ? "待机先" : "须") + actions[i] + (mechanismEffects[i] ? "、" + mechanismEffects[i].personal : "") + "；");
+  function policy(s, i) {
     const p = s.params, w = s.world;
-    parts.push((p.publicRules ? "公开办" : "私下办") + "，" + (p.sharedCost ? "共备物料" : "自备物料") + "，" + (p.review ? "到期重验" : "旧例不改") + "。");
-    if (isLove) parts.push((p.exceptions ? "可申诉改期" : "不特批改期") + "，" + (w.cooperate ? "约定互认" : "交接押物") + "；沉默不算同意。");
-    else parts.push((w.tech ? "可换工具" : "只练旧器") + "，" + (w.resources ? "底料有份" : "缺料等候") + (era.n >= 7 ? "，上岗照办。" : "，只谈成年学艺。"));
-    const branchWords = [s.path[0] === "1A" ? "轮灶取暖" : "冷磨器材"];
-    if (era.n >= 5) branchWords.push(s.path[1] === "5A" ? "等汽机交班" : "等水磨交班");
-    if (era.n >= 8) branchWords.push(s.path[2] === "8A" ? "机排须审" : "机自改班");
-    if (era.n === 10) branchWords.push(s.path[3] === "10A" ? "副本相认" : s.path[3] === "10B" ? "远航分舱" : "留身种田");
-    parts.push(branchWords.join("、") + "。");
-    const mechanismSentence = mechanismEffects.filter(Boolean).map((m) => m.text).join("、");
-    const personalScene = (isLove
-      ? ["洞口约", "仓边约", "泉边约", "归港约", "出厂约", "末班车", "下班约", "照护后", "返舱约"]
-      : ["石斧课", "谷斗课", "量尺课", "船模课", "车间课", "电表课", "上岗前", "修机班", "进舱前"])[era.n - 1];
+    if (i === 0) return { state: { publicRules: p.publicRules, review: p.review }, body:
+      (p.publicRules ? "办理动作公开示范；" : "办理动作只在经手时示范；") + (p.review ? "定期重验办法。" : "办法沿用，不作定期复核。") };
+    if (i === 1) return { state: { sharedCost: p.sharedCost, resources: w.resources }, body:
+      (p.sharedCost ? "物料由各户共同筹备；" : "物料由各户自行筹备；") + (w.resources ? "底料保留基本份额。" : "额外缺料须等候。") };
+    return { state: { exceptions: p.exceptions, cooperate: w.cooperate }, body:
+      (p.exceptions ? "争议可申请人工复验；" : "争议不另设特批；") + (w.cooperate ? "交付当面互验。" : "交付须押实物。") };
+  }
+  function outcome(facts, knobs, mechs) {
+    return JSON.stringify({ rules: facts.filter((f) => !f.dormant).map((f) => ({ id: f.id, consequence: f.state })).sort((a, b) => a.id.localeCompare(b.id)),
+      policy: knobs ? knobs.state : {}, mechanisms: mechs.filter((m) => m && m.effective).map((m) => ({ id: m.id, consequence: m.state })).sort((a, b) => a.id.localeCompare(b.id)) });
+  }
+  function worldCard(group, i, era, s, facts, mechanism) {
+    const active = facts.filter((f) => !f.dormant);
+    const lead = active.find((f) => f.id === "free-goods") || active[0] || facts[0];
+    const knobs = active.length ? policy(s, i) : null;
+    const mech = active.length ? mechanism : null;
     return {
-      theme: isLove ? "恋爱" : "学习", title: isLove ? "恋爱" : era.n >= 7 ? "学习·工作" : "学习",
-      ruleTags: s.selected.map((r) => r.id),
-      before: isLove ? "两人约好就能相见" : era.n >= 7 ? "学完本领就按旧班上岗" : "成年人跟着老手学艺",
-      after: era.n === 10 ? {
-        "10A": isLove ? "各存记忆，逐次相认" : "副本共用器材练实作",
-        "10B": isLove ? "约好返航，各留船位" : "异星校具，分舱上岗",
-        "10C": isLove ? "各留屋门，同种一畦" : "跟手种田，按季交活"
-      }[s.path[3]] : personalScene + "：" + actions.join("、"),
-      why: isLove ? "三组手续挤进两人日程" : "三组成本落在一双手上",
-      detail: detail(parts, [
-        isLove ? "靠近得等对方也主动；停在门外，也是一种答复。" : "成年人的练习占真工具，听懂了不等于已经轮到上手。",
-        mechanismSentence ? "还得面对" + mechanismSentence + "。" : "另一组用完器材才轮到你，先到不替后到的人答应。",
-        scenes[era.n - 1][isLove ? 6 : 5],
-        "这次能留下的，是下一回也能自己走开的余地。"
-      ]),
-      conflict: worldCards.some((c) => c.conflict), dormant: worldCards.flatMap((c) => c.dormant), changed: true
+      groupId: "desk-" + (i + 1), topic: lead.topic, outcomeKey: outcome(facts, knobs, [mech]),
+      theme: lead.theme, title: lead.title, ruleTags: group.map((p) => p.id),
+      before: lead.dormant ? "互联网尚未进入生活" : lead.before, after: lead.after, why: lead.why,
+      detail: detail(facts.map((f) => f.body).concat(knobs && knobs.body, mech && mech.body)),
+      conflict: facts.some((f) => f.conflict) || !!(mech && mech.conflict),
+      dormant: facts.filter((f) => f.dormant).map((f) => f.id), changed: active.length > 0
     };
+  }
+
+  function personalCardsFor(era, s, ctx, facts) {
+    const active = new Map(facts.filter((f) => !f.dormant).map((f) => [f.id, f]));
+    const has = (id) => active.has(id), cards = [];
+    function add(topic, theme, title, before, after, why, body, ids, policyIndex, mechanismIds) {
+      const limitedWork = has("thirty-years") || (has("fast-time") && !has("immortality"));
+      const household = {
+        "household-compute": { basic: "reserved", extra: "wait-for-capacity" },
+        "household-meal": { basic: "reserved", extra: has("free-goods") && has("four-hour") ? "no-afternoon-refill" : has("sun-off") ? "separate-light-budget" : "wait-for-stock" },
+        "household-access": { access: has("falling-moon") ? "tidal-window" : "wait-for-neighbor" },
+        "household-work": { work: limitedWork ? "early-handover" : "proof-not-vacancy" },
+        "household-errand": { errand: has("offline-world") ? (ctx.silent ? "deliver-demonstration" : "deliver-carrier") : "brake-luggage" }
+      }[topic];
+      const used = ids.filter(has).map((id) => Object.assign({}, active.get(id), { state: household }));
+      const knobs = policy(s, policyIndex);
+      const mechs = s.mechanisms.filter((m) => mechanismIds.includes(m.id)).map((m) => mechanismReport(m, era, s, ctx));
+      cards.push({ groupId: "", topic, outcomeKey: outcome(used, knobs, mechs), theme, title, before, after, why,
+        detail: detail([body].concat(used.map((f) => f.body), knobs.body, mechs.map((m) => m.body))),
+        ruleTags: used.map((f) => f.id), conflict: used.some((f) => f.conflict) || mechs.some((m) => m.conflict), dormant: [], changed: true });
+    }
+    if (has("free-goods") && ctx.ending === "uploaded") {
+      add("household-compute", "生活用能", "额外任务等空位", "算力按价格追加购买",
+        "常用副本保留运行份额，额外任务等算力空出。", "上传改变了生活载体，没有增加设备的实际容量。",
+        "住户的常用副本继续运行，临时任务先搁置；额外任务须让出保障基本运行的设备。",
+        ["free-goods", "four-hour"], 1, ["mars-survival", "time-dilation"]);
+    } else if (has("free-goods") || has("sun-off")) {
+      const short = has("free-goods") && has("four-hour");
+      add("household-meal", "吃饭", short ? "午后空篮回家" : "口粮与加餐分开领", "带钱就能补一顿加餐",
+        short ? "午后来领加餐的人空篮回家，基本口粮另领。" : has("sun-off") ? "家中改吃菌食，想在亮处吃饭还须留出能源。" : "家里不用再攒饭钱，加餐仍要等货。",
+        short ? "供应者工时已满，领货者不能用免费要求续做。" : "基本供应有保障，不等于额外需求即时满足。",
+        "这户人家把基本口粮与加餐分开安排，额外等候不从口粮里扣除。",
+        ["free-goods", "four-hour", "sun-off"], 1, ["simulation", "mars-survival", "time-dilation"]);
+    }
+    if (has("falling-moon") || has("flat-world")) {
+      add("household-access", "住处", has("falling-moon") ? "行李等下一次潮窗" : "邻居搬家须让路", "家门空着就能搬行李",
+        has("falling-moon") ? "住户先留在安全区，行李等潮窗再搬。" : "邻居搬物经过门前，住户须等通道空出再出门。",
+        "有使用权不等于有通行空间，进出还受物理条件限制。",
+        "住户将搬运和出门错开，不能靠多租一块地方取消路上的阻塞。",
+        ["falling-moon", "flat-world"], 2, ["dimension", "wandering-earth"]);
+    }
+    if (cards.length < 2 && (has("no-exam") || has("thirty-years") || (has("fast-time") && !has("immortality")))) {
+      const limited = has("thirty-years") || (has("fast-time") && !has("immortality"));
+      add("household-work", "工作", limited ? "交班早于工具报废" : "求职者带成品上门", "拿到资格就能订长期岗位",
+        limited ? "接任者提前来接手，旧工具还能继续用。" : "求职者带着成品来，录用仍须等岗位空出。",
+        limited ? "人的任期受限，工具寿命并没有同步缩短。" : "门槛改成实际工作，空位并没有因此增加。",
+        "成年人把能交接的工具留给下一位使用者，接任不能只靠原人的经历作保。",
+        limited ? ["thirty-years", "fast-time", "immortality"] : ["no-exam", "live-exams"], 0, ["tech-burst", "science-lock"]);
+    }
+    if (cards.length < 2 && (has("offline-world") || (has("half-gravity") && ctx.level >= 5))) {
+      const offline = has("offline-world");
+      add("household-errand", "出行", offline ? "出门顺带送资料" : "轻货也得慢停", "空手出门，资料远程送达",
+        offline ? (ctx.silent ? "出门的人顺带工具样品，收件者须等现场示范。" : "出门的人顺带存储件，收件者等人不等提示音。") : "搬家能提更多行李，抵达时仍须逐件刹稳。",
+        offline ? "断网没有取消传递需求，只把它加进了人的行程。" : "重量减半没有减少惯性，轻松提起不代表能轻松停下。",
+        "这趟出门同时占用人的时间与真实运力，不能把抵达以前的等候算成已经送达。",
+        offline ? ["offline-world"] : ["half-gravity"], 1, ["time-dilation", "suspicion"]);
+    }
+    return cards.slice(0, 2);
   }
 
   function resolve(recipe, fromN) {
@@ -420,28 +526,60 @@
     const first = Math.max(s.start, fromN || 1);
     // 先过滤再生成：续算不会读取或修改此前章节。
     return ERAS.filter((era) => era.n >= first).map((era) => {
-      const effects = groups.map((group) => group.map((p) => effectFor(p, era, s)));
-      const mechs = [0, 1, 2].map((i) => mechanismFor(s.mechanisms[i], era, s));
-      const worldCards = groups.map((group, i) => worldCard(group, i, era, s, effects[i], mechs[i]));
-      const personalCards = [0, 1].map((kind) => personalCard(kind, era, s, worldCards, effects, mechs));
+      const ctx = newsroom(era, s);
+      const facts = groups.map((group) => group.map((p) => ruleReport(effectFor(p, era, s), era, s, ctx)));
+      const mechs = [0, 1, 2].map((i) => mechanismReport(s.mechanisms[i], era, s, ctx));
+      const worldCards = groups.map((group, i) => worldCard(group, i, era, s, facts[i], mechs[i]));
+      const personalCards = personalCardsFor(era, s, ctx, facts.flat());
       const cards = worldCards.concat(personalCards);
       return {
         n: era.n, era: era.id, name: era.name, span: era.span,
-        subtitle: era.n === 10 ? { "10A": "换了载体，物料仍要排队", "10B": "船能远行，舱位不会变宽", "10C": "人留在地上，农时不等人" }[s.path[3]] : scenes[era.n - 1][0] + "先把成本摊开",
-        personal: personalCards.map((c) => c.after).join("；"), worldCards, personalCards,
+        subtitle: (worldCards.find((c) => c.changed) || worldCards[0]).title + "。",
+        personal: "", worldCards, personalCards,
         events: cards.map((c, i) => ({
           ev: {
             id: "combo-" + era.n + "-" + (i + 1), title: c.title, yearLabel: era.start, domain: c.theme,
             baseline: c.before, track: i < 3 ? "world" : "personal", hot: false,
-            ruleTags: c.ruleTags.slice(), conflict: c.conflict, dormant: c.dormant.slice()
+            ruleTags: c.ruleTags.slice(), conflict: c.conflict, dormant: c.dormant.slice(),
+            groupId: c.groupId, topic: c.topic, outcomeKey: c.outcomeKey
           },
-          view: { changed: true, alternate: c.after, why: c.why, detail: c.detail, chain: "", keywords: [], certainty: "假设" }
+          view: { changed: c.changed, alternate: c.after, why: c.why, detail: c.detail, chain: "", keywords: [], certainty: "假设" }
         })),
         branch: BRANCHES.find((b) => b.n === era.n) || null
       };
     });
   }
 
-  global.WRM_PRESETS = { ERAS, RECAP, all, byId, eraById, mechanisms, mechanismById, commonParams, BRANCHES, defaultPath, configurationError, resolve };
+  function textKey(text) {
+    return typeof text === "string" ? text.normalize("NFKC").replace(/[\s\p{P}\p{S}]+/gu, "") : "";
+  }
+  // 比较快照独立于最近世界线列表，父线被移出后仍可判定沿用。
+  function edition(run, n) {
+    const chapters = run && Array.isArray(run.chapters) ? run.chapters : [];
+    const chapter = chapters.find((c) => c.n === n);
+    const result = { visible: [], carried: [], dormant: [] };
+    if (!chapter) return result;
+    const comparison = run.comparison;
+    const comparable = comparison && n >= comparison.fromN && Array.isArray(comparison.chapters)
+      ? comparison.chapters.find((c) => c.n === n) : null;
+    const prior = chapters.filter((c) => c.n < n).flatMap((c) => c.events || []);
+    function matches(item, other) {
+      if (!other || (other.view && other.view.changed === false)) return false;
+      const left = item.ev || {}, right = other.ev || other;
+      if (left.topic && left.outcomeKey && right.topic && right.outcomeKey) return left.topic === right.topic && left.outcomeKey === right.outcomeKey;
+      const currentText = textKey(item.view && item.view.alternate);
+      const earlierText = textKey(other.view ? other.view.alternate : other.textKey);
+      return !!currentText && currentText === earlierText;
+    }
+    (chapter.events || []).forEach((item) => {
+      if (item.view && item.view.changed === false) result.dormant.push(item);
+      else if (comparable && (comparable.events || []).some((other) => matches(item, other))) result.carried.push({ item, reason: "与分叉前相同" });
+      else if (prior.some((other) => matches(item, other))) result.carried.push({ item, reason: "沿用前版" });
+      else result.visible.push(item);
+    });
+    return result;
+  }
+
+  global.WRM_PRESETS = { ERAS, RECAP, all, byId, eraById, mechanisms, mechanismById, commonParams, BRANCHES, defaultPath, configurationError, resolve, edition };
   if (typeof module !== "undefined" && module.exports) module.exports = global.WRM_PRESETS;
 })(typeof window !== "undefined" ? window : globalThis);

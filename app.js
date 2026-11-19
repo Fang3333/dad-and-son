@@ -1,10 +1,10 @@
 (function (global) {
   "use strict";
 
-  const APP_VERSION = "2.5.0";
+  const APP_VERSION = "2.6.0";
   const P = global.WRM_PRESETS;
   const SETUP_KEY = "wrm.recipe.v25";
-  const RUNS_KEY = "wrm.runs.v25";
+  const RUNS_KEY = "wrm.runs.v26";
   const clone = (value) => JSON.parse(JSON.stringify(value));
   const $ = (id) => document.getElementById(id);
   const state = {
@@ -62,7 +62,8 @@
     const recipe = recipeFrom(run.recipe);
     if (!recipe || P.configurationError(recipe)) return false;
     const eras = P.ERAS.filter((e) => e.n >= P.eraById(recipe.startEra).n);
-    return run.chapters.length === eras.length && run.chapters.every((ch, i) => ch.n === eras[i].n && ch.era === eras[i].id && Array.isArray(ch.events) && ch.events.length === 5 && ch.events.every((event) => event.ev && event.view && typeof event.ev.title === "string" && typeof event.view.detail === "string") && Array.isArray(ch.worldCards) && ch.worldCards.length === 3 && Array.isArray(ch.personalCards) && ch.personalCards.length === 2);
+    if (run.comparison && (!Number.isInteger(run.comparison.fromN) || !Array.isArray(run.comparison.chapters) || run.comparison.chapters.some((ch) => !ch || !Number.isInteger(ch.n) || !Array.isArray(ch.events) || ch.events.some((e) => !e || typeof e.topic !== "string" || typeof e.outcomeKey !== "string" || typeof e.textKey !== "string")))) return false;
+    return run.chapters.length === eras.length && run.chapters.every((ch, i) => ch.n === eras[i].n && ch.era === eras[i].id && Array.isArray(ch.events) && ch.events.length >= 3 && ch.events.length <= 5 && ch.events.every((event) => event.ev && event.view && typeof event.ev.title === "string" && typeof event.ev.topic === "string" && typeof event.ev.outcomeKey === "string" && typeof event.ev.baseline === "string" && typeof event.view.alternate === "string" && typeof event.view.detail === "string" && typeof event.view.changed === "boolean") && ch.events.filter((e) => e.ev.track === "world").length === 3 && ch.events.every((e) => ["world", "personal"].includes(e.ev.track)) && Array.isArray(ch.worldCards) && ch.worldCards.length === 3 && Array.isArray(ch.personalCards) && ch.personalCards.length === ch.events.length - 3);
   }
   function load() {
     try {
@@ -139,9 +140,17 @@
       showSetup();
     }
   }
-  function makeRun(recipe, chapters, kind, model, parent) {
+  function makeRun(recipe, chapters, kind, model, parent, fromN) {
     return {
-      parentId: parent ? parent.id : null, recipe: clone(recipe), path: recipe.branchPath.join("-"),
+      parentId: parent ? parent.id : null,
+      comparison: parent ? {
+        fromN,
+        chapters: parent.chapters.filter((ch) => ch.n >= fromN).map((ch) => ({
+          n: ch.n,
+          events: ch.events.map((item) => ({ topic: item.ev.topic, outcomeKey: item.ev.outcomeKey, textKey: item.view.alternate.normalize("NFKC").replace(/[\s\p{P}\p{S}]/gu, "") }))
+        }))
+      } : null,
+      recipe: clone(recipe), path: recipe.branchPath.join("-"),
       kind, model: model || "", start: chapters[0].n, ns: chapters.map((c) => c.n), chapters,
       intervention: { era: recipe.startEra }, recap: P.RECAP[chapters[0].n] || "",
       ruleName: recipe.rules.length + " 条规则同时发生", ruleNames: recipe.rules.map((id) => P.byId(id).name),
@@ -190,9 +199,10 @@
     const sample = P.resolve(localRecipe, fromN)[0];
     return {
       recipe: clone(recipe), rules: recipe.rules.map((id) => { const r = P.byId(id); return { id, name: r.name, description: r.rule, theme: r.theme }; }),
-      groups: sample.worldCards.map((c) => ({ theme: c.theme, ruleTags: c.ruleTags })),
+      groups: sample.worldCards.map((c) => ({ groupId: c.groupId, theme: c.theme, ruleTags: c.ruleTags })),
       intervention: { era: era.id, yearLabel: "", mode: "from" }, branchPath: recipe.branchPath.slice(),
-      previousChapters: parent ? parent.chapters.filter((c) => c.n < fromN) : []
+      previousChapters: parent ? parent.chapters.filter((c) => c.n < fromN) : [],
+      comparisonChapters: parent ? parent.chapters.filter((c) => c.n >= fromN) : []
     };
   }
   async function generate(force, branch) {
@@ -206,7 +216,7 @@
     $("appError").hidden = true;
     if (!recipe.custom.enabled) {
       const chapters = prefix.concat(P.resolve(recipe, fromN));
-      finishRun(makeRun(recipe, chapters, "local", "", parent), fromN);
+      finishRun(makeRun(recipe, chapters, "local", "", parent, fromN), fromN);
       if (branch) toast("已分叉：世界线 " + view.run.id.slice(3) + " · " + P.ERAS.find((e) => e.n === fromN).name + " " + branch.key.slice(-1));
       return;
     }
@@ -222,7 +232,7 @@
     let message = "";
     try {
       const p = payload(recipe, fromN, parent);
-      const key = global.WRM_AI.cacheKey({ schema: "ten-multi-branches-v1", payload: p, model: settings.model, baseUrl: settings.baseUrl, temperature: settings.temperature });
+      const key = global.WRM_AI.cacheKey({ schema: "news-delta-v26", payload: p, model: settings.model, baseUrl: settings.baseUrl, temperature: settings.temperature });
       const cached = force ? null : global.WRM_AI.cacheGet(key);
       let chapters;
       let model = settings.model;
@@ -237,7 +247,7 @@
         model = result.model;
         global.WRM_AI.cacheSet(key, { json: result.json, model });
       }
-      finishRun(makeRun(recipe, prefix.concat(chapters), "ai", model, parent), fromN);
+      finishRun(makeRun(recipe, prefix.concat(chapters), "ai", model, parent, fromN), fromN);
       succeeded = true;
       toast(branch ? "已分叉：世界线 " + view.run.id.slice(3) + " · " + P.ERAS.find((e) => e.n === fromN).name + " " + branch.key.slice(-1) : cached ? "命中本地缓存，未调用 API。" : "自定义世界线已生成。");
     } catch (e) { message = "AI 生成未完成，原世界线不变；可关闭自定义后离线生成。"; }

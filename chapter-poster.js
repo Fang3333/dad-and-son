@@ -58,13 +58,18 @@
     });
   }
   function joined(items, separator) { return Array.isArray(items) ? items.join(separator) : String(items || ""); }
-  function cards(ch, track) {
-    if (!ch) return [];
-    return (ch.events || []).filter((e) => e.ev && e.ev.track === track);
+  function cards(items, track) { return items.filter((item) => item.ev && item.ev.track === track); }
+  function title(item) { return item && item.ev ? String(item.ev.title || "") : ""; }
+  function newsSummary(edition, track) {
+    const visible = cards(edition.visible, track).filter((item) => item.view && item.view.changed === true);
+    const carried = cards(edition.carried.map((entry) => entry.item), track).length;
+    const dormant = cards(edition.dormant, track).length;
+    const statuses = [carried ? "沿用" + carried + "条" : "", dormant ? "休眠" + dormant + "组" : ""].filter(Boolean);
+    const headlines = visible.map(title).filter(Boolean).join("；");
+    return (headlines || (track === "world" ? "无新增世界新闻" : "无新增生活短讯")) + (statuses.length ? " · " + statuses.join("／") : "");
   }
-  function alternate(item) { return item && item.view ? String(item.view.alternate || "") : ""; }
   function build(run) {
-    const eras = global.WRM_PRESETS.ERAS;
+    const P = global.WRM_PRESETS, eras = P.ERAS;
     const recipe = run.recipe || {};
     const chapters = run.chapters || [];
     const runId = run.runId || run.id || "未编号";
@@ -79,7 +84,7 @@
     ctx.fillRect(0, 0, c.width, c.height);
     ctx.textBaseline = "top";
     ctx.fillStyle = RED;
-    textBox(ctx, "世界线 " + runId + " / v" + (run.appVersion || "2.5.0") + (run.parentId ? " / 源自 " + run.parentId : ""), 64, 40, 952, 30, 21, false, true);
+    textBox(ctx, "世界线 " + runId + " / v" + (run.appVersion || "2.6.0") + (run.parentId ? " / 源自 " + run.parentId : ""), 64, 40, 952, 30, 21, false, true);
     ctx.fillStyle = INK;
     textBox(ctx, "世界规则修改器", 64, 82, 952, 78, 62, true);
     textBox(ctx, run.ruleName || (recipe.rules || []).length + "条规则同时生效", 64, 163, 952, 30, 24, true);
@@ -99,39 +104,42 @@
     const startId = recipe.startEra || run.start || (run.intervention && run.intervention.era);
     const start = eras.find((e) => e.id === startId || e.n === startId);
     const first = start ? start.n : (chapters.length ? Math.min(...chapters.map((ch) => ch.n)) : 1);
-    const rowData = eras.map((era) => ({ era, untouched: era.n < first, ch: chapters.find((ch) => ch.n === era.n) }));
-    rowData.forEach(({ era, untouched, ch }, index) => {
+    const rowData = eras.map((era) => {
+      const untouched = era.n < first, ch = chapters.find((chapter) => chapter.n === era.n);
+      return { era, untouched, edition: !untouched && ch ? P.edition(run, era.n) : null };
+    });
+    rowData.forEach(({ era, untouched, edition }, index) => {
       const y = 563 + index * 48;
       ctx.fillStyle = RED;
       textBox(ctx, String(era.n).padStart(2, "0"), 64, y + 8, 34, 28, 20, true, true);
       ctx.fillStyle = INK;
       textBox(ctx, era.name, 106, y + 8, 156, 28, 20, true);
-      const world = cards(ch, "world"), people = cards(ch, "personal");
-      const worldText = untouched ? "未干预，原有进程照旧" : world.map(alternate).filter(Boolean).join("；") || "本版缺失，未作推演";
-      const personalText = untouched ? "未干预，不编写个人经历" : people.map(alternate).filter(Boolean).join("；") || "本版缺失，未编写经历";
+      const worldText = untouched ? "未干预，原有进程照旧" : edition ? newsSummary(edition, "world") : "本版未推演";
+      const personalText = untouched ? "未干预，不编写生活短讯" : edition ? newsSummary(edition, "personal") : "本版未推演";
       textBox(ctx, "世界：" + worldText, 280, y, 736, 22, 17);
-      textBox(ctx, "你：" + personalText, 280, y + 24, 736, 22, 17);
+      textBox(ctx, "生活：" + personalText, 280, y + 24, 736, 22, 17);
       ctx.fillStyle = LINE;
       ctx.fillRect(64, y + 47, 952, 1);
     });
 
-    const candidates = rowData.filter((row) => !row.untouched).flatMap((row) => cards(row.ch, "world"))
-      .filter((item) => item.ev && item.view && item.view.changed && item.ev.baseline !== item.view.alternate);
-    const pick = candidates.find((item) => item.conflict || item.view.conflict || item.ev.hot) || candidates[candidates.length - 1];
+    const candidates = rowData.filter((row) => row.edition).flatMap((row) => row.edition.visible)
+      .filter((item) => item.ev && item.view && item.view.changed === true && item.ev.baseline !== item.view.alternate);
+    const pick = candidates.find((item) => item.conflict || item.view.conflict || item.ev.conflict || item.ev.hot) || candidates[candidates.length - 1];
     ctx.fillStyle = RED;
     textBox(ctx, "最离谱改写", 64, 1060, 952, 26, 20, true, true);
     ctx.fillStyle = INK;
-    textBox(ctx, pick ? pick.ev.title + "：" + pick.ev.baseline + " → " + pick.view.alternate : "本次没有可展示的改写，不编造结果。", 64, 1092, 952, 60, 25, true);
+    textBox(ctx, pick ? pick.ev.title + "：" + pick.ev.baseline + " → " + pick.view.alternate : "本次无新增改写；沿用与休眠均未冒充新闻。", 64, 1092, 952, 60, 25, true);
     ctx.fillStyle = RED;
-    textBox(ctx, "你的十版一生 / 不同年代的成年人生切片", 64, 1164, 952, 26, 20, true, true);
+    textBox(ctx, "生活短讯摘录 / 仅收录各版新增", 64, 1164, 952, 26, 20, true, true);
     ctx.fillStyle = INK;
-    const montage = rowData.map(({ era, untouched, ch }) => era.name + "：" + (untouched ? "未干预" : alternate(cards(ch, "personal")[0]) || "未生成")).join(" / ");
-    textBox(ctx, montage, 64, 1198, 952, 134, 20);
+    const montage = rowData.filter((row) => row.edition).flatMap(({ era, edition }) =>
+      cards(edition.visible, "personal").filter((item) => item.view && item.view.changed === true).map((item) => era.name + "：" + title(item))).join(" / ");
+    textBox(ctx, montage || "无新增生活短讯", 64, 1198, 952, 134, 20);
     ctx.strokeStyle = RED;
     ctx.lineWidth = 2;
     ctx.strokeRect(814, 1360, 202, 42);
     ctx.fillStyle = RED;
-    textBox(ctx, "世界线已改写", 832, 1369, 166, 28, 22, true);
+    textBox(ctx, candidates.length ? "世界线已改写" : "本次无新增", 832, 1369, 166, 28, 22, true);
     ctx.fillStyle = INK;
     textBox(ctx, "虚构推演，勿对号入座 · 纯文字 / 离线制图", 64, 1372, 728, 24, 18, false, true);
     return c;

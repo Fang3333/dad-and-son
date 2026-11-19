@@ -57,20 +57,42 @@
         return { node: node, wasInert: wasInert };
       });
     }
+    $("ovArchive").replaceChildren();
+    $("ovArchive").hidden = true;
+    $("ovWhyBlock").hidden = false;
     $("ovMeta").textContent = [
-      ev.track === "personal" ? "个人小事" : "世界大事", ev.yearLabel, ev.domain, view.certainty
+      ev.track === "personal" ? "生活短讯" : "本版要闻", ev.yearLabel, ev.domain, view.certainty
     ].filter(Boolean).join(" · ");
     $("ovTitle").textContent = ev.title || "事件详情";
     $("ovFiction").hidden = !ev.hot;
     const names = (ev.ruleTags || []).map((id) => { const rule = global.WRM_PRESETS.byId(id); return rule ? rule.name : id; });
     const dormant = (ev.dormant || []).map((id) => { const rule = global.WRM_PRESETS.byId(id); return rule ? rule.name : id; });
-    $("ovDetail").textContent = (view.detail || view.alternate || "") + (names.length ? "\n涉及规则：" + names.join("、") + "。" : "") + (dormant.length ? "\ndormant（本版未生效）：" + dormant.join("、") + "。" : "");
+    $("ovDetail").textContent = (ev.baseline ? "原来：" + ev.baseline + "\n\n" : "") + (view.detail || view.alternate || "") + (names.length ? "\n涉及规则：" + names.join("、") + "。" : "") + (dormant.length ? "\n尚未生效：" + dormant.join("、") + "。" : "");
     $("ovWhy").textContent = (view.why || "") + (typeof ev.conflict === "string" && ev.conflict ? "\n冲突裁定：" + ev.conflict : "");
     $("ovChain").textContent = view.chain || "";
     $("ovChainBlock").hidden = !view.chain;
     $("evOverlay").hidden = false;
     $("evOverlay").querySelector(".overlay-panel").scrollTop = 0;
     $("ovClose").focus({ preventScroll: true });
+  }
+
+  function openArchive(edition, chapter) {
+    openOverlay({ title: "本版存档", yearLabel: chapter.name }, { detail: "沿用的后果和暂未生效的规则保留在这里，不计作本版新消息。", certainty: "情景推演" });
+    $("ovWhyBlock").hidden = true;
+    const archive = $("ovArchive");
+    archive.hidden = false;
+    const entries = edition.carried.concat(edition.dormant.map((item) => ({ item, reason: "尚未生效" })));
+    entries.forEach(({ item, reason }) => {
+      const section = el("section", "archive-entry");
+      section.appendChild(el("p", "archive-reason mono", reason));
+      section.appendChild(el("h4", "archive-title", item.ev.title));
+      section.appendChild(el("p", "archive-news", item.view.alternate));
+      section.appendChild(el("p", "archive-baseline", "原来：" + item.ev.baseline));
+      section.appendChild(el("p", "archive-detail", item.view.detail));
+      const rules = item.ev.ruleTags.map((id) => global.WRM_PRESETS.byId(id).name);
+      section.appendChild(el("p", "archive-rules", "涉及规则：" + rules.join("、")));
+      archive.appendChild(section);
+    });
   }
 
   function closeOverlay() {
@@ -121,46 +143,38 @@
     node.setAttribute("tabindex", "0");
     node.setAttribute("aria-haspopup", "dialog");
     node.setAttribute("aria-controls", "evOverlay");
-    node.setAttribute("aria-label", (personal ? "个人小事" : "世界大事") + " · " + ev.title + " · 查看改写详情");
+    node.setAttribute("aria-label", (personal ? "生活短讯" : "本版要闻") + " · " + ev.title + " · 查看改写详情");
     node.dataset.event = ev.id;
     node.dataset.track = personal ? "personal" : "world";
     node.style.animationDelay = (index * 40) + "ms";
 
     const top = el("div", "ev-top");
     const meta = el("div", "ev-meta");
-    meta.appendChild(el("span", "ev-year mono", ev.yearLabel));
     meta.appendChild(el("span", "ev-domain mono", ev.domain));
-    const track = el("span", "ev-track mono", personal ? "私" : "世界");
-    track.setAttribute("aria-label", personal ? "个人线" : "世界线");
-    meta.appendChild(track);
-    meta.appendChild(el("span", "stamp stamp-change", ev.conflict ? "冲突" : "已改写"));
+    if (!personal) meta.appendChild(el("span", "ev-rulecount mono", ev.ruleTags.length + " 条规则"));
+    if (ev.conflict) meta.appendChild(el("span", "stamp", "冲突"));
     top.appendChild(meta);
     top.appendChild(el("h3", "ev-title", ev.title));
     if (!personal && ev.ruleTags && ev.ruleTags.length) {
       const tags = el("div", "rule-tags");
-      ev.ruleTags.slice(0, 4).forEach((id) => {
+      ev.ruleTags.slice(0, 2).forEach((id) => {
         const rule = global.WRM_PRESETS.byId(id);
         const tag = el("span", "rule-tag", rule ? rule.name : id);
         tag.dataset.rule = id;
         tags.appendChild(tag);
       });
-      if (ev.ruleTags.length > 4) tags.appendChild(el("span", "tag-more", "+" + (ev.ruleTags.length - 4)));
+      if (ev.ruleTags.length > 2) tags.appendChild(el("span", "tag-more", "+" + (ev.ruleTags.length - 2)));
       top.appendChild(tags);
     }
     node.appendChild(top);
 
-    const halves = el("div", "ev-halves");
-    const before = el("div", "ev-before");
-    before.appendChild(el("span", "ev-half-label mono", "原来"));
-    before.appendChild(el("p", "ev-text", ev.baseline));
-    const now = el("div", "ev-now");
-    now.appendChild(el("span", "ev-half-label mono", "现在"));
-    const after = el("p", "ev-text");
+    const body = el("div", "ev-body");
+    const before = el("p", "ev-before", "原来 · " + ev.baseline);
+    const after = el("p", "ev-news");
     after.appendChild(markKeywords(view.alternate, view.keywords));
-    now.appendChild(after);
-    halves.appendChild(before);
-    halves.appendChild(now);
-    node.appendChild(halves);
+    body.appendChild(before);
+    body.appendChild(after);
+    node.appendChild(body);
 
     const open = () => openOverlay(ev, view);
     node.addEventListener("click", open);
@@ -176,10 +190,8 @@
   function renderTrack(id, items, offset) {
     const box = $(id);
     box.replaceChildren();
+    box.dataset.count = String(items.length);
     items.forEach((item, index) => box.appendChild(card(item.ev, item.view, offset + index)));
-    if (!items.length) {
-      box.appendChild(el("p", "track-empty", "本轨暂无事件"));
-    }
   }
 
   function renderNav(n, ns, hooks) {
@@ -220,7 +232,8 @@
     const chapter = run.chapters.find((entry) => entry.n === chapterN);
     if (!chapter) return;
     const firstChapter = run.chapters.find((entry) => entry.n === ns[0]) || chapter;
-    const items = chapter.events.filter((item) => item.view.changed);
+    const edition = global.WRM_PRESETS.edition(run, chapterN);
+    const items = edition.visible;
     const world = items.filter((item) => item.ev.track !== "personal");
     const personal = items.filter((item) => item.ev.track === "personal");
 
@@ -238,12 +251,12 @@
     select.value = run.id;
     select.disabled = hooks.busy;
     select.onchange = () => hooks.onSelectRun(select.value);
-    $("chapterSource").textContent = run.kind === "ai" ? "由 " + run.model + " 生成" : "本地剧本";
+    $("chapterSource").textContent = run.kind === "ai" ? "由 " + run.model + " 生成" : "冷面号外 · 本地剧本";
     $("chapterBig").textContent = String(chapterN).padStart(2, "0");
     $("chapterName").textContent = chapter.name;
-    $("chapterSubtitle").textContent = chapter.subtitle || "";
+    $("chapterSubtitle").textContent = items.length ? (chapter.subtitle || "本版消息") : "旧闻照旧，本报不凑版面";
     $("chapterSpan").textContent = chapter.span || "";
-    $("chapterCount").textContent = "本版改写 " + items.length + " 件 · 世界 " + world.length + " / 个人 " + personal.length + " · 情景推演";
+    $("chapterCount").textContent = "新消息 " + items.length + " 则 · 情景推演";
 
     const intervention = run.intervention || {};
     $("chapterIntervention").hidden = false;
@@ -251,10 +264,18 @@
     const recap = $("chapterRecap");
     recap.hidden = chapterN !== ns[0] || !run.recap;
     recap.textContent = recap.hidden ? "" : "前情：" + run.recap;
-    $("chapterPersonal").hidden = !chapter.personal;
-    $("chapterPersonal").textContent = chapter.personal || "";
-
-    $("chapterBody").dataset.count = String(items.length);
+    $("worldSection").hidden = !world.length;
+    $("personalSection").hidden = !personal.length;
+    $("editionEmpty").hidden = !!items.length;
+    const body = $("chapterBody");
+    body.dataset.count = String(items.length);
+    body.dataset.world = String(world.length);
+    body.dataset.personal = String(personal.length);
+    const archiveCount = edition.carried.length + edition.dormant.length;
+    $("editionArchive").hidden = !archiveCount;
+    $("archiveNote").textContent = [edition.carried.length ? "沿用 " + edition.carried.length + " 则" : "", edition.dormant.length ? "待生效 " + edition.dormant.length + " 则" : ""].filter(Boolean).join(" · ");
+    $("archiveBtn").onclick = () => openArchive(edition, chapter);
+    $("archiveBtn").disabled = hooks.busy;
     renderTrack("worldCards", world, 0);
     renderTrack("personalCards", personal, world.length);
     renderNav(chapterN, ns, hooks);

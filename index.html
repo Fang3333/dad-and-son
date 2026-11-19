@@ -4,22 +4,22 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>世界规则修改器 · 多规则与多分叉</title>
-<meta name="description" content="3–18 条规则同时发生，十个时代、四处分叉、每版三件世界大事与两件个人小事。离线推演、保留最近五条世界线，下载纯文字海报。情景推演，不是史实。">
+<meta name="description" content="3–18 条规则同时发生，十个时代、四处分叉。冷面号外报道新后果，生活短讯不凑数，旧闻收起随时查。离线推演、保留最近五条世界线，下载纯文字海报。情景推演，不是史实。">
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="styles.css?v=2.5.0">
-<script defer src="world-rule/data.js?v=2.5.0"></script>
-<script defer src="world-rule/engine.js?v=2.5.0"></script>
-<script defer src="chapters.js?v=2.5.0"></script>
-<script defer src="presets-a.js?v=2.5.0"></script>
-<script defer src="presets-b.js?v=2.5.0"></script>
-<script defer src="presets-c.js?v=2.5.0"></script>
-<script defer src="presets.js?v=2.5.0"></script>
-<script defer src="version.js?v=2.5.0"></script>
-<script defer src="ai.js?v=2.5.0"></script>
-<script defer src="setup.js?v=2.5.0"></script>
-<script defer src="chapter.js?v=2.5.0"></script>
-<script defer src="chapter-poster.js?v=2.5.0"></script>
-<script defer src="app.js?v=2.5.0"></script>
+<link rel="stylesheet" href="styles.css?v=2.6.0">
+<script defer src="world-rule/data.js?v=2.6.0"></script>
+<script defer src="world-rule/engine.js?v=2.6.0"></script>
+<script defer src="chapters.js?v=2.6.0"></script>
+<script defer src="presets-a.js?v=2.6.0"></script>
+<script defer src="presets-b.js?v=2.6.0"></script>
+<script defer src="presets-c.js?v=2.6.0"></script>
+<script defer src="presets.js?v=2.6.0"></script>
+<script defer src="version.js?v=2.6.0"></script>
+<script defer src="ai.js?v=2.6.0"></script>
+<script defer src="setup.js?v=2.6.0"></script>
+<script defer src="chapter.js?v=2.6.0"></script>
+<script defer src="chapter-poster.js?v=2.6.0"></script>
+<script defer src="app.js?v=2.6.0"></script>
 </head>
 <body>
 
@@ -98,23 +98,24 @@
       <div id="chapterBody" class="chapter-cards" data-count="0">
         <section id="worldSection" class="track-section track-world" data-track="world" aria-labelledby="worldTrackTitle">
           <div class="track-heading">
-            <h3 id="worldTrackTitle" class="track-title">世界大事</h3>
-            <span class="track-caption mono">公共版 / WORLD</span>
+            <h3 id="worldTrackTitle" class="track-title">本版要闻</h3>
+            <span class="track-caption mono">号外 / NEWS</span>
           </div>
           <div id="worldCards" class="track-cards"></div>
         </section>
         <section id="personalSection" class="track-section track-personal" data-track="personal" aria-labelledby="personalTrackTitle">
           <div class="track-heading">
-            <h3 id="personalTrackTitle" class="track-title">个人小事</h3>
-            <p id="chapterPersonal" class="chapter-personal" hidden></p>
-            <span class="track-caption mono">私人版 / PERSONAL</span>
+            <h3 id="personalTrackTitle" class="track-title">生活短讯</h3>
+            <span class="track-caption mono">街巷 / LOCAL</span>
           </div>
           <div id="personalCards" class="track-cards"></div>
         </section>
+        <div id="editionEmpty" class="edition-empty" hidden><p>本版没有新消息</p><span>沿用的安排已收入存档，不另编一条。</span></div>
       </div>
     </div>
 
     <div class="chapter-bottom">
+      <div id="editionArchive" class="edition-archive" hidden><span id="archiveNote" class="mono"></span><button id="archiveBtn" class="text-btn" type="button" aria-haspopup="dialog" aria-controls="evOverlay">查看本版存档</button></div>
       <section id="branchPoint" class="branch-point" aria-labelledby="branchTitle" hidden><h3 id="branchTitle"></h3><div id="branchOptions" class="branch-options"></div><p id="branchNote">选择后生成新世界线，当前线保留。</p></section>
     <nav class="chapter-nav" aria-label="章节导航">
       <button id="prevChapter" class="nav-btn" type="button">← 上一版</button>
@@ -146,7 +147,8 @@
     <h3 id="ovTitle" class="ov-title"></h3>
     <p id="ovFiction" class="ov-fiction mono" hidden>代号人物 · 虚构改写，勿对号入座</p>
     <p id="ovDetail" class="ov-detail"></p>
-    <div class="ov-why">
+    <div id="ovArchive" class="ov-archive" hidden></div>
+    <div id="ovWhyBlock" class="ov-why">
       <span class="ov-label mono">为什么</span>
       <p id="ovWhy"></p>
     </div>
