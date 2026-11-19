@@ -212,7 +212,9 @@
       const button = el("button", "dot" + (k === n ? " is-on" : ""));
       button.type = "button";
       button.dataset.page = String(k);
-      button.setAttribute("aria-label", "第 " + k + " 版");
+      const era = global.WRM_PRESETS.ERAS.find((entry) => entry.n === k);
+      button.setAttribute("aria-label", "第 " + k + " 版 · " + era.name);
+      button.title = era.name;
       if (k === n) button.setAttribute("aria-current", "step");
       button.onclick = () => hooks.onDot(k);
       dots.appendChild(button);
@@ -225,12 +227,76 @@
     poster.onclick = () => { if (!poster.disabled) hooks.onPoster(); };
   }
 
+  let pageAnimations = [], outgoingPage = null;
+  const motion = global.matchMedia("(prefers-reduced-motion: reduce)");
+
+  function cancelTransition() {
+    pageAnimations.forEach((animation) => animation.cancel());
+    pageAnimations = [];
+    if (outgoingPage) outgoingPage.remove();
+    outgoingPage = null;
+  }
+  motion.addEventListener("change", cancelTransition);
+  global.addEventListener("resize", cancelTransition);
+
+  function capturePage(direction) {
+    cancelTransition();
+    if (!direction || motion.matches || $("chapter").hidden) return null;
+    const main = document.querySelector(".chapter-main");
+    const rect = main.getBoundingClientRect();
+    const pageRect = $("chapter").getBoundingClientRect();
+    const copy = main.cloneNode(true);
+    copy.removeAttribute("id");
+    copy.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
+    copy.querySelectorAll("[tabindex]").forEach((node) => node.setAttribute("tabindex", "-1"));
+    copy.classList.add("page-leaf");
+    copy.setAttribute("aria-hidden", "true");
+    copy.inert = true;
+    Object.assign(copy.style, { left: (rect.left - pageRect.left) + "px", top: (rect.top - pageRect.top) + "px", width: rect.width + "px", height: rect.height + "px" });
+    const colors = global.getComputedStyle(main);
+    copy.style.setProperty("--edition-ink", colors.getPropertyValue("--edition-ink"));
+    copy.style.setProperty("--edition-paper", colors.getPropertyValue("--edition-paper"));
+    return copy;
+  }
+
+  function turnPage(copy, direction) {
+    if (!copy) return;
+    const main = document.querySelector(".chapter-main");
+    const step = direction === "prev" ? -1 : 1;
+    copy.style.height = Math.min(parseFloat(copy.style.height), main.getBoundingClientRect().height) + "px";
+    $("chapter").appendChild(copy);
+    outgoingPage = copy;
+    const timing = { duration: 360, easing: "cubic-bezier(.22,.7,.2,1)" };
+    const leave = copy.animate([
+      { transform: "translateX(0)", opacity: 1 },
+      { transform: "translateX(" + (-step * 42) + "px)", opacity: 0 }
+    ], timing);
+    const enter = main.animate([
+      { transform: "translateX(" + (step * 42) + "px)", opacity: 0 },
+      { transform: "translateX(0)", opacity: 1 }
+    ], timing);
+    pageAnimations = [leave, enter];
+    leave.onfinish = () => {
+      copy.remove();
+      if (outgoingPage === copy) { outgoingPage = null; pageAnimations = []; }
+    };
+  }
+
+  function editionSummary(chapter, edition) {
+    const carried = edition.carried.map((entry) => entry.item);
+    const lead = carried.find((item) => item.ev.track === "world") || carried[0];
+    if (lead) return chapter.name + "，" + lead.view.alternate;
+    const dormant = edition.dormant[0];
+    return dormant ? "本版规则尚缺生效条件：" + dormant.view.why : "本版没有新增后果，已有安排继续运行。";
+  }
+
   function render(state, n, hooks, direction, run) {
     closeOverlay();
     const ns = run.ns;
     const chapterN = ns.includes(Number(n)) ? Number(n) : ns[0];
     const chapter = run.chapters.find((entry) => entry.n === chapterN);
     if (!chapter) return;
+    const previousPage = capturePage(direction);
     const firstChapter = run.chapters.find((entry) => entry.n === ns[0]) || chapter;
     const edition = global.WRM_PRESETS.edition(run, chapterN);
     const items = edition.visible;
@@ -254,9 +320,14 @@
     $("chapterSource").textContent = run.kind === "ai" ? "由 " + run.model + " 生成" : "冷面号外 · 本地剧本";
     $("chapterBig").textContent = String(chapterN).padStart(2, "0");
     $("chapterName").textContent = chapter.name;
-    $("chapterSubtitle").textContent = items.length ? (chapter.subtitle || "本版消息") : "旧闻照旧，本报不凑版面";
+    $("chapterSubtitle").textContent = items.length ? items[0].ev.title + "。" : "世界没停，只是暂时没有新麻烦。";
+    const preceding = run.chapters.find((entry) => entry.n === ns[ns.indexOf(chapterN) - 1]);
+    $("chapterBridge").textContent = preceding ? preceding.name + " → " + chapter.name : "从这里改写世界";
+    $("editionLabel").textContent = chapterN >= 8 ? "未来特刊 · 假设" : "平行档案 · 假设";
+    $("emptySummary").textContent = editionSummary(chapter, edition);
+    $("emptyNote").textContent = edition.carried.length ? "以上为沿用近况，不计作新增新闻。旧闻全文见本版存档。" : "待生效的规则保留在存档中，不编造已经发生的后果。";
     $("chapterSpan").textContent = chapter.span || "";
-    $("chapterCount").textContent = "新消息 " + items.length + " 则 · 情景推演";
+    $("chapterCount").textContent = "新消息 " + items.length + " 则 · " + (chapterN >= 8 ? "未来畅想" : "情景推演");
 
     const intervention = run.intervention || {};
     $("chapterIntervention").hidden = false;
@@ -301,13 +372,12 @@
 
     const section = $("chapter");
     section.dataset.era = chapter.era || "";
-    section.classList.remove("turn-next", "turn-prev");
-    if (direction) {
-      void section.offsetWidth;
-      section.classList.add(direction === "prev" ? "turn-prev" : "turn-next");
-    }
+    section.dataset.future = String(chapterN >= 8);
+    section.dataset.direction = direction || "";
+    $("chapterDots").style.setProperty("--progress", ns.length > 1 ? (ns.indexOf(chapterN) / (ns.length - 1) * 100) + "%" : "0%");
+    turnPage(previousPage, direction);
   }
 
   bindOverlay();
-  global.WRM_CHAPTER_PAGE = { render: render, closeOverlay: closeOverlay, overlayOpen: overlayOpen };
+  global.WRM_CHAPTER_PAGE = { render, closeOverlay, overlayOpen, cancelTransition };
 })(typeof window !== "undefined" ? window : globalThis);

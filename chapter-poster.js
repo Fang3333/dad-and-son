@@ -2,7 +2,7 @@
   "use strict";
 
   const PAPER = "#F4F1E9", INK = "#141414", RED = "#A6231A", LINE = "#B9B2A2";
-  let lastFocus = null, canvas = null, filename = "world-line.png", backgroundState = [];
+  let lastFocus = null, canvas = null, filename = "what-if.png", backgroundState = [];
   function isOpen() { const overlay = document.getElementById("posterOverlay"); return !!overlay && !overlay.hidden; }
   function lines(ctx, text, width) {
     const out = [];
@@ -84,9 +84,12 @@
     ctx.fillRect(0, 0, c.width, c.height);
     ctx.textBaseline = "top";
     ctx.fillStyle = RED;
-    textBox(ctx, "世界线 " + runId + " / v" + (run.appVersion || "2.6.0") + (run.parentId ? " / 源自 " + run.parentId : ""), 64, 40, 952, 30, 21, false, true);
+    textBox(ctx, "世界线 " + runId + " / v" + (run.appVersion || "2.7.0") + (run.parentId ? " / 源自 " + run.parentId : ""), 64, 40, 952, 30, 21, false, true);
     ctx.fillStyle = INK;
-    textBox(ctx, "世界规则修改器", 64, 82, 952, 78, 62, true);
+    textBox(ctx, "What If", 64, 82, 590, 78, 76, true);
+    ctx.fillStyle = "#285A5B";
+    textBox(ctx, "平行世界报 / 未来特刊", 660, 112, 356, 32, 22, true);
+    ctx.fillStyle = INK;
     textBox(ctx, run.ruleName || (recipe.rules || []).length + "条规则同时生效", 64, 163, 952, 30, 24, true);
     const names = Array.isArray(run.ruleNames) && run.ruleNames.length ? run.ruleNames : (recipe.rules || []);
     chips(ctx, names, 64, 201, 952, 151);
@@ -114,7 +117,12 @@
       textBox(ctx, String(era.n).padStart(2, "0"), 64, y + 8, 34, 28, 20, true, true);
       ctx.fillStyle = INK;
       textBox(ctx, era.name, 106, y + 8, 156, 28, 20, true);
-      const worldText = untouched ? "未干预，原有进程照旧" : edition ? newsSummary(edition, "world") : "本版未推演";
+      if (era.n >= 8) {
+        ctx.fillStyle = "#E0EAE5";
+        ctx.fillRect(274, y, 742, 46);
+        ctx.fillStyle = "#285A5B";
+      }
+      const worldText = untouched ? "未干预，原有进程照旧" : edition ? (edition.visible.length ? newsSummary(edition, "world") : "沿用社评：" + (edition.carried[0] ? title(edition.carried[0].item) : "条件未备，规则继续等待")) : "本版未推演";
       const personalText = untouched ? "未干预，不编写生活短讯" : edition ? newsSummary(edition, "personal") : "本版未推演";
       textBox(ctx, "世界：" + worldText, 280, y, 736, 22, 17);
       textBox(ctx, "生活：" + personalText, 280, y + 24, 736, 22, 17);
@@ -159,7 +167,7 @@
     preview.textContent = "";
     canvas = nextCanvas;
     preview.appendChild(canvas);
-    filename = "world-line-" + String(run.runId || run.id || "untitled").replace(/[^a-zA-Z0-9_-]/g, "_") + ".png";
+    filename = "what-if-" + String(run.runId || run.id || "untitled").replace(/[^a-zA-Z0-9_-]/g, "_") + ".png";
     document.getElementById("posterMsg").textContent = "1080 × 1440 · PNG · 只含本次世界线，不含 API 设置";
     document.getElementById("posterOverlay").hidden = false;
     document.getElementById("posterClose").focus();

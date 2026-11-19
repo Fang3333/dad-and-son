@@ -1,10 +1,10 @@
 (function (global) {
   "use strict";
 
-  const APP_VERSION = "2.6.0";
+  const APP_VERSION = "2.7.0";
   const P = global.WRM_PRESETS;
   const SETUP_KEY = "wrm.recipe.v25";
-  const RUNS_KEY = "wrm.runs.v26";
+  const RUNS_KEY = "wrm.runs.v27";
   const clone = (value) => JSON.parse(JSON.stringify(value));
   const $ = (id) => document.getElementById(id);
   const state = {
@@ -16,7 +16,7 @@
   };
   const runs = [];
   const view = { run: null, chapter: 1, busy: false };
-  let toastTimer;
+  let toastTimer, turnDirection = "";
 
   function toast(text) {
     clearTimeout(toastTimer);
@@ -96,6 +96,8 @@
   }
   function showSetup() {
     closeOverlays();
+    global.WRM_CHAPTER_PAGE.cancelTransition();
+    turnDirection = "";
     $("setup").hidden = false;
     $("chapter").hidden = true;
     document.body.classList.remove("on-chapter");
@@ -106,14 +108,15 @@
   }
   function showChapter(n, animate) {
     closeOverlays();
-    const direction = animate === false ? "" : n >= view.chapter ? "next" : "prev";
+    const direction = animate === false || $("chapter").hidden || n === view.chapter ? "" : turnDirection || (n > view.chapter ? "next" : "prev");
+    turnDirection = "";
     view.chapter = n;
     const run = view.run;
     const i = run.ns.indexOf(n);
     global.WRM_CHAPTER_PAGE.render(state, n, {
       onEdit: () => { if (!view.busy) global.location.hash = "#setup"; },
-      onPrev: () => goChapter(run.ns[i - 1]),
-      onNext: () => goChapter(run.ns[(i + 1) % run.ns.length]),
+      onPrev: () => goChapter(run.ns[i - 1], "prev"),
+      onNext: () => goChapter(run.ns[(i + 1) % run.ns.length], "next"),
       onDot: goChapter,
       onPoster: () => global.WRM_CHAPTER_POSTER.open(view.run),
       onBranch: branchRun, onSelectRun: selectRun, runs, busy: view.busy
@@ -123,8 +126,9 @@
     document.body.classList.add("on-chapter");
     $("chapterName").focus({ preventScroll: true });
   }
-  function goChapter(n) {
+  function goChapter(n, direction) {
     if (view.busy || !view.run || !view.run.ns.includes(n)) return;
+    turnDirection = direction || "";
     if (global.location.hash === "#chapter/" + n) showChapter(n);
     else global.location.hash = "#chapter/" + n;
   }
@@ -232,7 +236,7 @@
     let message = "";
     try {
       const p = payload(recipe, fromN, parent);
-      const key = global.WRM_AI.cacheKey({ schema: "news-delta-v26", payload: p, model: settings.model, baseUrl: settings.baseUrl, temperature: settings.temperature });
+      const key = global.WRM_AI.cacheKey({ schema: "what-if-v27", payload: p, model: settings.model, baseUrl: settings.baseUrl, temperature: settings.temperature });
       const cached = force ? null : global.WRM_AI.cacheGet(key);
       let chapters;
       let model = settings.model;
@@ -285,8 +289,8 @@
     global.addEventListener("keydown", (event) => {
       if (view.busy || $("chapter").hidden || global.WRM_CHAPTER_PAGE.overlayOpen() || global.WRM_CHAPTER_POSTER.isOpen() || global.WRM_SETUP.overlayOpen() || event.target.closest("input,select,textarea,button")) return;
       const i = view.run.ns.indexOf(view.chapter);
-      if (event.key === "ArrowRight") { event.preventDefault(); goChapter(view.run.ns[(i + 1) % view.run.ns.length]); }
-      if (event.key === "ArrowLeft" && i > 0) { event.preventDefault(); goChapter(view.run.ns[i - 1]); }
+      if (event.key === "ArrowRight") { event.preventDefault(); goChapter(view.run.ns[(i + 1) % view.run.ns.length], "next"); }
+      if (event.key === "ArrowLeft" && i > 0) { event.preventDefault(); goChapter(view.run.ns[i - 1], "prev"); }
     });
     route();
   }

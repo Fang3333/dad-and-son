@@ -3,28 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>世界规则修改器 · 多规则与多分叉</title>
-<meta name="description" content="3–18 条规则同时发生，十个时代、四处分叉。冷面号外报道新后果，生活短讯不凑数，旧闻收起随时查。离线推演、保留最近五条世界线，下载纯文字海报。情景推演，不是史实。">
+<title>What If · 平行世界报</title>
+<meta name="description" content="如果荒唐的规则认真执行，世界会怎样？3–18 条规则、十个时代、四处分叉，从石斧到意识副本，读一份不存在的世界日报。离线可玩，未来纯属畅想。">
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="styles.css?v=2.6.0">
-<script defer src="world-rule/data.js?v=2.6.0"></script>
-<script defer src="world-rule/engine.js?v=2.6.0"></script>
-<script defer src="chapters.js?v=2.6.0"></script>
-<script defer src="presets-a.js?v=2.6.0"></script>
-<script defer src="presets-b.js?v=2.6.0"></script>
-<script defer src="presets-c.js?v=2.6.0"></script>
-<script defer src="presets.js?v=2.6.0"></script>
-<script defer src="version.js?v=2.6.0"></script>
-<script defer src="ai.js?v=2.6.0"></script>
-<script defer src="setup.js?v=2.6.0"></script>
-<script defer src="chapter.js?v=2.6.0"></script>
-<script defer src="chapter-poster.js?v=2.6.0"></script>
-<script defer src="app.js?v=2.6.0"></script>
+<link rel="stylesheet" href="styles.css?v=2.7.0">
+<script defer src="world-rule/data.js?v=2.7.0"></script>
+<script defer src="world-rule/engine.js?v=2.7.0"></script>
+<script defer src="chapters.js?v=2.7.0"></script>
+<script defer src="presets-a.js?v=2.7.0"></script>
+<script defer src="presets-b.js?v=2.7.0"></script>
+<script defer src="presets-c.js?v=2.7.0"></script>
+<script defer src="presets.js?v=2.7.0"></script>
+<script defer src="version.js?v=2.7.0"></script>
+<script defer src="ai.js?v=2.7.0"></script>
+<script defer src="setup.js?v=2.7.0"></script>
+<script defer src="chapter.js?v=2.7.0"></script>
+<script defer src="chapter-poster.js?v=2.7.0"></script>
+<script defer src="app.js?v=2.7.0"></script>
 </head>
 <body>
 
 <header class="masthead">
-  <div class="brand"><h1>世界规则修改器</h1></div>
+  <div class="brand"><h1>What If<span class="brand-stop">.</span></h1><p class="brand-caption mono">平行世界报 / THE WHAT IF PRESS</p></div>
   <p id="setupVersion" class="setup-ver mono" aria-live="polite"></p>
 </header>
 
@@ -32,10 +32,12 @@
 
   <section id="setup" class="setup" aria-labelledby="setupTitle">
     <div class="setup-story">
-      <h2 id="setupTitle" class="page-title" tabindex="-1">如果</h2>
+      <p class="setup-kicker mono">现实未必同意，本报先行刊登。</p>
+      <h2 id="setupTitle" class="page-title" tabindex="-1">如果，</h2>
       <div class="chip-line"><div id="ruleChips" class="rule-chips" role="group" aria-label="已选规则"></div><button id="addRule" class="rule-chip chip-add" type="button">+ 加一条</button></div>
       <p class="setup-question">同时发生，从 <select id="startEra" aria-label="开始时代"></select> <span>开始，世界会怎样？</span></p>
       <div class="selection-tools mono"><span id="selectedCount" aria-live="polite">已选 3/18 条</span><button id="shuffleRules" class="text-btn" type="button">洗牌</button><button id="allRules" class="text-btn" type="button">全部规则</button></div>
+      <p class="setup-deck">从石斧到意识副本，读十版不存在的新闻。<br>规则由你改，麻烦由世界想办法。</p>
     </div>
     <details id="advanced" class="advanced">
       <summary>高级：参数 / 假设 / API / 自定义</summary>
@@ -69,6 +71,8 @@
   <section id="chapter" class="chapter" aria-labelledby="chapterName" hidden>
     <div class="chapter-top">
       <div class="chapter-identity">
+        <span class="chapter-brand" aria-label="What If 平行世界报">What If<span class="brand-stop">.</span></span>
+        <span id="editionLabel" class="edition-label"></span>
         <span id="chapterRun" class="chapter-run mono"></span>
         <span id="chapterNo" class="chapter-no mono"></span>
       </div>
@@ -88,6 +92,7 @@
           <h2 id="chapterName" class="chapter-name" tabindex="-1"></h2>
           <p id="chapterSubtitle" class="chapter-subtitle"></p>
           <div class="chapter-caption">
+            <p id="chapterBridge" class="chapter-bridge mono"></p>
             <p id="chapterSpan" class="chapter-span mono"></p>
             <p id="chapterCount" class="chapter-count mono"></p>
           </div>
@@ -110,7 +115,7 @@
           </div>
           <div id="personalCards" class="track-cards"></div>
         </section>
-        <div id="editionEmpty" class="edition-empty" hidden><p>本版没有新消息</p><span>沿用的安排已收入存档，不另编一条。</span></div>
+        <article id="editionEmpty" class="edition-empty" hidden aria-labelledby="emptyTitle"><p class="empty-kicker mono">本版社评 / THE WORLD GOES ON</p><h3 id="emptyTitle">年历翻篇，世界照常。</h3><p id="emptySummary" class="empty-summary"></p><span id="emptyNote" class="empty-note"></span></article>
       </div>
     </div>
 
@@ -225,7 +230,7 @@
 
 <footer>
   <p id="disclaimer" class="disclaimer"></p>
-  <p class="colophon mono"><span id="metaVersion"></span> · 报纸版式 B · 断网可玩</p>
+  <p class="colophon mono"><span id="metaVersion"></span> · 平行世界报 · 断网可玩</p>
 </footer>
 
 <noscript><p class="error">本页需要 JavaScript 才能推演世界。请启用后刷新。</p></noscript>
