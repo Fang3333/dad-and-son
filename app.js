@@ -1,245 +1,283 @@
 (function (global) {
   "use strict";
 
-  const APP_VERSION = "2.4.0";
-  const APP_UPDATED = "2026-11-19";
-  const LS = "wrm.setup";
+  const APP_VERSION = "2.5.0";
+  const P = global.WRM_PRESETS;
+  const SETUP_KEY = "wrm.recipe.v25";
+  const RUNS_KEY = "wrm.runs.v25";
+  const clone = (value) => JSON.parse(JSON.stringify(value));
+  const $ = (id) => document.getElementById(id);
   const state = {
-    ruleId: "no-exam", params: {}, mechanisms: [], libraryOpen: false, hasAIRun: false,
-    custom: { name: "", description: "", params: [
-      { key: "p1", label: "", value: true }, { key: "p2", label: "", value: false },
-      { key: "p3", label: "", value: true }, { key: "p4", label: "", value: false }
-    ] },
-    intervention: { era: "primitive", yearLabel: "" },
-    assumptions: { tech: true, resources: true, cooperate: true }
+    rules: ["no-exam", "four-hour", "free-goods"], startEra: "primitive", assumptions: [],
+    worldAssumptions: { tech: true, resources: true, cooperate: true },
+    params: Object.fromEntries(P.commonParams.map((p) => [p.id, p.default])),
+    branchPath: P.defaultPath("primitive"),
+    custom: { enabled: false, name: "", description: "", params: [1, 2, 3, 4].map((n) => ({ key: "p" + n, label: "", value: true })) }
   };
-  const view = { generated: false, chapter: 1, run: null, busy: false };
+  const runs = [];
+  const view = { run: null, chapter: 1, busy: false };
+  let toastTimer;
 
-  function save() {
-    try {
-      global.localStorage.setItem(LS, JSON.stringify({ ruleId: state.ruleId, params: state.params, custom: state.custom,
-        intervention: state.intervention, assumptions: state.assumptions, mechanisms: state.mechanisms, libraryOpen: state.libraryOpen }));
-    } catch (e) {}
+  function toast(text) {
+    clearTimeout(toastTimer);
+    $("toast").textContent = text;
+    $("toast").hidden = false;
+    toastTimer = setTimeout(() => { $("toast").hidden = true; }, 5000);
   }
-
-  function load() {
-    state.params = global.WRM_SETUP.defaultParams(global.WRM_SETUP.ruleById(state.ruleId));
-    try {
-      const s = JSON.parse(global.localStorage.getItem(LS) || "null");
-      if (!s || (s.ruleId !== "custom" && !global.WRM_PRESETS.byId(s.ruleId))) return;
-      state.ruleId = s.ruleId;
-      state.libraryOpen = s.libraryOpen === true;
-      if (s.custom && typeof s.custom === "object") {
-        if (typeof s.custom.name === "string") state.custom.name = s.custom.name.slice(0, 20);
-        if (typeof s.custom.description === "string") state.custom.description = s.custom.description.slice(0, 120);
-        if (Array.isArray(s.custom.params)) state.custom.params.forEach((p, i) => {
-          const old = s.custom.params[i];
-          if (old && typeof old.label === "string") p.label = old.label.slice(0, 12);
-          if (old && typeof old.value === "boolean") p.value = old.value;
-        });
-      }
-      if (s.intervention && global.WRM_AI.ERAS.some((e) => e.id === s.intervention.era)) {
-        state.intervention.era = s.intervention.era;
-        if (typeof s.intervention.yearLabel === "string") state.intervention.yearLabel = s.intervention.yearLabel.slice(0, 8);
-      }
-      if (state.ruleId === "custom") state.params = global.WRM_SETUP.customParamMap(state);
-      else {
-        const rule = global.WRM_SETUP.ruleById(state.ruleId);
-        state.params = global.WRM_SETUP.defaultParams(rule);
-        rule.params.forEach((p) => {
-          if (s.params && typeof s.params[p.id] === "boolean") state.params[p.id] = s.params[p.id];
-        });
-      }
-      global.WRM_CHAPTERS.assumptions.forEach((a) => {
-        if (s.assumptions && typeof s.assumptions[a.id] === "boolean") state.assumptions[a.id] = s.assumptions[a.id];
+  function recipeFrom(raw) {
+    if (!raw || !Array.isArray(raw.rules)) return null;
+    const next = clone(state);
+    next.rules = Array.from(new Set(raw.rules.filter((id) => P.byId(id)))).slice(0, 18);
+    next.startEra = P.ERAS.some((era) => era.id === raw.startEra) ? raw.startEra : "primitive";
+    next.assumptions = Array.isArray(raw.assumptions) ? Array.from(new Set(raw.assumptions.filter((id) => P.mechanismById(id)))).slice(0, 3) : [];
+    Object.keys(next.worldAssumptions).forEach((key) => {
+      if (raw.worldAssumptions && typeof raw.worldAssumptions[key] === "boolean") next.worldAssumptions[key] = raw.worldAssumptions[key];
+    });
+    P.commonParams.forEach((p) => { next.params[p.id] = raw.params && typeof raw.params[p.id] === "boolean" ? raw.params[p.id] : p.default; });
+    next.branchPath = P.defaultPath(next.startEra).map((key) => {
+      const branch = P.BRANCHES.find((b) => b.options.some((o) => o.key === key));
+      return (Array.isArray(raw.branchPath) && raw.branchPath.find((item) => branch.options.some((o) => o.key === item))) || key;
+    });
+    next.custom = { enabled: false, name: "", description: "", params: [1, 2, 3, 4].map((n) => ({ key: "p" + n, label: "", value: true })) };
+    if (raw.custom && typeof raw.custom === "object") {
+      next.custom.enabled = raw.custom.enabled === true;
+      next.custom.name = Array.from(String(raw.custom.name || "")).slice(0, 20).join("");
+      next.custom.description = Array.from(String(raw.custom.description || "")).slice(0, 120).join("");
+      next.custom.params.forEach((p, i) => {
+        const old = Array.isArray(raw.custom.params) && raw.custom.params[i];
+        if (old) { p.label = Array.from(String(old.label || "")).slice(0, 12).join(""); p.value = old.value !== false; }
       });
-      if (Array.isArray(s.mechanisms)) state.mechanisms = Array.from(new Set(s.mechanisms.filter((id) => global.WRM_PRESETS.mechanismById(id)))).slice(0, 3);
+    }
+    return next;
+  }
+  function save() {
+    try { global.localStorage.setItem(SETUP_KEY, JSON.stringify(state)); } catch (e) { toast("浏览器存储不可用；本次会话仍可继续。"); }
+  }
+  function saveRuns() {
+    try { global.localStorage.setItem(RUNS_KEY, JSON.stringify({ currentId: view.run && view.run.id, runs })); }
+    catch (e) { toast("世界线暂留本次会话；浏览器未能保存，刷新前可下载海报。"); }
+  }
+  function validRun(run) {
+    if (!run || !/^WL-\d+$/.test(run.id) || run.appVersion !== APP_VERSION || !run.recipe || !Array.isArray(run.chapters)) return false;
+    const recipe = recipeFrom(run.recipe);
+    if (!recipe || P.configurationError(recipe)) return false;
+    const eras = P.ERAS.filter((e) => e.n >= P.eraById(recipe.startEra).n);
+    return run.chapters.length === eras.length && run.chapters.every((ch, i) => ch.n === eras[i].n && ch.era === eras[i].id && Array.isArray(ch.events) && ch.events.length === 5 && ch.events.every((event) => event.ev && event.view && typeof event.ev.title === "string" && typeof event.view.detail === "string") && Array.isArray(ch.worldCards) && ch.worldCards.length === 3 && Array.isArray(ch.personalCards) && ch.personalCards.length === 2);
+  }
+  function load() {
+    try {
+      const saved = recipeFrom(JSON.parse(global.localStorage.getItem(SETUP_KEY) || "null"));
+      if (saved) Object.assign(state, saved);
+      const stored = JSON.parse(global.localStorage.getItem(RUNS_KEY) || "null");
+      if (stored && Array.isArray(stored.runs)) {
+        const ids = new Set();
+        stored.runs.filter(validRun).slice(0, 5).forEach((run) => {
+          if (ids.has(run.id)) return;
+          ids.add(run.id);
+          run.ns = run.chapters.map((c) => c.n);
+          run.start = run.ns[0];
+          run.path = run.recipe.branchPath.join("-");
+          run.runId = run.id;
+          runs.push(run);
+        });
+        view.run = runs.find((run) => run.id === stored.currentId) || runs[0] || null;
+      }
     } catch (e) {}
   }
-
-  function ns() { return view.run ? view.run.ns : global.WRM_AI.ERAS.map((e) => e.n); }
   function closeOverlays() {
     global.WRM_CHAPTER_PAGE.closeOverlay();
     global.WRM_CHAPTER_POSTER.close();
     global.WRM_SETUP.closeApi();
+    global.WRM_SETUP.closeDialogs();
+  }
+  function refreshIdentity() {
+    $("setupVersion").textContent = view.run ? "世界线 " + view.run.id.slice(3) + " · 第 " + view.chapter + " 版" : "十个时代 · 四处分叉";
   }
   function showSetup() {
     closeOverlays();
-    document.getElementById("setup").hidden = false;
-    document.getElementById("chapter").hidden = true;
+    $("setup").hidden = false;
+    $("chapter").hidden = true;
     document.body.classList.remove("on-chapter");
-    global.WRM_SETUP.refreshVersion(state.ruleId);
-    global.WRM_SETUP.refreshGen(state);
-    global.scrollTo(0, 0);
-    document.getElementById("setupTitle").focus();
+    $("advanced").open = false;
+    global.WRM_SETUP.render(state, hooks);
+    refreshIdentity();
+    $("setupTitle").focus({ preventScroll: true });
   }
-  function showChapter(n) {
+  function showChapter(n, animate) {
     closeOverlays();
-    const direction = n >= view.chapter ? "next" : "prev";
+    const direction = animate === false ? "" : n >= view.chapter ? "next" : "prev";
     view.chapter = n;
-    const list = ns();
-    const i = list.indexOf(n);
+    const run = view.run;
+    const i = run.ns.indexOf(n);
     global.WRM_CHAPTER_PAGE.render(state, n, {
-      onEdit: backToSetup,
-      onPrev: () => goChapter(list[i - 1]),
-      onNext: () => goChapter(i >= list.length - 1 ? list[0] : list[i + 1]),
+      onEdit: () => { if (!view.busy) global.location.hash = "#setup"; },
+      onPrev: () => goChapter(run.ns[i - 1]),
+      onNext: () => goChapter(run.ns[(i + 1) % run.ns.length]),
       onDot: goChapter,
-      onPoster: () => global.WRM_CHAPTER_POSTER.open(view.run)
-    }, direction, view.run);
-    document.getElementById("setup").hidden = true;
-    document.getElementById("chapter").hidden = false;
+      onPoster: () => global.WRM_CHAPTER_POSTER.open(view.run),
+      onBranch: branchRun, onSelectRun: selectRun, runs, busy: view.busy
+    }, direction, run);
+    $("setup").hidden = true;
+    $("chapter").hidden = false;
     document.body.classList.add("on-chapter");
-    global.scrollTo(0, 0);
-    document.getElementById("chapterName").focus();
+    $("chapterName").focus({ preventScroll: true });
   }
   function goChapter(n) {
-    if (!ns().includes(n)) return;
-    const target = "#chapter/" + n;
-    if (global.location.hash === target) showChapter(n);
-    else global.location.hash = target;
-  }
-  function backToSetup() {
-    if (global.location.hash === "#setup") showSetup();
-    else global.location.hash = "#setup";
+    if (view.busy || !view.run || !view.run.ns.includes(n)) return;
+    if (global.location.hash === "#chapter/" + n) showChapter(n);
+    else global.location.hash = "#chapter/" + n;
   }
   function route() {
-    const m = global.location.hash.match(/^#chapter\/(\d+)$/);
-    if (m && view.generated) {
-      let n = Number(m[1]);
-      if (!ns().includes(n)) {
-        n = ns()[0];
-        global.history.replaceState(null, "", "#chapter/" + n);
-      }
+    if (view.busy) return;
+    const match = global.location.hash.match(/^#chapter\/(\d+)$/);
+    if (match && view.run) {
+      const n = view.run.ns.includes(Number(match[1])) ? Number(match[1]) : view.run.start;
+      global.history.replaceState(null, "", "#chapter/" + n);
       showChapter(n);
     } else {
-      if (global.location.hash !== "#setup") global.history.replaceState(null, "", "#setup");
+      global.history.replaceState(null, "", "#setup");
       showSetup();
     }
   }
-
-  function makeRun(chapters, kind, model) {
-    const start = chapters[0].n;
-    const rule = global.WRM_SETUP.ruleById(state.ruleId);
+  function makeRun(recipe, chapters, kind, model, parent) {
     return {
-      kind, model: model || "", start, ns: chapters.map((c) => c.n), chapters,
-      intervention: Object.assign({}, state.intervention), recap: global.WRM_AI.RECAP[start] || "",
-      ruleId: state.ruleId, ruleName: state.ruleId === "custom" ? state.custom.name.trim() : rule.name,
-      ruleDescription: state.ruleId === "custom" ? state.custom.description.trim() : rule.rule,
-      assumptions: global.WRM_CHAPTERS.assumptions.map((a) => a.label + (state.assumptions[a.id] ? "：开" : "：关")),
-      mechanisms: state.mechanisms.map((id) => global.WRM_PRESETS.mechanismById(id).name),
-      parameters: state.ruleId === "custom" ? state.custom.params.map((p) => p.label + (p.value ? "：开" : "：关"))
-        : rule.params.map((p) => p.label + (state.params[p.id] ? "：开" : "：关")),
+      parentId: parent ? parent.id : null, recipe: clone(recipe), path: recipe.branchPath.join("-"),
+      kind, model: model || "", start: chapters[0].n, ns: chapters.map((c) => c.n), chapters,
+      intervention: { era: recipe.startEra }, recap: P.RECAP[chapters[0].n] || "",
+      ruleName: recipe.rules.length + " 条规则同时发生", ruleNames: recipe.rules.map((id) => P.byId(id).name),
+      assumptions: global.WRM_CHAPTERS.assumptions.map((a) => a.label + (recipe.worldAssumptions[a.id] ? "：开" : "：关")),
+      mechanisms: recipe.assumptions.map((id) => P.mechanismById(id).name),
+      parameters: P.commonParams.map((p) => p.label + (recipe.params[p.id] ? "：开" : "：关")),
       appVersion: APP_VERSION
     };
   }
-  function finishRun(run, noteText) {
-    global.WRM_VERSION.bump();
-    run.runId = global.WRM_VERSION.runId(run.ruleId);
-    state.hasAIRun = run.kind === "ai" || state.hasAIRun;
-    save();
+  function finishRun(run, chapter) {
+    do { global.WRM_VERSION.bump(); run.id = global.WRM_VERSION.runId(); } while (runs.some((r) => r.id === run.id));
+    run.runId = run.id;
+    runs.unshift(run);
+    if (runs.length > 5) runs.length = 5;
     view.run = run;
-    view.generated = true;
     view.busy = false;
+    Object.assign(state, clone(run.recipe));
     global.WRM_SETUP.busy(false);
     global.WRM_SETUP.showFallback(false);
-    global.WRM_SETUP.note(noteText || "");
-    goChapter(run.start);
+    save();
+    saveRuns();
+    global.history.replaceState(null, "", "#chapter/" + chapter);
+    showChapter(chapter, false);
   }
-  function generateLocal() {
-    if (view.busy || state.ruleId === "custom") return;
-    const err = document.getElementById("appError");
-    err.hidden = true;
-    try {
-      finishRun(makeRun(global.WRM_PRESETS.resolve(state), "local"), "本地剧本 · 未调用 API");
-    } catch (e) {
-      err.textContent = global.WRM_PRESETS.configurationError(state) || "本地剧本不可用，请重新选择一套剧本";
-      err.hidden = false;
-    }
+  function selectRun(id) {
+    if (view.busy) return;
+    const run = runs.find((r) => r.id === id);
+    if (!run) return;
+    view.run = run;
+    Object.assign(state, clone(run.recipe));
+    save();
+    saveRuns();
+    const n = run.ns.includes(view.chapter) ? view.chapter : run.start;
+    global.history.replaceState(null, "", "#chapter/" + n);
+    showChapter(n, false);
   }
-  function payload() {
+  function setBusy(on) {
+    view.busy = on;
+    global.WRM_SETUP.busy(on);
+    document.querySelectorAll("#chapter button, #runSelect").forEach((button) => { button.disabled = on; });
+  }
+  function payload(recipe, fromN, parent) {
+    const era = P.ERAS.find((e) => e.n === fromN);
+    const localRecipe = clone(recipe);
+    localRecipe.custom.enabled = false;
+    const sample = P.resolve(localRecipe, fromN)[0];
     return {
-      name: state.custom.name.trim(), description: state.custom.description.trim(),
-      params: state.custom.params.map((p) => ({ key: p.key, label: p.label.trim(), value: !!p.value })),
-      intervention: Object.assign({ mode: "from" }, state.intervention),
-      assumptions: { tech: !!state.assumptions.tech, resources: !!state.assumptions.resources, cooperation: !!state.assumptions.cooperate },
-      mechanisms: state.mechanisms.map((id) => {
-        const m = global.WRM_PRESETS.mechanismById(id);
-        return { name: m.name, description: m.note };
-      })
+      recipe: clone(recipe), rules: recipe.rules.map((id) => { const r = P.byId(id); return { id, name: r.name, description: r.rule, theme: r.theme }; }),
+      groups: sample.worldCards.map((c) => ({ theme: c.theme, ruleTags: c.ruleTags })),
+      intervention: { era: era.id, yearLabel: "", mode: "from" }, branchPath: recipe.branchPath.slice(),
+      previousChapters: parent ? parent.chapters.filter((c) => c.n < fromN) : []
     };
   }
-  async function generateAI(force) {
-    if (view.busy || state.ruleId !== "custom") return;
-    document.getElementById("appError").hidden = true;
-    const settings = global.WRM_AI.loadSettings();
-    const error = global.WRM_PRESETS.configurationError(state);
+  async function generate(force, branch) {
+    if (view.busy) return;
+    const recipe = branch ? branch.recipe : clone(state);
+    const error = P.configurationError(recipe);
     if (error) { global.WRM_SETUP.note(error); return; }
-    if (!global.WRM_AI.hasKey(settings)) { global.WRM_SETUP.note("自定义规则需要 API Key"); return; }
-    if (!global.WRM_SETUP.customValid(state)) { global.WRM_SETUP.note("填好规则名称和四个参数名，才能用 AI 生成"); return; }
-    const p = payload();
-    const cache = global.WRM_AI.cacheKey({ schema: "eight-five-v1", payload: p, model: settings.model, baseUrl: settings.baseUrl, temperature: settings.temperature });
-    view.busy = true;
-    global.WRM_SETUP.busy(true);
-    global.WRM_SETUP.showFallback(false);
+    const fromN = branch ? branch.n : P.eraById(recipe.startEra).n;
+    const parent = branch ? branch.parent : null;
+    const prefix = parent ? parent.chapters.filter((c) => c.n < fromN) : [];
+    $("appError").hidden = true;
+    if (!recipe.custom.enabled) {
+      const chapters = prefix.concat(P.resolve(recipe, fromN));
+      finishRun(makeRun(recipe, chapters, "local", "", parent), fromN);
+      if (branch) toast("已分叉：世界线 " + view.run.id.slice(3) + " · " + P.ERAS.find((e) => e.n === fromN).name + " " + branch.key.slice(-1));
+      return;
+    }
+    const settings = global.WRM_AI.loadSettings();
+    if (!global.WRM_AI.hasKey(settings) || !global.WRM_SETUP.customValid(recipe)) {
+      const message = "自定义约束需要 API Key、名称和四个参数名；可在高级设置中补全。";
+      if (branch) toast(message); else global.WRM_SETUP.note(message);
+      return;
+    }
+    setBusy(true);
+    if (branch) $("branchNote").textContent = "正在生成分叉后的章节；原世界线不变。";
+    let succeeded = false;
+    let message = "";
     try {
-      const hit = force ? null : global.WRM_AI.cacheGet(cache);
-      if (hit) {
-        try {
-          const chapters = global.WRM_AI.normalize(hit.json, state.intervention.era);
-          finishRun(makeRun(chapters, "ai", settings.model), "命中本地缓存，未扣费；重新生成可强制重跑");
-          return;
-        } catch (e) {}
+      const p = payload(recipe, fromN, parent);
+      const key = global.WRM_AI.cacheKey({ schema: "ten-multi-branches-v1", payload: p, model: settings.model, baseUrl: settings.baseUrl, temperature: settings.temperature });
+      const cached = force ? null : global.WRM_AI.cacheGet(key);
+      let chapters;
+      let model = settings.model;
+      if (cached) {
+        try { chapters = global.WRM_AI.normalize(cached.json, p.intervention.era, recipe); } catch (e) {}
       }
-      const result = await global.WRM_AI.generateWorld(settings, p);
-      if (result.ok) {
-        try {
-          const chapters = global.WRM_AI.normalize(result.json, state.intervention.era);
-          global.WRM_AI.cacheSet(cache, { json: result.json, model: result.model });
-          finishRun(makeRun(chapters, "ai", result.model), "");
-          return;
-        } catch (e) {
-          result.message = "AI 返回的章节不完整或不符合五卡格式";
-        }
+      if (!chapters) {
+        const result = await global.WRM_AI.generateWorld(settings, p);
+        if (!result.ok) { message = "AI 不可用：" + result.message; return; }
+        try { chapters = global.WRM_AI.normalize(result.json, p.intervention.era, recipe); }
+        catch (e) { message = "AI 返回的章节或规则标签不完整，未替换当前世界线。"; return; }
+        model = result.model;
+        global.WRM_AI.cacheSet(key, { json: result.json, model });
       }
-      global.WRM_SETUP.note("AI 不可用：" + result.message + "；可改用本地剧本，离线生成");
-      global.WRM_SETUP.showFallback(true);
-    } catch (e) {
-      global.WRM_SETUP.note("AI 生成未完成；可改用本地剧本，离线生成");
-      global.WRM_SETUP.showFallback(true);
-    } finally {
-      view.busy = false;
-      const message = document.getElementById("genNote").textContent;
-      global.WRM_SETUP.busy(false);
-      global.WRM_SETUP.note(message);
+      finishRun(makeRun(recipe, prefix.concat(chapters), "ai", model, parent), fromN);
+      succeeded = true;
+      toast(branch ? "已分叉：世界线 " + view.run.id.slice(3) + " · " + P.ERAS.find((e) => e.n === fromN).name + " " + branch.key.slice(-1) : cached ? "命中本地缓存，未调用 API。" : "自定义世界线已生成。");
+    } catch (e) { message = "AI 生成未完成，原世界线不变；可关闭自定义后离线生成。"; }
+    finally {
+      setBusy(false);
+      if (!succeeded) {
+        history.replaceState(null, "", branch ? "#chapter/" + view.chapter : "#setup");
+        if (branch) { showChapter(view.chapter, false); $("branchNote").textContent = message; toast(message); }
+        else { global.WRM_SETUP.note(message); global.WRM_SETUP.showFallback(true); }
+      } else showChapter(view.chapter, false);
     }
   }
-  function useBuiltin() {
-    state.ruleId = "no-exam";
-    state.params = global.WRM_SETUP.defaultParams(global.WRM_SETUP.ruleById(state.ruleId));
-    state.mechanisms = [];
-    state.libraryOpen = true;
-    save();
-    global.WRM_SETUP.render(state, hooks);
-    global.WRM_SETUP.showFallback(false);
-    global.WRM_SETUP.note("已改用本地剧本：取消考试；也可选择另外十七套");
+  function branchRun(key) {
+    if (view.busy || !view.run) return;
+    const point = P.BRANCHES.find((b) => b.n === view.chapter && b.options.some((option) => option.key === key));
+    if (!point || view.run.recipe.branchPath.includes(key)) return;
+    const recipe = clone(view.run.recipe);
+    recipe.branchPath = recipe.branchPath.filter((item) => !point.options.some((option) => option.key === item)).concat(key).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+    generate(false, { recipe, n: point.n, parent: view.run, key });
   }
-  function onKey(e) {
-    if (document.getElementById("chapter").hidden || !document.getElementById("evOverlay").hidden || global.WRM_CHAPTER_POSTER.isOpen()) return;
-    const tag = e.target && e.target.tagName;
-    if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
-    const i = ns().indexOf(view.chapter);
-    if (e.key === "ArrowRight") { e.preventDefault(); goChapter(ns()[i >= ns().length - 1 ? 0 : i + 1]); }
-    else if (e.key === "ArrowLeft" && i > 0) { e.preventDefault(); goChapter(ns()[i - 1]); }
-  }
-  const hooks = { onChange: save, onGenerateAI: () => generateAI(false), onRegenerate: () => generateAI(true), onGenerateLocal: generateLocal, onFallback: useBuiltin };
+  const hooks = {
+    onChange: save, onGenerate: () => generate(false), onRegenerate: () => generate(true),
+    onFallback: () => { state.custom.enabled = false; save(); global.WRM_SETUP.render(state, hooks); global.WRM_SETUP.showFallback(false); }
+  };
   function boot() {
     global.WRM_VERSION.load();
     load();
+    global.WRM_RECIPE = state;
+    global.WRM_RUNS = runs;
+    global.WRM_APP = { state, view, generate, branchRun, selectRun };
     global.WRM_SETUP.render(state, hooks);
-    document.getElementById("disclaimer").textContent = "八版都是情景推演，改写与未来部分为虚构，不是史实或预测。勿对号入座。";
-    document.getElementById("metaVersion").textContent = "v" + APP_VERSION + " · " + APP_UPDATED + " · 18 套 / 8 版 · 数据 v" + global.WRM_DATA.meta.version;
+    $("disclaimer").textContent = "情景推演，不是史实或预测。勿对号入座。";
+    $("metaVersion").textContent = "v" + APP_VERSION + " · 十版 / 四处分叉 · 离线可玩";
     global.addEventListener("hashchange", route);
-    global.addEventListener("keydown", onKey);
+    global.addEventListener("keydown", (event) => {
+      if (view.busy || $("chapter").hidden || global.WRM_CHAPTER_PAGE.overlayOpen() || global.WRM_CHAPTER_POSTER.isOpen() || global.WRM_SETUP.overlayOpen() || event.target.closest("input,select,textarea,button")) return;
+      const i = view.run.ns.indexOf(view.chapter);
+      if (event.key === "ArrowRight") { event.preventDefault(); goChapter(view.run.ns[(i + 1) % view.run.ns.length]); }
+      if (event.key === "ArrowLeft" && i > 0) { event.preventDefault(); goChapter(view.run.ns[i - 1]); }
+    });
     route();
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);

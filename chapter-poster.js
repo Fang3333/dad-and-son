@@ -3,7 +3,7 @@
 
   const PAPER = "#F4F1E9", INK = "#141414", RED = "#A6231A", LINE = "#B9B2A2";
   let lastFocus = null, canvas = null, filename = "world-line.png", backgroundState = [];
-  function isOpen() { return !document.getElementById("posterOverlay").hidden; }
+  function isOpen() { const overlay = document.getElementById("posterOverlay"); return !!overlay && !overlay.hidden; }
   function lines(ctx, text, width) {
     const out = [];
     let line = "";
@@ -15,102 +15,143 @@
     if (line) out.push(line);
     return out;
   }
-  function paragraph(ctx, text, x, y, width, lineHeight, maxLines) {
-    const parts = lines(ctx, text, width);
-    parts.slice(0, maxLines).forEach((line, i) => {
-      if (i === maxLines - 1 && parts.length > maxLines) {
-        while (line && ctx.measureText(line + "…").width > width) line = line.slice(0, -1);
-        line += "…";
-      }
-      ctx.fillText(line, x, y + i * lineHeight);
-    });
-  }
   function font(ctx, size, bold, mono) {
     ctx.font = (bold ? "700 " : "") + size + "px " + (mono ? "Consolas, 'Microsoft YaHei', monospace" : "SimSun, 'Songti SC', serif");
   }
+  /* 所有区块先测量再落字；缩字号而不裁掉规则、路径或时代。 */
+  function textBox(ctx, text, x, y, width, height, size, bold, mono) {
+    let parts, lineHeight;
+    for (;;) {
+      font(ctx, size, bold, mono);
+      parts = lines(ctx, text, width);
+      lineHeight = Math.ceil(size * 1.25);
+      if (parts.length * lineHeight <= height && parts.every((part) => ctx.measureText(part).width <= width)) break;
+      if (size <= 1) throw new Error("海报文字过长，无法在画布内排版");
+      size = Math.max(1, size - 0.5);
+    }
+    parts.forEach((part, i) => ctx.fillText(part, x, y + i * lineHeight));
+  }
+  function chips(ctx, names, x, y, width, height) {
+    let size = 20, placed;
+    for (;;) {
+      font(ctx, size, true);
+      let left = 0, top = 0, rowHeight = 0;
+      placed = names.map((name, i) => {
+        const parts = lines(ctx, String(i + 1).padStart(2, "0") + " " + name, width - 16);
+        const w = Math.min(width, Math.max(...parts.map((part) => ctx.measureText(part).width)) + 16);
+        const h = parts.length * Math.ceil(size * 1.25) + 8;
+        if (left && left + w > width) { left = 0; top += rowHeight + 4; rowHeight = 0; }
+        const chip = { parts, x: left, y: top, w, h };
+        left += w + 6;
+        rowHeight = Math.max(rowHeight, h);
+        return chip;
+      });
+      if (!placed.length || Math.max(...placed.map((item) => item.y + item.h)) <= height) break;
+      if (size <= 1) throw new Error("规则名称过长，无法在海报内排版");
+      size = Math.max(1, size - 0.5);
+    }
+    ctx.strokeStyle = LINE;
+    ctx.lineWidth = 1;
+    placed.forEach((item) => {
+      ctx.strokeRect(x + item.x, y + item.y, item.w, item.h);
+      item.parts.forEach((part, i) => ctx.fillText(part, x + item.x + 8, y + item.y + 4 + i * Math.ceil(size * 1.25)));
+    });
+  }
+  function joined(items, separator) { return Array.isArray(items) ? items.join(separator) : String(items || ""); }
+  function cards(ch, track) {
+    if (!ch) return [];
+    return (ch.events || []).filter((e) => e.ev && e.ev.track === track);
+  }
+  function alternate(item) { return item && item.view ? String(item.view.alternate || "") : ""; }
   function build(run) {
+    const eras = global.WRM_PRESETS.ERAS;
+    const recipe = run.recipe || {};
+    const chapters = run.chapters || [];
+    const runId = run.runId || run.id || "未编号";
     const c = document.createElement("canvas");
     c.width = 1080;
     c.height = 1440;
-    c.setAttribute("aria-label", "世界线 " + run.runId + " 的八版文字海报");
+    c.setAttribute("aria-label", "世界线 " + runId + " 的十版文字海报");
     c.setAttribute("role", "img");
     const ctx = c.getContext("2d");
+    if (!ctx) throw new Error("浏览器不支持文字海报画布");
     ctx.fillStyle = PAPER;
     ctx.fillRect(0, 0, c.width, c.height);
     ctx.textBaseline = "top";
     ctx.fillStyle = RED;
-    font(ctx, 24, false, true);
-    ctx.fillText("世界线 " + run.runId + " / v" + run.appVersion, 64, 48);
+    textBox(ctx, "世界线 " + runId + " / v" + (run.appVersion || "2.5.0") + (run.parentId ? " / 源自 " + run.parentId : ""), 64, 40, 952, 30, 21, false, true);
     ctx.fillStyle = INK;
-    font(ctx, 70, true);
-    ctx.fillText("世界规则修改器", 64, 98);
-    font(ctx, 36, true);
-    paragraph(ctx, run.ruleName, 64, 184, 952, 42, 1);
-    font(ctx, 19, false, true);
-    paragraph(ctx, run.assumptions.join(" · "), 64, 240, 952, 26, 2);
-    paragraph(ctx, "叠加机制：" + (run.mechanisms.join(" / ") || "无"), 64, 292, 952, 25, 1);
-    paragraph(ctx, run.parameters.join(" · "), 64, 323, 952, 24, 2);
-    ctx.fillRect(64, 382, 952, 3);
+    textBox(ctx, "世界规则修改器", 64, 82, 952, 78, 62, true);
+    textBox(ctx, run.ruleName || (recipe.rules || []).length + "条规则同时生效", 64, 163, 952, 30, 24, true);
+    const names = Array.isArray(run.ruleNames) && run.ruleNames.length ? run.ruleNames : (recipe.rules || []);
+    chips(ctx, names, 64, 201, 952, 151);
+    textBox(ctx, "世界假设：" + (joined(run.assumptions, " · ") || "未提供"), 64, 364, 952, 40, 18, false, true);
+    textBox(ctx, "叠加机制：" + (joined(run.mechanisms, " / ") || "无"), 64, 410, 952, 40, 18, false, true);
+    textBox(ctx, "执行参数：" + (joined(run.parameters, " · ") || "未提供"), 64, 456, 952, 40, 18, false, true);
+    const rawPath = run.path || recipe.branchPath || [];
+    const path = Array.isArray(rawPath) ? rawPath.map((p) => typeof p === "string" ? p : [p.id, p.label || p.name].filter(Boolean).join(" ")).join(" → ") : String(rawPath);
+    ctx.fillStyle = RED;
+    textBox(ctx, "分叉路径：" + (path || "尚未选择"), 64, 502, 952, 40, 18, true, true);
+    ctx.fillStyle = INK;
+    ctx.fillRect(64, 551, 952, 2);
 
-    global.WRM_PRESETS.ERAS.forEach((era, index) => {
-      const y = 404 + index * 84;
-      const ch = run.chapters.find((chapter) => chapter.n === era.n);
+    // 分叉的 intervention 是重写起点；未干预区间仍按 recipe 的最初起点判断。
+    const startId = recipe.startEra || run.start || (run.intervention && run.intervention.era);
+    const start = eras.find((e) => e.id === startId || e.n === startId);
+    const first = start ? start.n : (chapters.length ? Math.min(...chapters.map((ch) => ch.n)) : 1);
+    const rowData = eras.map((era) => ({ era, untouched: era.n < first, ch: chapters.find((ch) => ch.n === era.n) }));
+    rowData.forEach(({ era, untouched, ch }, index) => {
+      const y = 563 + index * 48;
       ctx.fillStyle = RED;
-      font(ctx, 22, true, true);
-      ctx.fillText(String(era.n).padStart(2, "0"), 64, y);
+      textBox(ctx, String(era.n).padStart(2, "0"), 64, y + 8, 34, 28, 20, true, true);
       ctx.fillStyle = INK;
-      font(ctx, 24, true);
-      const label = era.n === 8 ? "后人类" : era.name;
-      ctx.fillText(label, 106, y);
-      if (era.n === 8) { font(ctx, 17, false, true); ctx.fillText("2200", 108, y + 31); }
-      font(ctx, 22, false);
-      const world = ch ? ch.events.filter((e) => e.ev.track === "world") : [];
-      const people = ch ? ch.events.filter((e) => e.ev.track === "personal") : [];
-      paragraph(ctx, "世界：" + (ch ? world[0].view.alternate : "未干预，原有进程照旧"), 272, y, 744, 25, 1);
-      font(ctx, 20, false);
-      paragraph(ctx, "你：" + (ch ? people.map((e) => e.view.alternate).join("；") : "未干预，不编写个人经历"), 272, y + 29, 744, 24, 2);
+      textBox(ctx, era.name, 106, y + 8, 156, 28, 20, true);
+      const world = cards(ch, "world"), people = cards(ch, "personal");
+      const worldText = untouched ? "未干预，原有进程照旧" : world.map(alternate).filter(Boolean).join("；") || "本版缺失，未作推演";
+      const personalText = untouched ? "未干预，不编写个人经历" : people.map(alternate).filter(Boolean).join("；") || "本版缺失，未编写经历";
+      textBox(ctx, "世界：" + worldText, 280, y, 736, 22, 17);
+      textBox(ctx, "你：" + personalText, 280, y + 24, 736, 22, 17);
       ctx.fillStyle = LINE;
-      ctx.fillRect(64, y + 78, 952, 1);
+      ctx.fillRect(64, y + 47, 952, 1);
     });
 
-    const last = run.chapters[run.chapters.length - 1];
-    const pick = last.events.find((e) => e.ev.track === "world");
+    const candidates = rowData.filter((row) => !row.untouched).flatMap((row) => cards(row.ch, "world"))
+      .filter((item) => item.ev && item.view && item.view.changed && item.ev.baseline !== item.view.alternate);
+    const pick = candidates.find((item) => item.conflict || item.view.conflict || item.ev.hot) || candidates[candidates.length - 1];
     ctx.fillStyle = RED;
-    font(ctx, 20, true, true);
-    ctx.fillText("最离谱改写", 64, 1096);
+    textBox(ctx, "最离谱改写", 64, 1060, 952, 26, 20, true, true);
     ctx.fillStyle = INK;
-    font(ctx, 27, true);
-    paragraph(ctx, pick.ev.title + "：" + pick.ev.baseline + " → " + pick.view.alternate, 64, 1126, 952, 32, 2);
+    textBox(ctx, pick ? pick.ev.title + "：" + pick.ev.baseline + " → " + pick.view.alternate : "本次没有可展示的改写，不编造结果。", 64, 1092, 952, 60, 25, true);
     ctx.fillStyle = RED;
-    font(ctx, 20, true, true);
-    ctx.fillText("你的八版一生 / 不同年代的个人切片", 64, 1202);
+    textBox(ctx, "你的十版一生 / 不同年代的成年人生切片", 64, 1164, 952, 26, 20, true, true);
     ctx.fillStyle = INK;
-    font(ctx, 21, false);
-    const montage = run.chapters.map((ch) => ch.events.find((e) => e.ev.track === "personal").view.alternate).join("；");
-    paragraph(ctx, montage, 64, 1236, 952, 27, 4);
+    const montage = rowData.map(({ era, untouched, ch }) => era.name + "：" + (untouched ? "未干预" : alternate(cards(ch, "personal")[0]) || "未生成")).join(" / ");
+    textBox(ctx, montage, 64, 1198, 952, 134, 20);
     ctx.strokeStyle = RED;
     ctx.lineWidth = 2;
     ctx.strokeRect(814, 1360, 202, 42);
     ctx.fillStyle = RED;
-    font(ctx, 22, true);
-    ctx.fillText("世界线已改写", 836, 1370);
+    textBox(ctx, "世界线已改写", 832, 1369, 166, 28, 22, true);
     ctx.fillStyle = INK;
-    font(ctx, 18, false, true);
-    ctx.fillText("虚构推演，勿对号入座 · 纯文字 / 离线生成", 64, 1372);
+    textBox(ctx, "虚构推演，勿对号入座 · 纯文字 / 离线制图", 64, 1372, 728, 24, 18, false, true);
     return c;
   }
   function open(run) {
-    lastFocus = document.activeElement;
-    backgroundState = Array.from(document.querySelectorAll("main, header.masthead, footer")).map((node) => {
-      const wasInert = node.inert;
-      node.inert = true;
-      return { node, wasInert };
-    });
+    const nextCanvas = build(run);
+    const overlay = document.getElementById("posterOverlay");
+    if (!isOpen()) {
+      lastFocus = document.activeElement;
+      backgroundState = Array.from(document.querySelectorAll("main, header.masthead, footer")).filter((node) => !node.contains(overlay)).map((node) => {
+        const wasInert = node.inert;
+        node.inert = true;
+        return { node, wasInert };
+      });
+    }
     const preview = document.getElementById("posterPreview");
     preview.textContent = "";
-    canvas = build(run);
+    canvas = nextCanvas;
     preview.appendChild(canvas);
-    filename = "world-line-" + run.runId + ".png";
+    filename = "world-line-" + String(run.runId || run.id || "untitled").replace(/[^a-zA-Z0-9_-]/g, "_") + ".png";
     document.getElementById("posterMsg").textContent = "1080 × 1440 · PNG · 只含本次世界线，不含 API 设置";
     document.getElementById("posterOverlay").hidden = false;
     document.getElementById("posterClose").focus();
@@ -146,7 +187,8 @@
     if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); }
     if (e.key === "Tab") {
       const first = document.getElementById("posterClose"), last = document.getElementById("posterDownload");
-      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      if (document.activeElement !== first && document.activeElement !== last) { e.preventDefault(); (e.shiftKey ? last : first).focus(); }
+      else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
       else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     }
   });

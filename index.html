@@ -3,117 +3,67 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>世界规则修改器 · 八时代双轨长河</title>
-<meta name="description" content="18 套本地剧本，8 个时代，从原始到 2200 后人类。改一条规则，看每版 3 件世界大事与 2 件个人小事：报纸一屏一章，点卡片读细节，生成世界线海报。可填自己的 API Key 推演自定义规则。情景推演，不是史实。">
+<title>世界规则修改器 · 多规则与多分叉</title>
+<meta name="description" content="3–18 条规则同时发生，十个时代、四处分叉、每版三件世界大事与两件个人小事。离线推演、保留最近五条世界线，下载纯文字海报。情景推演，不是史实。">
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="styles.css?v=2.4.0">
-<script defer src="world-rule/data.js?v=2.4.0"></script>
-<script defer src="world-rule/engine.js?v=2.4.0"></script>
-<script defer src="chapters.js?v=2.4.0"></script>
-<script defer src="presets-a.js?v=2.4.0"></script>
-<script defer src="presets-b.js?v=2.4.0"></script>
-<script defer src="presets-c.js?v=2.4.0"></script>
-<script defer src="presets.js?v=2.4.0"></script>
-<script defer src="version.js?v=2.4.0"></script>
-<script defer src="ai.js?v=2.4.0"></script>
-<script defer src="setup.js?v=2.4.0"></script>
-<script defer src="chapter.js?v=2.4.0"></script>
-<script defer src="chapter-poster.js?v=2.4.0"></script>
-<script defer src="app.js?v=2.4.0"></script>
+<link rel="stylesheet" href="styles.css?v=2.5.0">
+<script defer src="world-rule/data.js?v=2.5.0"></script>
+<script defer src="world-rule/engine.js?v=2.5.0"></script>
+<script defer src="chapters.js?v=2.5.0"></script>
+<script defer src="presets-a.js?v=2.5.0"></script>
+<script defer src="presets-b.js?v=2.5.0"></script>
+<script defer src="presets-c.js?v=2.5.0"></script>
+<script defer src="presets.js?v=2.5.0"></script>
+<script defer src="version.js?v=2.5.0"></script>
+<script defer src="ai.js?v=2.5.0"></script>
+<script defer src="setup.js?v=2.5.0"></script>
+<script defer src="chapter.js?v=2.5.0"></script>
+<script defer src="chapter-poster.js?v=2.5.0"></script>
+<script defer src="app.js?v=2.5.0"></script>
 </head>
 <body>
 
 <header class="masthead">
-  <div class="issue mono">号外 · 情景推演，不是史实</div>
-  <div class="brand">
-    <h1>世界规则修改器</h1>
-    <div class="latin mono">World Rule Modifier · 八时代 / 世界与个人双轨</div>
-  </div>
+  <div class="brand"><h1>世界规则修改器</h1></div>
+  <p id="setupVersion" class="setup-ver mono" aria-live="polite"></p>
 </header>
 
 <main>
 
   <section id="setup" class="setup" aria-labelledby="setupTitle">
-    <div class="setup-tools">
-      <button id="apiSettingsBtn" class="line-btn" type="button">API 设置</button>
-      <span id="apiPill" class="api-pill mono">未配置 API Key</span>
+    <div class="setup-story">
+      <h2 id="setupTitle" class="page-title" tabindex="-1">如果</h2>
+      <div class="chip-line"><div id="ruleChips" class="rule-chips" role="group" aria-label="已选规则"></div><button id="addRule" class="rule-chip chip-add" type="button">+ 加一条</button></div>
+      <p class="setup-question">同时发生，从 <select id="startEra" aria-label="开始时代"></select> <span>开始，世界会怎样？</span></p>
+      <div class="selection-tools mono"><span id="selectedCount" aria-live="polite">已选 3/18 条</span><button id="shuffleRules" class="text-btn" type="button">洗牌</button><button id="allRules" class="text-btn" type="button">全部规则</button></div>
     </div>
-    <p id="setupVersion" class="setup-ver mono" aria-live="polite"></p>
-    <h2 id="setupTitle" class="page-title" tabindex="-1">设定这个世界</h2>
-
-    <div class="setup-block">
-      <h3 class="block-head">选一条要改的规则</h3>
-      <div id="ruleCards" class="rule-cards" role="group" aria-label="选择规则"></div>
-    </div>
-
-    <section id="presetDesk" class="setup-block" aria-labelledby="presetTitle" hidden>
-      <div class="block-toolbar">
-        <h3 id="presetTitle" class="block-head">挑一套本地剧本</h3>
-        <button id="randomPreset" class="line-btn" type="button">随机组合</button>
+    <details id="advanced" class="advanced">
+      <summary>高级：参数 / 假设 / API / 自定义</summary>
+      <div class="advanced-body">
+        <div class="setup-block"><h3 class="block-head">四个参数</h3><div id="paramToggles" class="switch-list" role="group" aria-label="规则参数"></div></div>
+        <div class="setup-block"><h3 class="block-head">世界假设</h3><div id="assumeToggles" class="switch-list" role="group" aria-label="世界假设"></div></div>
+        <div id="mechanismBlock" class="setup-block">
+          <h3 class="block-head">叠加机制 · 最多 3 个</h3>
+          <h4 class="mechanism-title mono">三体机制</h4><div id="trisolaranChoices" class="mechanism-choices" role="group" aria-label="三体机制"></div>
+          <h4 class="mechanism-title mono">影视机制</h4><div id="filmChoices" class="mechanism-choices" role="group" aria-label="影视机制"></div>
+          <p id="mechanismNote" class="note" aria-live="polite"></p>
+        </div>
+        <div class="setup-block setup-tools"><button id="apiSettingsBtn" class="line-btn" type="button">API 设置</button><span id="apiPill" class="api-pill mono">未配置 API Key</span></div>
+        <label class="api-check"><input id="customEnabled" type="checkbox"><span>加入自定义约束（与已选规则一起用 AI 推演）</span></label>
+        <div id="customDesk" class="setup-block" hidden>
+          <label class="api-label" for="customName">约束名称（≤20 字）</label><input id="customName" class="api-input" maxlength="20" placeholder="例：每件物品都有记忆">
+          <label class="api-label" for="customDesc">描述（≤120 字）</label><textarea id="customDesc" class="api-input" maxlength="120" rows="2"></textarea>
+          <div id="customParams" class="custom-params" role="group" aria-label="自定义参数"></div>
+          <button id="regenBtn" class="text-btn" type="button" hidden>忽略缓存重新生成</button>
+        </div>
       </div>
-      <p class="note">18 套剧本，断网也能读。选定后仍可调整参数、假设与干预时间。</p>
-      <div id="presetCards" class="preset-cards" role="group" aria-label="选择本地剧本"></div>
-    </section>
-
-    <div id="customDesk" class="setup-block" hidden>
-      <h3 class="block-head">自定义规则</h3>
-      <div class="api-field">
-        <label class="api-label mono" for="customName">名称（≤20 字）</label>
-        <input id="customName" class="api-input" type="text" maxlength="20" placeholder="例：取消大学考试">
-      </div>
-      <div class="api-field">
-        <label class="api-label mono" for="customDesc">一句话描述（≤120 字）</label>
-        <input id="customDesc" class="api-input" type="text" maxlength="120" placeholder="例：文凭不再存在，本事靠跟着做学会">
-      </div>
-      <p class="note">四个参数都要起名，AI 按开关状态推演。</p>
-      <div id="customParams" class="custom-params" role="group" aria-label="自定义参数"></div>
+    </details>
+    <div class="setup-bottom">
+      <p id="genNote" class="note gen-note" aria-live="polite"></p>
+      <p id="appError" class="error" role="alert" hidden></p>
+      <button id="fallbackBtn" class="text-btn" type="button" hidden>关闭自定义，改用本地组合</button>
+      <button id="generateBtn" class="generate" type="button">生成这个世界 →</button>
     </div>
-
-    <div id="paramBlock" class="setup-block">
-      <h3 class="block-head">四个参数</h3>
-      <p id="paramNote" class="note"></p>
-      <div id="paramToggles" class="switch-list" role="group" aria-label="规则参数"></div>
-    </div>
-
-    <div class="setup-block">
-      <h3 class="block-head">更改时间</h3>
-      <div id="eraBtns" class="era-btns" role="group" aria-label="干预时代"></div>
-      <div class="api-field era-year">
-        <label class="api-label mono" for="yearInput">年份（可选，留空用时代起点）</label>
-        <input id="yearInput" class="api-input" type="text" maxlength="8" placeholder="例：1450">
-      </div>
-      <p id="interventionNote" class="note"></p>
-    </div>
-
-    <div class="setup-block">
-      <h3 class="block-head">三个世界假设</h3>
-      <div id="assumeToggles" class="switch-list" role="group" aria-label="世界假设"></div>
-      <p class="note">内容会随假设变化；关掉一条，也会有不同的世界与个人经历。</p>
-    </div>
-
-    <div id="mechanismBlock" class="setup-block">
-      <h3 class="block-head">给世界加一点机制</h3>
-      <p class="note">三体机制与影视机制，两组合计最多选 3 个；不选也能生成。</p>
-      <div class="mechanism-group">
-        <h4 class="mechanism-title mono">三体机制</h4>
-        <div id="trisolaranChoices" class="mechanism-choices" role="group" aria-label="三体机制"></div>
-      </div>
-      <div class="mechanism-group">
-        <h4 class="mechanism-title mono">影视机制</h4>
-        <div id="filmChoices" class="mechanism-choices" role="group" aria-label="影视机制"></div>
-      </div>
-      <p id="mechanismNote" class="note" aria-live="polite">两组合计最多 3 个。</p>
-    </div>
-
-    <p id="selectedPreset" class="selected-preset" aria-live="polite"></p>
-    <div class="generate-actions">
-      <button id="aiGenerateBtn" class="generate" type="button">用 AI 生成这个世界 →</button>
-      <button id="localBtn" class="generate generate-local" type="button">本地模板</button>
-      <button id="regenBtn" class="line-btn" type="button" hidden>重新生成</button>
-    </div>
-    <p id="genNote" class="note gen-note" aria-live="polite"></p>
-    <button id="fallbackBtn" class="line-btn fallback-btn" type="button" hidden>改用内置规则</button>
-    <p id="appError" class="error" role="alert" hidden></p>
   </section>
 
   <section id="chapter" class="chapter" aria-labelledby="chapterName" hidden>
@@ -126,7 +76,8 @@
         <span id="chapterRule" class="chapter-rule"></span>
         <span id="chapterSource" class="chapter-source mono"></span>
       </div>
-      <button id="editAssumptions" class="line-btn" type="button">修改假设</button>
+      <button id="editAssumptions" class="text-btn" type="button">修改规则</button>
+      <div class="chapter-route"><span id="chapterPath" class="mono"></span><label class="run-picker mono">切换世界线 <select id="runSelect" aria-label="最近五条世界线"></select></label></div>
       <p id="chapterIntervention" class="chapter-intervention mono" hidden></p>
     </div>
 
@@ -163,17 +114,29 @@
       </div>
     </div>
 
+    <div class="chapter-bottom">
+      <section id="branchPoint" class="branch-point" aria-labelledby="branchTitle" hidden><h3 id="branchTitle"></h3><div id="branchOptions" class="branch-options"></div><p id="branchNote">选择后生成新世界线，当前线保留。</p></section>
     <nav class="chapter-nav" aria-label="章节导航">
       <button id="prevChapter" class="nav-btn" type="button">← 上一版</button>
-      <div id="chapterDots" class="chapter-dots" role="group" aria-label="八时代章节圆点"></div>
+      <div id="chapterDots" class="chapter-dots" role="group" aria-label="十时代章节圆点"></div>
       <button id="nextChapter" class="nav-btn" type="button">下一版 →</button>
       <button id="posterBtn" class="nav-btn poster-btn" type="button">生成海报</button>
     </nav>
+    </div>
   </section>
 
 </main>
 
 <div class="rift" aria-hidden="true"></div>
+<div id="toast" class="toast mono" role="status" aria-live="polite" hidden></div>
+<dialog id="ruleDialog" class="command-dialog" aria-labelledby="ruleDialogTitle">
+  <div class="command-head"><h2 id="ruleDialogTitle">全部规则</h2><button id="closeRules" class="text-btn" type="button" aria-label="关闭规则面板">关闭</button></div>
+  <label class="sr-only" for="ruleSearch">搜索规则、分组或关键词</label><input id="ruleSearch" class="api-input" type="search" placeholder="搜索规则、分组或关键词" autocomplete="off">
+  <div id="chipEditor" hidden><span id="chipEditorLabel"></span><button id="removeRule" class="text-btn" type="button">删除此条</button></div>
+  <div id="ruleList" class="command-list"></div>
+  <div class="command-foot mono"><span id="ruleSelectionCount" aria-live="polite"></span><button id="clearRules" class="text-btn" type="button">清空</button><button id="selectAllRules" class="text-btn" type="button">全选</button><button id="doneRules" class="line-btn" type="button">完成</button></div>
+</dialog>
+<dialog id="chaosDialog" class="chaos-dialog" aria-labelledby="chaosTitle"><h2 id="chaosTitle">混沌模式</h2><p>同时启用全部 18 条规则。矛盾不会消失，详情会说明谁压住谁。</p><div class="command-foot"><button id="cancelChaos" class="text-btn" type="button">取消</button><button id="confirmChaos" class="line-btn" type="button">确认全选 18 条</button></div></dialog>
 
 <div id="evOverlay" class="overlay" hidden>
   <div class="overlay-backdrop" data-close="1"></div>

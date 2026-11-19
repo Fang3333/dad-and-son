@@ -62,8 +62,10 @@
     ].filter(Boolean).join(" · ");
     $("ovTitle").textContent = ev.title || "事件详情";
     $("ovFiction").hidden = !ev.hot;
-    $("ovDetail").textContent = view.detail || view.alternate || "";
-    $("ovWhy").textContent = view.why || "";
+    const names = (ev.ruleTags || []).map((id) => { const rule = global.WRM_PRESETS.byId(id); return rule ? rule.name : id; });
+    const dormant = (ev.dormant || []).map((id) => { const rule = global.WRM_PRESETS.byId(id); return rule ? rule.name : id; });
+    $("ovDetail").textContent = (view.detail || view.alternate || "") + (names.length ? "\n涉及规则：" + names.join("、") + "。" : "") + (dormant.length ? "\ndormant（本版未生效）：" + dormant.join("、") + "。" : "");
+    $("ovWhy").textContent = (view.why || "") + (typeof ev.conflict === "string" && ev.conflict ? "\n冲突裁定：" + ev.conflict : "");
     $("ovChain").textContent = view.chain || "";
     $("ovChainBlock").hidden = !view.chain;
     $("evOverlay").hidden = false;
@@ -131,9 +133,20 @@
     const track = el("span", "ev-track mono", personal ? "私" : "世界");
     track.setAttribute("aria-label", personal ? "个人线" : "世界线");
     meta.appendChild(track);
-    meta.appendChild(el("span", "stamp stamp-change", "已改写"));
+    meta.appendChild(el("span", "stamp stamp-change", ev.conflict ? "冲突" : "已改写"));
     top.appendChild(meta);
     top.appendChild(el("h3", "ev-title", ev.title));
+    if (!personal && ev.ruleTags && ev.ruleTags.length) {
+      const tags = el("div", "rule-tags");
+      ev.ruleTags.slice(0, 4).forEach((id) => {
+        const rule = global.WRM_PRESETS.byId(id);
+        const tag = el("span", "rule-tag", rule ? rule.name : id);
+        tag.dataset.rule = id;
+        tags.appendChild(tag);
+      });
+      if (ev.ruleTags.length > 4) tags.appendChild(el("span", "tag-more", "+" + (ev.ruleTags.length - 4)));
+      top.appendChild(tags);
+    }
     node.appendChild(top);
 
     const halves = el("div", "ev-halves");
@@ -211,9 +224,20 @@
     const world = items.filter((item) => item.ev.track !== "personal");
     const personal = items.filter((item) => item.ev.track === "personal");
 
-    $("chapterRun").textContent = "世界线 " + run.runId;
+    $("chapterRun").textContent = "世界线 " + run.id.slice(3);
     $("chapterRule").textContent = run.ruleName;
-    $("chapterNo").textContent = "第 " + chapterN + " 版 / 8";
+    $("chapterNo").textContent = "第 " + chapterN + " 版 / 10";
+    $("chapterPath").textContent = "路径 " + (run.path || "尚无分叉");
+    const select = $("runSelect");
+    select.replaceChildren();
+    hooks.runs.forEach((entry) => {
+      const option = el("option", "", "世界线 " + entry.id.slice(3) + " · " + (entry.path || "起始"));
+      option.value = entry.id;
+      select.appendChild(option);
+    });
+    select.value = run.id;
+    select.disabled = hooks.busy;
+    select.onchange = () => hooks.onSelectRun(select.value);
     $("chapterSource").textContent = run.kind === "ai" ? "由 " + run.model + " 生成" : "本地剧本";
     $("chapterBig").textContent = String(chapterN).padStart(2, "0");
     $("chapterName").textContent = chapter.name;
@@ -234,6 +258,24 @@
     renderTrack("worldCards", world, 0);
     renderTrack("personalCards", personal, world.length);
     renderNav(chapterN, ns, hooks);
+    const branch = global.WRM_PRESETS.BRANCHES.find((point) => point.n === chapterN);
+    $("branchPoint").hidden = !branch;
+    $("branchOptions").replaceChildren();
+    if (branch) {
+      $("branchTitle").textContent = "分叉点 · " + chapter.name;
+      $("branchNote").textContent = "选择后生成新世界线，当前线保留。";
+      branch.options.forEach((option) => {
+        const chosen = run.recipe.branchPath.includes(option.key);
+        const button = el("button", "text-btn branch-option" + (chosen ? " is-on" : ""), option.label);
+        button.type = "button";
+        button.dataset.branch = option.key;
+        button.setAttribute("aria-pressed", String(chosen));
+        button.disabled = hooks.busy || chosen;
+        button.onclick = () => hooks.onBranch(option.key);
+        $("branchOptions").appendChild(button);
+      });
+    }
+    $("editAssumptions").disabled = hooks.busy;
     $("editAssumptions").onclick = () => hooks.onEdit();
 
     const section = $("chapter");
