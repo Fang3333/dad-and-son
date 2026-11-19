@@ -1,13 +1,14 @@
-/* 世界规则修改器 · 一屏一章编排（v2.3）
+/* 世界规则修改器 · 一屏一章编排（v2.4）
    第 1 页 #setup 唯一可编辑；第 2–6 页 #chapter/1..5 只读且不滚动，hash 路由、浏览器前进后退可用。
    状态（规则/自定义/参数/干预时间/假设）存 localStorage，回到设定页原样恢复；每次生成世界线编号 +1。
-   生成两条路：本地模板（内置 3 规则）与 AI（OpenAI 兼容，Key 只存浏览器）；AI 失败内置回退本地、自定义提示改用内置。
+   生成两条路：本地模板（内置 3 规则）与 AI（站点公共代理，访客免填 Key，Key 在服务端 Secret）；
+   AI 失败内置回退本地、自定义提示改用内置。
    干预时间之前的章节不渲染；AI 结果按 规则+干预+假设+模型 哈希缓存，「重新生成」绕过缓存。
    不改 world-rule/data.js 与 engine.js 的结构；引擎只用来取世界名。 */
 (function (global) {
   "use strict";
 
-  const APP_VERSION = "2.3.0";
+  const APP_VERSION = "2.4.0";
   const APP_UPDATED = "2026-11-19";
   const LS = "wrm.setup";
 
@@ -245,31 +246,22 @@
     };
   }
 
-  function cacheCore(settings) {
+  function cacheCore() {
     return {
       rule: state.ruleId === "custom"
         ? { name: state.custom.name.trim(), description: state.custom.description.trim(), params: state.custom.params }
         : { id: state.ruleId, params: state.params },
       intervention: state.intervention,
       assumptions: state.assumptions,
-      model: settings.model,
-      temperature: settings.temperature
+      model: global.WRM_AI.DEFAULTS.model,
+      temperature: global.WRM_AI.DEFAULTS.temperature
     };
   }
 
   async function generateAI(force) {
     const err = document.getElementById("appError");
     err.hidden = true;
-    const settings = global.WRM_AI.loadSettings();
     const custom = state.ruleId === "custom";
-    if (!global.WRM_AI.hasKey(settings)) {
-      if (custom) {
-        global.WRM_SETUP.note("自定义规则需要 API Key");
-        return;
-      }
-      generateLocal("未配置 API Key，已用本地模板");
-      return;
-    }
     if (custom && !global.WRM_SETUP.customValid(state)) {
       global.WRM_SETUP.note("填好规则名称和四个参数名，才能用 AI 生成");
       return;
@@ -279,17 +271,17 @@
     const regen = document.getElementById("regenBtn");
     regen.disabled = true;
 
-    const key = global.WRM_AI.cacheKey(cacheCore(settings));
+    const key = global.WRM_AI.cacheKey(cacheCore());
     const hit = force ? null : global.WRM_AI.cacheGet(key);
     if (hit) {
       try {
         const chapters = global.WRM_AI.normalize(hit.json, state.intervention.era);
-        finishRun(aiRun(chapters, hit.model || settings.model), "命中本地缓存，未扣费；「重新生成」可强制重跑");
+        finishRun(aiRun(chapters, hit.model || global.WRM_AI.DEFAULTS.model), "命中本地缓存，未扣费；「重新生成」可强制重跑");
         return;
       } catch (e) { /* 缓存损坏则重跑 */ }
     }
 
-    const r = await global.WRM_AI.generateWorld(settings, payload());
+    const r = await global.WRM_AI.generateWorld(payload());
     if (r.ok) {
       try {
         const chapters = global.WRM_AI.normalize(r.json, state.intervention.era);
@@ -304,7 +296,7 @@
     global.WRM_SETUP.busy(false);
     regen.disabled = false;
     if (custom) {
-      global.WRM_SETUP.note("AI 不可用：" + r.message + "；自定义规则需要 Key");
+      global.WRM_SETUP.note("AI 不可用：" + r.message + "；可稍后重试或改用内置规则");
       global.WRM_SETUP.showFallback(true);
       return;
     }
@@ -343,6 +335,9 @@
   function boot() {
     global.WRM_VERSION.load();
     load();
+    /* v2.3 自填 Key 通道已删：清掉旧版本留在浏览器里的 Key，不再使用 */
+    try { global.localStorage.removeItem("wrm.api"); } catch (e) { /* 忽略 */ }
+    try { global.sessionStorage.removeItem("wrm.api"); } catch (e) { /* 忽略 */ }
     global.WRM_SETUP.render(state, hooks);
     document.getElementById("disclaimer").textContent =
       global.WRM_CHAPTERS.meta.disclaimer + global.WRM_DATA.meta.disclaimer;
@@ -353,6 +348,7 @@
     global.addEventListener("hashchange", route);
     global.addEventListener("keydown", onKey);
     route();
+    global.WRM_AI.health().then((h) => global.WRM_SETUP.setProxy(h));
   }
 
   if (document.readyState === "loading") {

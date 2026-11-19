@@ -1,6 +1,6 @@
-/* 第 1 页 · 设定：选规则（3 内置 + 自定义）/ 调四参数 / 干预时间 / 设三假设 / API 设置弹窗。
+/* 第 1 页 · 设定：选规则（3 内置 + 自定义）/ 调四参数 / 干预时间 / 设三假设。
    全站唯一有表单控件的页面。只渲染与回调，不持有状态；状态由 app.js 保管并写 localStorage。
-   Key 只经 WRM_AI 存浏览器；弹窗里 Key 输入框留空表示沿用已保存的 Key，DOM 文本只出现后 4 位掩码。 */
+   AI 唯一通道 = 站点公共代理（访客免填 Key）；顶部 pill 显示代理可用性，由 app.js 探测后写入。 */
 (function (global) {
   "use strict";
 
@@ -12,6 +12,7 @@
   }
 
   let currentState = null;
+  const proxy = { available: null, configured: true };
 
   function ruleById(id) {
     if (id === "custom") {
@@ -193,22 +194,42 @@
   /* ---------- 生成按钮门控 ---------- */
 
   function refreshGen(state) {
-    const s = global.WRM_AI.loadSettings();
-    const has = global.WRM_AI.hasKey(s);
     const custom = state.ruleId === "custom";
     const valid = customValid(state);
     const ai = document.getElementById("aiGenerateBtn");
     const local = document.getElementById("localBtn");
-    ai.disabled = custom && (!has || !valid);
+    ai.disabled = custom && !valid;
     local.disabled = custom;
     const note = document.getElementById("genNote");
-    if (custom && !has) note.textContent = "自定义规则需要 API Key";
-    else if (custom && !valid) note.textContent = "填好规则名称和四个参数名，才能用 AI 生成";
-    else if (custom) note.textContent = "自定义规则只走 AI；生成失败会提示改用内置规则";
+    if (custom && !valid) note.textContent = "填好规则名称和四个参数名，才能用 AI 生成";
+    else if (custom) note.textContent = "自定义规则只走 AI（公共代理，免填 Key）；生成失败会提示改用内置规则";
     else note.textContent = "";
-    document.getElementById("apiPill").textContent = has
-      ? s.model + " · " + global.WRM_AI.masked(s.apiKey)
-      : "未配置 API Key";
+    renderProxyPill();
+  }
+
+  function renderProxyPill() {
+    const pill = document.getElementById("apiPill");
+    if (!pill) return;
+    pill.classList.remove("is-ok", "is-err");
+    if (proxy.available === null) {
+      pill.textContent = "公共 AI 代理 · 检测中…";
+    } else if (proxy.available && proxy.configured) {
+      pill.textContent = "公共 AI 代理 · deepseek-chat · 免填 Key";
+      pill.classList.add("is-ok");
+    } else if (proxy.available) {
+      pill.textContent = "公共 AI 代理 · 未配置 Key";
+      pill.classList.add("is-err");
+    } else {
+      pill.textContent = "公共 AI 代理不可用 · 本地模板仍可玩";
+      pill.classList.add("is-err");
+    }
+  }
+
+  function setProxy(h) {
+    proxy.available = !!(h && h.available);
+    proxy.configured = !h || h.configured !== false;
+    renderProxyPill();
+    if (currentState) refreshGen(currentState);
   }
 
   function note(text) {
@@ -222,165 +243,13 @@
   function busy(on) {
     const ai = document.getElementById("aiGenerateBtn");
     const local = document.getElementById("localBtn");
-    ai.textContent = on ? "生成中…（最长 30 秒）" : "用 AI 生成这个世界 →";
+    ai.textContent = on ? "生成中…（最长 80 秒）" : "用 AI 生成这个世界 →";
     if (on) {
       ai.disabled = true;
       local.disabled = true;
     } else if (currentState) {
       refreshGen(currentState);
     }
-  }
-
-  /* ---------- API 设置弹窗 ---------- */
-
-  let dlg = null;
-  let apiLastFocus = null;
-  let apiBound = false;
-
-  function apiOpen() {
-    return !document.getElementById("apiOverlay").hidden;
-  }
-
-  function fillModelOptions(models, current) {
-    const sel = document.getElementById("apiModel");
-    sel.textContent = "";
-    const list = models.slice();
-    if (current && list.indexOf(current) < 0) list.unshift(current);
-    if (!list.length) list.push(current || global.WRM_AI.DEFAULTS.model);
-    list.forEach((m) => {
-      const o = el("option", null, m);
-      o.value = m;
-      sel.appendChild(o);
-    });
-    sel.value = current && list.indexOf(current) >= 0 ? current : list[0];
-  }
-
-  function openApi() {
-    dlg = global.WRM_AI.loadSettings();
-    apiLastFocus = document.activeElement;
-    document.getElementById("apiProvider").value = dlg.provider;
-    document.getElementById("apiBaseUrl").value = dlg.baseUrl;
-    const key = document.getElementById("apiKey");
-    key.value = "";
-    key.type = "password";
-    key.placeholder = dlg.apiKey ? "已保存 " + global.WRM_AI.masked(dlg.apiKey) + "（留空沿用）" : "sk-…";
-    document.getElementById("apiKeyToggle").textContent = "显示";
-    fillModelOptions([dlg.model], dlg.model);
-    document.getElementById("apiModel").hidden = false;
-    document.getElementById("apiModelManual").hidden = true;
-    document.getElementById("apiModelNote").textContent = "";
-    document.getElementById("apiTemp").value = String(dlg.temperature);
-    document.getElementById("apiTempVal").textContent = String(dlg.temperature);
-    document.getElementById("apiRemember").checked = !dlg.remember;
-    const msg = document.getElementById("apiTestMsg");
-    msg.textContent = "";
-    msg.className = "api-testmsg mono";
-    document.getElementById("apiOverlay").hidden = false;
-    key.focus();
-  }
-
-  function closeApi() {
-    const ov = document.getElementById("apiOverlay");
-    if (ov.hidden) return;
-    ov.hidden = true;
-    dlg = null;
-    if (apiLastFocus && typeof apiLastFocus.focus === "function") apiLastFocus.focus();
-    apiLastFocus = null;
-  }
-
-  function collect() {
-    const manual = document.getElementById("apiModelManual");
-    const sel = document.getElementById("apiModel");
-    const typed = document.getElementById("apiKey").value.trim();
-    return {
-      provider: document.getElementById("apiProvider").value,
-      baseUrl: document.getElementById("apiBaseUrl").value.trim() || global.WRM_AI.DEFAULTS.baseUrl,
-      apiKey: typed || (dlg ? dlg.apiKey : ""),
-      model: (!manual.hidden ? manual.value.trim() : sel.value) || (dlg ? dlg.model : global.WRM_AI.DEFAULTS.model),
-      temperature: Number(document.getElementById("apiTemp").value),
-      remember: !document.getElementById("apiRemember").checked
-    };
-  }
-
-  function testMsg(text, ok) {
-    const msg = document.getElementById("apiTestMsg");
-    msg.textContent = text;
-    msg.className = "api-testmsg mono" + (ok === true ? " is-ok" : ok === false ? " is-err" : "");
-  }
-
-  function bindApi(state, hooks) {
-    document.getElementById("apiSettingsBtn").onclick = openApi;
-    document.getElementById("apiClose").onclick = closeApi;
-    if (apiBound) return;
-    apiBound = true;
-    document.getElementById("apiOverlay").addEventListener("click", (e) => {
-      if (e.target && e.target.dataset && e.target.dataset.close) closeApi();
-    });
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && apiOpen()) {
-        e.stopPropagation();
-        closeApi();
-      }
-    });
-
-    document.getElementById("apiKeyToggle").onclick = () => {
-      const key = document.getElementById("apiKey");
-      const show = key.type === "password";
-      key.type = show ? "text" : "password";
-      document.getElementById("apiKeyToggle").textContent = show ? "隐藏" : "显示";
-    };
-
-    document.getElementById("apiKeyClear").onclick = () => {
-      dlg = global.WRM_AI.clearKey(dlg || global.WRM_AI.loadSettings());
-      document.getElementById("apiKey").value = "";
-      document.getElementById("apiKey").placeholder = "sk-…";
-      testMsg("已清除本机保存的 Key", true);
-      refreshGen(state);
-      hooks.onChange();
-    };
-
-    document.getElementById("apiTemp").oninput = (e) => {
-      document.getElementById("apiTempVal").textContent = e.target.value;
-    };
-
-    document.getElementById("apiRefreshModels").onclick = async () => {
-      const btn = document.getElementById("apiRefreshModels");
-      btn.disabled = true;
-      btn.textContent = "刷新中…";
-      const r = await global.WRM_AI.listModels(collect());
-      btn.disabled = false;
-      btn.textContent = "刷新模型列表";
-      const sel = document.getElementById("apiModel");
-      const manual = document.getElementById("apiModelManual");
-      const noteEl = document.getElementById("apiModelNote");
-      if (r.ok) {
-        fillModelOptions(r.models, collect().model);
-        sel.hidden = false;
-        manual.hidden = true;
-        noteEl.textContent = "共 " + r.models.length + " 个模型";
-      } else {
-        manual.value = collect().model;
-        sel.hidden = true;
-        manual.hidden = false;
-        noteEl.textContent = r.message + "；可手填模型名";
-      }
-    };
-
-    document.getElementById("apiTest").onclick = async () => {
-      const btn = document.getElementById("apiTest");
-      btn.disabled = true;
-      testMsg("测试中…", null);
-      const r = await global.WRM_AI.testConnection(collect());
-      btn.disabled = false;
-      testMsg(r.ok ? r.message : r.message, r.ok);
-    };
-
-    document.getElementById("apiSave").onclick = () => {
-      dlg = global.WRM_AI.saveSettings(collect());
-      closeApi();
-      refreshGen(state);
-      hooks.onChange();
-    };
   }
 
   function render(state, hooks) {
@@ -395,20 +264,19 @@
     document.getElementById("aiGenerateBtn").onclick = () => hooks.onGenerateAI();
     document.getElementById("localBtn").onclick = () => hooks.onGenerateLocal();
     document.getElementById("fallbackBtn").onclick = () => hooks.onFallback();
-    bindApi(state, hooks);
   }
 
   global.WRM_SETUP = {
     render: render,
     refreshVersion: refreshVersion,
     refreshGen: refreshGen,
+    setProxy: setProxy,
     defaultParams: defaultParams,
     ruleById: ruleById,
     customValid: customValid,
     customParamMap: customParamMap,
     note: note,
     showFallback: showFallback,
-    busy: busy,
-    closeApi: closeApi
+    busy: busy
   };
 })(typeof window !== "undefined" ? window : globalThis);

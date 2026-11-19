@@ -1,22 +1,20 @@
-/* API 适配层（v2.3）：OpenAI 兼容协议，浏览器直连。
-   Key 只存浏览器（localStorage wrm.api 或 sessionStorage wrm.api），不进 URL、不进日志、不进错误文案。
-   listModels / testConnection / generateWorld；30 秒超时；仅 JSON 解析失败重试 1 次。
+/* AI 适配层（v2.4）：唯一通道 = Qoder Sites 公共代理，访客免填 Key。
+   Key 只存服务端 Secret DEEPSEEK_API_KEY，不进前端、不进仓库、不进浏览器存储。
+   代理固定目的地 DeepSeek、固定模型与温度；前端只发 messages（system+user）。
+   generateWorld：80 秒超时；仅 JSON 解析失败重试 1 次。
    结果缓存 wrm.aiCache：按 规则+干预+假设+模型 哈希，避免重复扣费；「重新生成」绕过缓存。
    本文件不 console 任何内容；错误信息只含静态中文与状态码。 */
 (function (global) {
   "use strict";
 
-  const LS_KEY = "wrm.api";
+  const PROXY = "/functions/v1/app/ai";
+  const HEALTH = "/functions/v1/app/health";
   const CACHE_KEY = "wrm.aiCache";
-  const TIMEOUT_MS = 30000;
+  const TIMEOUT_MS = 80000;
 
   const DEFAULTS = {
-    provider: "openai-compatible",
-    baseUrl: "https://api.deepseek.com/v1",
-    apiKey: "",
     model: "deepseek-chat",
-    temperature: 0.8,
-    remember: true
+    temperature: 0.8
   };
 
   const ERAS = [
@@ -49,126 +47,51 @@
   ].join("\n");
 
   function ls() { try { return global.localStorage; } catch (e) { return null; } }
-  function ss() { try { return global.sessionStorage; } catch (e) { return null; } }
-
-  function sanitize(s) {
-    const out = Object.assign({}, DEFAULTS);
-    if (!s || typeof s !== "object") return out;
-    if (s.provider === "custom" || s.provider === "openai-compatible") out.provider = s.provider;
-    if (typeof s.baseUrl === "string" && s.baseUrl.trim()) out.baseUrl = s.baseUrl.trim();
-    if (typeof s.apiKey === "string") out.apiKey = s.apiKey;
-    if (typeof s.model === "string" && s.model.trim()) out.model = s.model.trim();
-    const t = Number(s.temperature);
-    if (isFinite(t)) out.temperature = Math.min(1.5, Math.max(0, t));
-    out.remember = s.remember !== false;
-    return out;
-  }
-
-  function loadSettings() {
-    let out = sanitize(null);
-    const a = ls();
-    const b = ss();
-    try { if (a && a.getItem(LS_KEY)) out = sanitize(JSON.parse(a.getItem(LS_KEY))); } catch (e) { /* 损坏存储忽略 */ }
-    try { if (b && b.getItem(LS_KEY)) out = sanitize(JSON.parse(b.getItem(LS_KEY))); } catch (e) { /* 损坏存储忽略 */ }
-    return out;
-  }
-
-  function saveSettings(s) {
-    const clean = sanitize(s);
-    const a = ls();
-    const b = ss();
-    try { if (a) a.removeItem(LS_KEY); } catch (e) { /* 忽略 */ }
-    try { if (b) b.removeItem(LS_KEY); } catch (e) { /* 忽略 */ }
-    const target = clean.remember ? a : b;
-    try { if (target) target.setItem(LS_KEY, JSON.stringify(clean)); } catch (e) { /* 存储不可用则只留内存 */ }
-    return clean;
-  }
-
-  function clearKey(s) {
-    const clean = sanitize(s);
-    clean.apiKey = "";
-    return saveSettings(clean);
-  }
-
-  function hasKey(s) {
-    return !!(s && typeof s.apiKey === "string" && s.apiKey.trim());
-  }
-
-  /* 只显示后 4 位；Key 本体不进 DOM 文本 */
-  function masked(key) {
-    if (!key) return "";
-    return "••••••••" + key.slice(-4);
-  }
 
   function errFor(status) {
-    if (status === 401) return "API Key 无效或已过期";
-    if (status === 403) return "这个 Key 没有该模型权限";
-    if (status === 404) return "Base URL 或模型名不对";
-    if (status === 429) return "限流，稍后再试";
-    return "服务返回 " + status + "，稍后再试或换个模型";
+    if (status === 400) return "请求内容不合规范，稍后再试";
+    if (status === 429) return "公共代理限流，稍后再试";
+    if (status === 502) return "上游模型服务出错，稍后再试";
+    if (status === 503) return "公共代理未配置，暂不可用";
+    if (status === 504) return "上游模型服务超时，稍后再试";
+    return "公共代理返回 " + status + "，稍后再试";
   }
 
-  const CORS_MSG = "浏览器被服务商拦截（CORS）；换一个支持浏览器直连的 Base URL，或本地代理";
-  const TIMEOUT_MSG = "超时（30 秒），服务商没响应";
+  const OFFLINE_MSG = "公共代理不可用（当前环境没有云函数或网络不通）";
+  const TIMEOUT_MSG = "超时（80 秒），模型没响应";
 
-  function base(s) {
-    return String(s.baseUrl || DEFAULTS.baseUrl).replace(/\/+$/, "");
-  }
-
-  function headers(s) {
-    return { "Content-Type": "application/json", "Authorization": "Bearer " + s.apiKey };
-  }
-
-  /* 统一请求：网络/CORS/超时/状态码都映射成中文，绝不带 Key 或请求体 */
-  async function request(s, path, body, signal) {
+  /* 统一请求：只发同源代理；网络/超时/状态码都映射成中文，绝不带 Key */
+  async function proxyRequest(path, body, timeoutMs) {
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
-    const onAbort = () => ctrl.abort();
-    if (signal) {
-      if (signal.aborted) ctrl.abort();
-      else signal.addEventListener("abort", onAbort);
-    }
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs || TIMEOUT_MS);
     let res;
     try {
-      res = await fetch(base(s) + path, {
+      res = await fetch(path, {
         method: body ? "POST" : "GET",
-        headers: headers(s),
+        credentials: "same-origin",
+        headers: body ? { "Content-Type": "application/json" } : undefined,
         body: body ? JSON.stringify(body) : undefined,
         signal: ctrl.signal
       });
     } catch (e) {
       clearTimeout(timer);
-      if (signal) signal.removeEventListener("abort", onAbort);
-      if (ctrl.signal.aborted && !(signal && signal.aborted)) return { ok: false, code: "timeout", message: TIMEOUT_MSG };
-      return { ok: false, code: "network", message: CORS_MSG };
+      if (ctrl.signal.aborted) return { ok: false, code: "timeout", message: TIMEOUT_MSG };
+      return { ok: false, code: "network", message: OFFLINE_MSG };
     }
     clearTimeout(timer);
-    if (signal) signal.removeEventListener("abort", onAbort);
-    if (!res.ok) return { ok: false, code: "http-" + res.status, message: errFor(res.status) };
     let json = null;
-    try { json = await res.json(); } catch (e) { return { ok: false, code: "parse", message: "服务返回的不是 JSON" }; }
+    try { json = await res.json(); } catch (e) { /* 非 JSON 按状态码处理 */ }
+    if (!res.ok) {
+      const code = json && typeof json.code === "string" ? json.code : "";
+      return { ok: false, code: code || "http-" + res.status, message: errFor(res.status) };
+    }
     return { ok: true, json: json };
   }
 
-  async function listModels(s) {
-    if (!hasKey(s)) return { ok: false, code: "nokey", message: "先填 API Key" };
-    const r = await request(s, "/models", null);
-    if (!r.ok) return r;
-    const list = r.json && Array.isArray(r.json.data) ? r.json.data : [];
-    const models = list.map((m) => (m && typeof m.id === "string" ? m.id : "")).filter(Boolean);
-    if (!models.length) return { ok: false, code: "empty", message: "模型列表为空，可手填模型名" };
-    return { ok: true, models: models };
-  }
-
-  async function testConnection(s) {
-    if (!hasKey(s)) return { ok: false, code: "nokey", message: "先填 API Key" };
-    const r = await request(s, "/chat/completions", {
-      model: s.model,
-      max_tokens: 1,
-      messages: [{ role: "user", content: "ping" }]
-    });
-    if (!r.ok) return r;
-    return { ok: true, message: "连接正常" };
+  async function health() {
+    const r = await proxyRequest(HEALTH, null, 8000);
+    if (!r.ok || !r.json || r.json.ok !== true) return { available: false, configured: false };
+    return { available: true, configured: r.json.configured !== false };
   }
 
   function userMessage(p) {
@@ -189,31 +112,27 @@
     return t.trim();
   }
 
-  async function callOnce(s, p) {
-    const r = await request(s, "/chat/completions", {
-      model: s.model,
-      temperature: s.temperature,
-      response_format: { type: "json_object" },
+  async function callOnce(p) {
+    const r = await proxyRequest(PROXY, {
       messages: [
         { role: "system", content: SYSTEM },
         { role: "user", content: userMessage(p) }
       ]
     });
     if (!r.ok) return r;
-    const content = r.json && r.json.choices && r.json.choices[0] && r.json.choices[0].message
-      ? r.json.choices[0].message.content : "";
+    const content = r.json && typeof r.json.content === "string" ? r.json.content : "";
+    if (!content) return { ok: false, code: "empty", message: "AI 返回为空，稍后再试" };
     let json;
     try { json = JSON.parse(stripFences(content)); } catch (e) { return { ok: false, code: "parse", message: "AI 返回的不是合法 JSON" }; }
     return { ok: true, json: json };
   }
 
-  /* 仅 JSON 解析失败重试 1 次；401/403/429/CORS 不重试 */
-  async function generateWorld(s, p, signal) {
-    if (!hasKey(s)) return { ok: false, code: "nokey", message: "自定义规则需要 API Key" };
-    let r = await callOnce(s, p);
-    if (!r.ok && r.code === "parse") r = await callOnce(s, p);
+  /* 仅 JSON 解析失败重试 1 次；限流/上游错误/超时不重试 */
+  async function generateWorld(p) {
+    let r = await callOnce(p);
+    if (!r.ok && r.code === "parse") r = await callOnce(p);
     if (!r.ok) return r;
-    return { ok: true, json: r.json, model: s.model };
+    return { ok: true, json: r.json, model: DEFAULTS.model };
   }
 
   function eraById(id) {
@@ -333,14 +252,8 @@
     ERAS: ERAS,
     RECAP: RECAP,
     SYSTEM: SYSTEM,
-    loadSettings: loadSettings,
-    saveSettings: saveSettings,
-    clearKey: clearKey,
-    hasKey: hasKey,
-    masked: masked,
+    health: health,
     errFor: errFor,
-    listModels: listModels,
-    testConnection: testConnection,
     generateWorld: generateWorld,
     userMessage: userMessage,
     normalize: normalize,

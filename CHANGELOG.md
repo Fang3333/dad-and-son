@@ -2,6 +2,17 @@
 
 本格式遵循 Keep a Changelog，版本号遵循 semver。
 
+## [2.4.0] - 2026-11-19
+
+### 变更
+- AI 通道改回 Qoder Sites 公共代理（恢复 v1.6–v1.7 的「访客用站长的 API」模式）：ai.js 重写为代理适配层，只发同源 `/functions/v1/app/ai`（system+user 两条 messages），Key 只在服务端 Secret `DEEPSEEK_API_KEY`，不进前端、不进仓库、不进浏览器存储；固定 deepseek-chat、温度 0.8。保留 v2.3 全部界面与玩法（一屏一章 / 自定义规则 / 更改时间 / 双生成按钮 / 缓存 / 重新生成 / 中文错误映射 / normalize 校验）。
+- 代理扩容适配整段世界线生成：max_tokens 2200→6000、上游超时 20s→75s、温度 0.4→0.8；前端超时 30s→80s，按钮文案「生成中…（最长 80 秒）」。限流 / 缓存 / 每日总量闸不变。
+- 设定页顶部「API 设置」按钮与 pill 改为公共代理状态 pill：启动时 GET /health 探测，显示「公共 AI 代理 · deepseek-chat · 免填 Key」（绿）/「未配置 Key」/「不可用 · 本地模板仍可玩」（红），附一句说明。
+- 自定义规则不再要求 Key：只门控名称与四个参数名；失败提示「稍后重试或改用内置规则」。内置规则 AI 失败仍自动回退本地模板并明说原因。
+
+### 移除
+- v2.3 自填 Key 通道整体删除：API 设置弹窗（服务商 / Base URL / Key / 模型列表 / 温度 / 仅本次会话 / 测试连接 / 保存到本机）、ai.js 的 loadSettings / saveSettings / clearKey / hasKey / masked / listModels / testConnection 与 wrm.api 读写、相关样式。启动时清掉旧版本留在 localStorage / sessionStorage 的 wrm.api Key。
+
 ## [2.3.0] - 2026-11-19
 
 ### 新增

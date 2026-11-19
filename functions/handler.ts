@@ -6,8 +6,8 @@
 const UPSTREAM = "https://api.deepseek.com/chat/completions";
 const MODEL = "deepseek-chat";
 const MAX_CHARS = 16000;
-const MAX_TOKENS = 2200;
-const TIMEOUT = 20000;
+const MAX_TOKENS = 6000;
+const TIMEOUT = 75000;
 const DAY_CAP = 500;
 const IP_PER_MIN = 10;
 const CACHE_TTL = 30 * 60 * 1000;
@@ -110,7 +110,7 @@ export async function handler(req) {
         method: "POST",
         signal: controller.signal,
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + key },
-        body: JSON.stringify({ model: MODEL, temperature: 0.4, max_tokens: MAX_TOKENS, messages: messages })
+        body: JSON.stringify({ model: MODEL, temperature: 0.8, max_tokens: MAX_TOKENS, messages: messages })
       });
       if (!res.ok) return json(502, { ok: false, code: "upstream_error" });
       const data = await res.json();

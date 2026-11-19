@@ -4,17 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>世界规则修改器 · 一屏一章</title>
-<meta name="description" content="选一条现实规则，调四个参数，设三个世界假设，生成一条从原始到现代的分版长河：一屏一章，只看被改写的大事，点卡片看细节。可填自己的 API Key 用 AI 生成自定义规则的世界线。情景推演，不是史实。">
+<meta name="description" content="选一条现实规则，调四个参数，设三个世界假设，生成一条从原始到现代的分版长河：一屏一章，只看被改写的大事，点卡片看细节。AI 走站点公共代理，访客免填 Key，也可写自定义规则、指定干预时间。情景推演，不是史实。">
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="styles.css?v=2.3.0">
-<script defer src="world-rule/data.js?v=2.3.0"></script>
-<script defer src="world-rule/engine.js?v=2.3.0"></script>
-<script defer src="chapters.js?v=2.3.0"></script>
-<script defer src="version.js?v=2.3.0"></script>
-<script defer src="ai.js?v=2.3.0"></script>
-<script defer src="setup.js?v=2.3.0"></script>
-<script defer src="chapter.js?v=2.3.0"></script>
-<script defer src="app.js?v=2.3.0"></script>
+<link rel="stylesheet" href="styles.css?v=2.4.0">
+<script defer src="world-rule/data.js?v=2.4.0"></script>
+<script defer src="world-rule/engine.js?v=2.4.0"></script>
+<script defer src="chapters.js?v=2.4.0"></script>
+<script defer src="version.js?v=2.4.0"></script>
+<script defer src="ai.js?v=2.4.0"></script>
+<script defer src="setup.js?v=2.4.0"></script>
+<script defer src="chapter.js?v=2.4.0"></script>
+<script defer src="app.js?v=2.4.0"></script>
 </head>
 <body>
 
@@ -30,8 +30,8 @@
 
   <section id="setup" class="setup" aria-labelledby="setupTitle">
     <div class="setup-tools">
-      <button id="apiSettingsBtn" class="line-btn" type="button">API 设置</button>
-      <span id="apiPill" class="api-pill mono">未配置 API Key</span>
+      <span id="apiPill" class="api-pill mono">公共 AI 代理 · 检测中…</span>
+      <span class="note proxy-note">AI 由站点公共代理提供，访客免填 Key；代理不可用时内置规则仍可走本地模板。</span>
     </div>
     <p id="setupVersion" class="setup-ver mono" aria-live="polite"></p>
     <h2 id="setupTitle" class="page-title" tabindex="-1">设定这个世界</h2>
@@ -137,59 +137,6 @@
       <span class="ov-label mono">连锁反应</span>
       <p id="ovChain"></p>
     </div>
-  </div>
-</div>
-
-<div id="apiOverlay" class="overlay" hidden>
-  <div class="overlay-backdrop" data-close="1"></div>
-  <div class="overlay-panel api-panel" role="dialog" aria-modal="true" aria-labelledby="apiTitle">
-    <button id="apiClose" class="ov-close" type="button" aria-label="关闭">×</button>
-    <h3 id="apiTitle" class="ov-title">API 设置</h3>
-    <p class="note api-honest">Key 只存在你自己的浏览器里，不上传我们的服务器；但浏览器端调用仍有泄露风险，建议用临时 Key，演示完吊销。</p>
-
-    <div class="api-field">
-      <label class="api-label mono" for="apiProvider">服务商</label>
-      <select id="apiProvider" class="api-input">
-        <option value="openai-compatible">OpenAI 兼容（默认）</option>
-        <option value="custom">自定义（OpenAI 协议）</option>
-      </select>
-    </div>
-    <div class="api-field">
-      <label class="api-label mono" for="apiBaseUrl">Base URL</label>
-      <input id="apiBaseUrl" class="api-input" type="text" spellcheck="false" placeholder="https://api.deepseek.com/v1">
-    </div>
-    <div class="api-field">
-      <label class="api-label mono" for="apiKey">API Key</label>
-      <div class="api-keyrow">
-        <input id="apiKey" class="api-input" type="password" autocomplete="off" spellcheck="false" placeholder="sk-…">
-        <button id="apiKeyToggle" class="mini-btn mono" type="button">显示</button>
-        <button id="apiKeyClear" class="mini-btn mono" type="button">清除</button>
-      </div>
-    </div>
-    <div class="api-field">
-      <label class="api-label mono" for="apiModel">模型</label>
-      <div class="api-keyrow">
-        <select id="apiModel" class="api-input"></select>
-        <input id="apiModelManual" class="api-input" type="text" spellcheck="false" hidden>
-        <button id="apiRefreshModels" class="mini-btn mono" type="button">刷新模型列表</button>
-      </div>
-      <p id="apiModelNote" class="note"></p>
-    </div>
-    <div class="api-field">
-      <label class="api-label mono" for="apiTemp">温度 <span id="apiTempVal" class="mono">0.8</span></label>
-      <input id="apiTemp" class="api-range" type="range" min="0" max="1.5" step="0.1" value="0.8">
-    </div>
-    <label class="api-check">
-      <input id="apiRemember" type="checkbox">
-      <span>仅本次会话（关浏览器即忘，不写 localStorage）</span>
-    </label>
-
-    <div class="api-actions">
-      <button id="apiTest" class="mini-btn mono" type="button">测试连接</button>
-      <button id="apiSave" class="line-btn" type="button">保存到本机</button>
-    </div>
-    <p id="apiTestMsg" class="api-testmsg mono" aria-live="polite"></p>
-    <p class="note">Key 只保存在浏览器；公共电脑勿用；泄露请吊销。</p>
   </div>
 </div>
 
