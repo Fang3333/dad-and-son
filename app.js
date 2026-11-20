@@ -1,10 +1,10 @@
 (function (global) {
   "use strict";
 
-  const APP_VERSION = "2.7.0";
+  const APP_VERSION = "2.8.0";
   const P = global.WRM_PRESETS;
   const SETUP_KEY = "wrm.recipe.v25";
-  const RUNS_KEY = "wrm.runs.v27";
+  const RUNS_KEY = "wrm.runs.v28";
   const clone = (value) => JSON.parse(JSON.stringify(value));
   const $ = (id) => document.getElementById(id);
   const state = {
@@ -236,7 +236,7 @@
     let message = "";
     try {
       const p = payload(recipe, fromN, parent);
-      const key = global.WRM_AI.cacheKey({ schema: "what-if-v27", payload: p, model: settings.model, baseUrl: settings.baseUrl, temperature: settings.temperature });
+      const key = global.WRM_AI.cacheKey({ schema: "what-if-v28", payload: p, model: settings.model, baseUrl: settings.baseUrl, temperature: settings.temperature });
       const cached = force ? null : global.WRM_AI.cacheGet(key);
       let chapters;
       let model = settings.model;

@@ -84,7 +84,7 @@
     ctx.fillRect(0, 0, c.width, c.height);
     ctx.textBaseline = "top";
     ctx.fillStyle = RED;
-    textBox(ctx, "世界线 " + runId + " / v" + (run.appVersion || "2.7.0") + (run.parentId ? " / 源自 " + run.parentId : ""), 64, 40, 952, 30, 21, false, true);
+    textBox(ctx, "世界线 " + runId + " / v" + (run.appVersion || "2.8.0") + (run.parentId ? " / 源自 " + run.parentId : ""), 64, 40, 952, 30, 21, false, true);
     ctx.fillStyle = INK;
     textBox(ctx, "What If", 64, 82, 590, 78, 76, true);
     ctx.fillStyle = "#285A5B";

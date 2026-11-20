@@ -27,7 +27,8 @@
         break;
       }
       if (best.index) frag.appendChild(document.createTextNode(rest.slice(0, best.index)));
-      frag.appendChild(el("em", "kw", best.word));
+      frag.appendChild(el("mark", "kw", best.word));
+      words.splice(words.indexOf(best.word), 1);
       rest = rest.slice(best.index + best.word.length);
     }
     return frag;
@@ -67,7 +68,11 @@
     $("ovFiction").hidden = !ev.hot;
     const names = (ev.ruleTags || []).map((id) => { const rule = global.WRM_PRESETS.byId(id); return rule ? rule.name : id; });
     const dormant = (ev.dormant || []).map((id) => { const rule = global.WRM_PRESETS.byId(id); return rule ? rule.name : id; });
-    $("ovDetail").textContent = (ev.baseline ? "原来：" + ev.baseline + "\n\n" : "") + (view.detail || view.alternate || "") + (names.length ? "\n涉及规则：" + names.join("、") + "。" : "") + (dormant.length ? "\n尚未生效：" + dormant.join("、") + "。" : "");
+    $("ovDetail").replaceChildren(
+      document.createTextNode(ev.baseline ? "原来：" + ev.baseline + "\n\n" : ""),
+      markKeywords(view.detail || view.alternate || "", view.keywords),
+      document.createTextNode((names.length ? "\n涉及规则：" + names.join("、") + "。" : "") + (dormant.length ? "\n尚未生效：" + dormant.join("、") + "。" : ""))
+    );
     $("ovWhy").textContent = (view.why || "") + (typeof ev.conflict === "string" && ev.conflict ? "\n冲突裁定：" + ev.conflict : "");
     $("ovChain").textContent = view.chain || "";
     $("ovChainBlock").hidden = !view.chain;
@@ -86,7 +91,9 @@
       const section = el("section", "archive-entry");
       section.appendChild(el("p", "archive-reason mono", reason));
       section.appendChild(el("h4", "archive-title", item.ev.title));
-      section.appendChild(el("p", "archive-news", item.view.alternate));
+      const news = el("p", "archive-news");
+      news.appendChild(markKeywords(item.view.alternate, item.view.keywords));
+      section.appendChild(news);
       section.appendChild(el("p", "archive-baseline", "原来：" + item.ev.baseline));
       section.appendChild(el("p", "archive-detail", item.view.detail));
       const rules = item.ev.ruleTags.map((id) => global.WRM_PRESETS.byId(id).name);
@@ -285,9 +292,13 @@
   function editionSummary(chapter, edition) {
     const carried = edition.carried.map((entry) => entry.item);
     const lead = carried.find((item) => item.ev.track === "world") || carried[0];
-    if (lead) return chapter.name + "，" + lead.view.alternate;
+    if (lead) {
+      const summary = document.createDocumentFragment();
+      summary.append(document.createTextNode(chapter.name + "，"), markKeywords(lead.view.alternate, lead.view.keywords));
+      return summary;
+    }
     const dormant = edition.dormant[0];
-    return dormant ? "本版规则尚缺生效条件：" + dormant.view.why : "本版没有新增后果，已有安排继续运行。";
+    return document.createTextNode(dormant ? "本版规则尚缺生效条件：" + dormant.view.why : "本版没有新增后果，已有安排继续运行。");
   }
 
   function render(state, n, hooks, direction, run) {
@@ -324,7 +335,7 @@
     const preceding = run.chapters.find((entry) => entry.n === ns[ns.indexOf(chapterN) - 1]);
     $("chapterBridge").textContent = preceding ? preceding.name + " → " + chapter.name : "从这里改写世界";
     $("editionLabel").textContent = chapterN >= 8 ? "未来特刊 · 假设" : "平行档案 · 假设";
-    $("emptySummary").textContent = editionSummary(chapter, edition);
+    $("emptySummary").replaceChildren(editionSummary(chapter, edition));
     $("emptyNote").textContent = edition.carried.length ? "以上为沿用近况，不计作新增新闻。旧闻全文见本版存档。" : "待生效的规则保留在存档中，不编造已经发生的后果。";
     $("chapterSpan").textContent = chapter.span || "";
     $("chapterCount").textContent = "新消息 " + items.length + " 则 · " + (chapterN >= 8 ? "未来畅想" : "情景推演");

@@ -291,8 +291,8 @@
   // 后果指纹不含年代装饰、标题或无关配方开关。
   function ruleReport(e, era, s, ctx) {
     const id = e.p.id, h = ctx.has;
-    function fact(topic, theme, title, after, why, body, state) {
-      return { id, topic, theme, title, before: ruleBefore[id], after, why, body,
+    function fact(topic, theme, title, after, why, body, state, keywords = []) {
+      return { id, topic, theme, title, before: ruleBefore[id], after, why, body, keywords,
         state, dormant: e.dormant, conflict: e.conflict };
     }
     if (e.dormant) return fact("network-delivery", "通信观察", "断网尚无网可断",
@@ -310,142 +310,148 @@
       for (let n = ctx.level; n >= 1; n--) if (entries[n]) return entries[n];
       throw new Error("缺少可执行的规则阶段：" + id);
     }
+    // 第四项是编辑选定的重点，第五项可另写精练事实；不截字，不把文案写进后果指纹。
     function news(topic, theme, why, entry, constraints) {
-      return fact(topic, theme, entry[1], entry[2], why, entry[2], Object.assign({ method: entry[0] }, constraints));
+      return fact(topic, theme, entry[1], entry[2], why, entry[4] || entry[2],
+        Object.assign({ method: entry[0] }, constraints), entry[3] || []);
     }
     switch (id) {
       case "no-exam": {
         let entry = step({
-          1: ["show-finished-tool", "斧头替人开口", "取消考试后，求职者带石斧现场劈木。推荐者可以到场，不能替斧头锋利。"],
-          2: ["shared-apprentice-material", "穷学徒也领材料", "无考试招徒改由作坊供试做材料，免得录用的全是自带铜料的人。"],
-          3: ["public-repair-liability", "修好的水渠才作数", "无考试录用改看公共修渠，漏水须本人补好。围观喝彩不计入供水量。"],
-          4: ["cross-workshop-reproduction", "作品出门再做一遍", "无考试招工让作品跨坊复做，换一套工具仍能交活才算手艺。师门不包邮。"],
-          5: ["production-batch-proof", "好零件要成批交", "工厂不考分，改验连续做出的零件。一件精品不能替整批废品办理入职。"],
-          6: ["deenergized-safety-practice", "先断电再显身手", "电工凭断电实修入职，接通前另人复验。手艺可亲自展示，触电不必。"],
-          7: ["individual-contribution", "合做作品拆开认领", "无考试招聘拆验合作作品，每人重做自己那部分。合影不算共同完成。"],
+          1: ["show-finished-tool", "斧头替人开口", "求职者带石斧当场劈木，考官改看木屑。履历越厚，地上越难扫。", ["履历越厚，地上越难扫"]],
+          2: ["shared-apprentice-material", "招徒先发铜料", "作坊供料让成人试做，富家带来的铜也得放下。家底第一次坐了冷板凳。", ["家底第一次坐了冷板凳"]],
+          3: ["public-repair-liability", "水渠主持面试", "招工改看修渠，漏处由本人补。推荐人夸了半天，水从他脚边跑了。", ["水从他脚边跑了"]],
+          4: ["cross-workshop-reproduction", "师门出了工具箱", "求职者到别坊换工具重做作品，祖师爷的名头跟来了，顺手的锤子没来。", ["顺手的锤子没来"]],
+          5: ["production-batch-proof", "精品带不动整批", "工厂连验一批试件才招人，唯一的精品摆在废品中间，像来探亲的。", ["像来探亲的"]],
+          6: ["deenergized-safety-practice", "电工面试先断电", "电工断电实修后由旁人复验，录用前最安静的那根线，决定谁留下。", ["最安静的那根线"]],
+          7: ["individual-contribution", "合影里找不到作者", "招聘让每人重做合作作品中的一段，负责合影的人终于领到一台相机。", ["负责合影的人"]],
           8: s.path[2] === "8A"
-            ? ["audited-human-machine-practice", "人机一起交实修", "无考试岗位改验人机共同实修，人须当场接管故障。机器合格不顺带录用主人。"]
-            : ["autonomous-machine-partner", "机器也挑搭档", "无考试岗位由自治机器试配搭档，人须补做机器的盲区。主人称呼不算资历。"],
-          9: ["isolated-life-support-practice", "先修空舱再接人", "舱务录用不考分，先在隔离空舱修漏，再接生命维持活。推荐人不能代供氧。"],
-          10: ["separate-copy-work-proof", "复制经历不包录用", "副本各自实修载体才获岗，共用旧作品只验一次。复制经历没有复制空缺。"]
+            ? ["audited-human-machine-practice", "面试故意弄坏机器", "人机同场实修，故障时由人接管。机器做对的题，忽然成了人的送命题。", ["人的送命题"]]
+            : ["autonomous-line-human-nonstandard", "机器招人补盲区", "AI接管流水线后试配人类搭档，少量非标工序仍招人。人类成了祖传非标零件。", ["祖传非标零件"], "AI接管流水线，少量非标工序仍试配人类搭档。人类成了祖传非标零件。"],
+          9: ["isolated-life-support-practice", "空舱先替人试住", ctx.silent
+            ? "舱务招人先在隔离空舱修漏，人还站得笔直，压力表已经瘪了。"
+            : "舱务招人先在隔离空舱修漏，推荐信还很饱满，压力表已经瘪了。", [ctx.silent ? "人还站得笔直" : "推荐信还很饱满"]],
+          10: ["separate-copy-work-proof", "分身挤满面试间", "副本各修载体才获岗，旧作品只验一次。十个自己来了，岗位还是一个。", ["十个自己来了"]]
         });
-        if (ctx.ending === "voyage") entry = ["closed-voyage-maintenance", "船员先试断补给", "星船不考分，候选人须在断补给演练中修好循环系统。推荐人留在岸上。"];
-        if (ctx.ending === "land") entry = ["whole-growing-cycle", "田头验完整一季", "回归土地后不考分，接手" + field + "须做完一季养护。种下去不算已经收获。"];
-        return news("hiring", "招工新规", "取消考试排名，实际贡献仍须核验，岗位不会凭空增加。", entry,
+        if (ctx.ending === "voyage") entry = ["closed-voyage-maintenance", "星船面试断外援", "星船招人先试断补给修循环，熟人都在岸上，关系远得很物理。", ["关系远得很物理"]];
+        if (ctx.ending === "land") entry = ["whole-growing-cycle", "面试长出一季", "接手" + field + "要实做一整季，求职者天天来看。面试结果还没长熟。", ["面试结果还没长熟"]];
+        return news("hiring", "招工见闻", "取消考试排名，实际贡献仍须核验，岗位不会凭空增加。", entry,
           ctx.ending === "land" ? { cultivation: field } : undefined);
       }
       case "four-hour": {
         let entry = step({
-          1: ["relay-guarding", "守洞也得交班", "守洞与采集合计四小时，守夜须轮人。闭着眼睛坐在洞口仍算值班。"],
-          2: ["continuous-irrigation-relay", "水不停人要换", "灌溉工满四小时交出水闸，下一班接水。活物不因换班暂停需水。"],
-          3: ["travel-service-total", "换马不重开工时", "驿夫跑腿与搬货合计四小时，换马不重开工时。马不是新雇主。"],
-          4: ["distributed-piecework-total", "带回家做也算工", "作坊把活分到各户，家中赶工仍计四小时。门关上了，劳动没有消失。"],
+          1: ["relay-guarding", "守洞也得交班", "守洞与采集合计四小时，夜里轮人守。野兽等了一宿，等来三拨新面孔。", ["三拨新面孔"]],
+          2: ["continuous-irrigation-relay", "河水留下加班", "灌溉工四小时换手，水闸照开。人都换过一轮，河水还在原岗位。", ["河水还在原岗位"]],
+          3: ["travel-service-total", "换马不刷新工时", "驿夫跑腿搬货合计四小时，换马照算。第二匹马刚上岗，人已经下班。", ["第二匹马刚上岗"]],
+          4: ["distributed-piecework-total", "门板藏不住工时", "作坊把活送进家里，家中赶工也计四小时。藏得住锤子声，藏不住锤子活。", ["藏不住锤子活"]],
           5: ctx.drive === "水轮替汽"
-            ? ["water-mill-relay", "水轮没有下班键", "水磨工满四小时换人，水轮继续转，接班者先接住未完的活。河水不替人加班。"]
-            : [ctx.drive === "蒸汽推机" ? "steam-relay" : "geothermal-relay", "机器续转人先交班", ctx.drive + "连续运转，工人满四小时交班。机器没有累，不构成人的加班理由。"],
-          6: ["emergency-relief-reserve", "抢修先留接班人", "电网抢修也限四小时，开工前先备接替班。停电不能把工时上限一起关掉。"],
+            ? ["water-mill-relay", "水轮没有下班键", "水磨工四小时换人，河水继续推轮。全厂工龄最长的，一滴也留不住。", ["一滴也留不住"]]
+            : [ctx.drive === "蒸汽推机" ? "steam-relay" : "geothermal-relay", "机器续转人先收工", ctx.drive + "不停，工人四小时轮换。厂里最能熬的那个，领的是润滑油。", ["领的是润滑油"]],
+          6: ["emergency-relief-reserve", "抢修队自带下一班", "电网抢修先备接替班，四小时就换人。灯还没亮，下一班已经摸黑来了。", ["下一班已经摸黑来了"]],
           7: ctx.silent || disconnected
-            ? ["in-person-handover-counted", "上门交接也算工", "下班后上门示范也计入四小时，接手人须在限时内到场。热心不另开工时。"]
-            : ["after-hours-messages-counted", "回复收到也算工", "下班后处理工作消息也计入四小时，雇主须把碎片工时合并。收到不是休息。"],
+            ? ["in-person-handover-counted", "热心也占工时", "上门示范计入四小时，接手人赶来时，热心师傅的今日份热心已用完。", ["今日份热心已用完"]]
+            : ["after-hours-messages-counted", "收到也是一笔工时", "回复工作消息计入四小时，雇主把碎片时间合账。已读不回终于有了预算依据。", ["已读不回"]],
           8: s.path[2] === "8A"
-            ? ["human-approval-counted", "审机器的人也下班", "机器接夜班，人类试机与检修合计四小时。监管者不能靠监管取得第五小时。"]
-            : ["autonomous-output-human-limit", "算法不能续人类工时", "机器自行增产，人的纠错仍计四小时。算法找到新订单，没找到第五小时。"],
-          9: ["embodied-and-remote-total", "换机械手不算下班", "舱内操控与现场检修合计四小时，换到机械手上继续做，也不算本人下班。"],
-          10: ["all-conscious-copies-total", "分身刚到本人下班", "所有意识副本合计四小时，分身刚进工位，本人已到下班时间。"]
+            ? ["human-approval-counted", "审机器的人先困了", "机器接夜班，人类试机检修合计四小时。监督席空了，机器还在等人夸。", ["机器还在等人夸"]]
+            : ["autonomous-output-human-limit", "订单长出第五小时", "AI自行增产，人的纠错仍计四小时。它接了通宵订单，只好自己熬完。", ["只好自己熬完"]],
+          9: ["embodied-and-remote-total", "机械手也要打卡", "舱内操控与实修合计四小时。人把活递给自己的机械手，工时绕一圈又回来了。", ["工时绕一圈又回来了"]],
+          10: ["all-conscious-copies-total", "分身赶上集体下班", "所有意识副本合计四小时，分身刚坐稳就一起收工。内卷终于卷成了年轮。", ["内卷终于卷成了年轮"]]
         });
-        if (ctx.ending === "voyage") entry = ["continuous-voyage-watch", "船不停人轮值", "星际值守与训练合计四小时，船不能停，值班者必须换。航程不发加班许可。"];
-        if (ctx.ending === "land") entry = ["harvest-relay", "庄稼没批准加班", field + "养护合计四小时，成熟部分分片交给下一班。丰收不批准集体加班。"];
+        if (ctx.ending === "voyage") entry = ["continuous-voyage-watch", "人下班船继续远行", "星船值守训练合计四小时，换人不停车。下班时，家乡又远了一截。", ["家乡又远了一截"]];
+        if (ctx.ending === "land") entry = ["harvest-relay", "收成等下一双手", field + "养护四小时轮班，成熟处交下一班收。人坐下了，丰收还站在地里。", ["丰收还站在地里"]];
         return news("shift-service", "工时快讯", "每人每日生产服务合计四小时，跨雇主与副本计时，基本口粮保留。", entry,
           ctx.ending === "land" ? { cultivation: field } : undefined);
       }
       case "free-goods": {
         let entry = step({
-          1: [shortSupply ? "ration-then-no-refill" : "ration-then-surplus", shortSupply ? "零元加餐已领完" : "价格没了产量还在",
-            shortSupply ? "免费" + food + "午前领完，四小时后不续做。" + (ctx.heat === "cold" ? "下午等下一批，等候也免费。" : "下午可继续领取香味。") : "免费" + food + "先留基本口粮，余量领完等明天。零元不负责让猎物增殖。"],
-          2: ["seed-before-distribution", "下轮的饭不能领走", "零价食仓先留种再分口粮余量，领完的人不能回头领种。下一轮的饭暂不出仓。"],
-          3: ["durable-goods-return-pool", "工具免费归还要完整", "零价工具轮用后回库，断柄须修好再交。免费不是把损耗交给下一位。"],
-          4: ["cargo-before-price", "船舱不认零元标签", "零价船货在产地配齐后按舱容装载，价格归零，没多腾出一间货舱。"],
-          5: ["material-recovery-before-output", "废料成了进货渠道", "零价工厂收回边角料再开工，产量仍受原料约束。零元可以一直不变，货不能无限多。"],
-          6: ["repair-stock-reserved", "先留抢修那一箱", "零价电器先留公共抢修备件再配发，坏掉的设备不能拿免费当维修办法。"],
-          7: ["stock-not-orders", "领货快不等于造货快", "零价订货按实库存配发，同一人分开领仍只一份。手快不能提前造货。"],
-          8: ["printer-feedstock-loop", "打印晚饭先交原料", "零价打印机回收旧成品再接新订单，原料另占份额。空托盘不能打印晚饭。"],
+          1: [shortSupply ? "ration-then-no-refill" : "ration-then-surplus", shortSupply ? "零元加餐已领完" : "零元也有最后一份",
+            shortSupply ? "免费" + food + "加餐午前领完，四小时后停做，基本口粮留足。下午只剩碗很自由。" : "免费" + food + "先留基本口粮，余量领完等明天。最后一份照旧很有身价。",
+            [shortSupply ? "只剩碗很自由" : "最后一份照旧很有身价"]],
+          2: ["seed-before-distribution", "明年的饭先别盛", "零价食仓留种后分口粮余量，最饱满的一袋留在仓里，等着生出下一仓。", ["等着生出下一仓"]],
+          3: ["durable-goods-return-pool", "免费锄头认得旧主", "零价农具归还前修断柄，下位使用者接过新柄。上一位的力气留在裂缝里。", ["力气留在裂缝里"]],
+          4: ["cargo-before-price", "零价货船照旧满载", "零价船货在产地配齐，按舱容装载。货物都白送，船身还是沉了同样深。", ["船身还是沉了同样深"]],
+          5: ["material-recovery-before-output", "废料重回老岗位", "零价工厂收回边角料再开工，昨天按废料抬出去的，今天按原料请回来。", ["按原料请回来"]],
+          6: ["repair-stock-reserved", "坏灯有了免费邻居", "零价电器先留抢修备件，领灯者发现旁边那箱只修不发，专等大家用坏。", ["专等大家用坏"]],
+          7: ["stock-not-orders", "购物车先实现自由", "零价订货按库存每人一份，购物车装了一百件，仓库只回了一件。", ["购物车装了一百件"]],
+          8: ["printer-feedstock-loop", "新杯子记得旧杯子", "零价打印机收旧成品再开工。杯子换了造型，昨天的原子今天接着上班。", ["昨天的原子今天接着上班"]],
           9: planar
-            ? ["planar-freight-capacity", "零元货也占一条路", "零价舱货沿平面货道串行配送，前货不出后货不进。零元不能从上方抄近路。"]
-            : ["orbital-freight-capacity", "零元送到轨道另等船", "零价轨道配送仍占运力，口粮先装，额外货等货船。免的是价格，不是货物质量。"],
-          10: ["basic-compute-before-extra", "零元副本也吃算力", "零价算力先保基本运行，额外副本共分余量。复制自己不能复制散热面积。"]
+            ? ["planar-freight-capacity", "免费货物堵成一线", "零价舱货沿平面货道串行，前货不出后货不进。免费午餐堵在免费晚餐前面。", ["免费午餐堵在免费晚餐前面"]]
+            : ["orbital-freight-capacity", "零元包邮等轨道", "零价轨道配送先装口粮，额外货等船。价格失重了，包裹还得老实加速。", ["价格失重了"]],
+          10: ["basic-compute-before-extra", "肉身下线热还在线", "零价算力先保基本运行，额外副本分余量。肉身下线，散热费没下线。", ["肉身下线，散热费没下线"]]
         });
-        if (ctx.ending === "voyage") entry = ["closed-voyage-stock", "星际退货也占货舱", "零价星船物资按闭环库存配发，退货也须带回。退到宇宙里不算入库。"];
-        if (ctx.ending === "land") entry = ["seed-and-tool-reserve", "收成先留下一季", "回归土地后零价收成先留种，农具轮用归还。领空一仓不等于完成下一季生产。"];
+        if (ctx.ending === "voyage") entry = ["closed-voyage-stock", "退货还得陪它远航", "星船零价物资循环配发，退货也留舱内。买家不想要了，还得陪它飞几光年。", ["还得陪它飞几光年"]];
+        if (ctx.ending === "land") entry = ["seed-and-tool-reserve", "免费也得还锄头", "零价收成先留种，农具轮用归还。领走的饭归你，明年的饭还在土里忙。", ["明年的饭还在土里忙"]];
         return news("ration-supply", "物资行情", "商品零价不增加资源，基本口粮优先，余量按人轮候。", entry,
           ctx.level === 1 ? { food, heat: ctx.heat } : undefined);
       }
       case "sun-off": {
         let entry = step({
-          1: ["geothermal-rations", "饭有了天还没亮", "太阳熄灭后地热菌毯保温饱，照明另耗能源。吃饱以后，天也不会亮。"],
-          2: ["shared-heat-ducts", "暖气先走公共沟", "暗地聚居点共挖引热沟，先暖住处再暖工坊。离热井近不等于独占热井。"],
-          3: ["cascaded-heat", "一份热用完接着用", "暗城把热水依次送过菌床和浴池，后段只接余热。泡澡不能要求重新烧出太阳。"],
-          5: ["insulation-before-output", "工坊先给管子穿衣", "地热工坊先包住漏热管再扩产，菌食保温优先。新增机器先等热，不等日出。"],
-          6: ["geothermal-electric-light", "灯光另算用能", "暗城用地热供电，照明与保温分开配给。有暖房不自动附赠通宵灯光。"],
-          8: ["crop-specific-light-pulses", "菜园按叶片开灯", "暗城农机只给需光叶片补光，菌床留在暗处。照亮整座城不再冒充种菜。"],
-          9: ["closed-habitat-food-heat", "舱里的夜班不看天", "暗舱回收菌食生产的水与余热，照明单独占能耗。窗外一直没到开灯时间。"],
-          10: ["compute-waste-heat", "算房供暖不包照明", "上传住区把算房余热送去养菌，生身照明仍须供电。思想很热不等于天亮。"]
+          1: ["geothermal-rations", "饭有了天还没亮", "太阳熄灭后地热菌毯保温饱，照明另耗能。先学会不饿，再学会摸黑找碗。", ["摸黑找碗"]],
+          2: ["shared-heat-ducts", "暖气先走公共沟", "聚居点共挖热沟，先暖住处再暖工坊。匠人下了工，终于比石头暖得快。", ["比石头暖得快"]],
+          3: ["cascaded-heat", "澡堂接了菌床的班", "热水先过菌床再进浴池，同一份余热养完饭又暖人，饭比食客先洗澡。", ["饭比食客先洗澡"]],
+          5: ["insulation-before-output", "管子比工人先穿棉", "地热工坊包好漏热管才扩产，菌食优先保温。全厂最怕着凉的是管子。", ["最怕着凉的是管子"]],
+          6: ["geothermal-electric-light", "暖房也有黑灯时候", "地热电分开供暖照明，暖房住户省下灯额。终于躺在黑暗里过上热日子。", ["躺在黑暗里过上热日子"]],
+          8: ["crop-specific-light-pulses", "菜叶领到私人日出", "农机按需给叶片补光，菌床仍住暗处。人类围着菜叶，蹭一次私人日出。", ["私人日出"]],
+          9: ["closed-habitat-food-heat", "洗菜水下次还来", "暗舱循环菌食用水和余热，照明另耗能。今天洗菜的水，明天还来认菜。", ["明天还来认菜"]],
+          10: ["compute-waste-heat", "思考顺便养晚饭", "算房余热养菌，灯仍另供电。上传者想了一夜，想法没熟，晚饭熟了。", ["想法没熟，晚饭熟了"]]
         });
-        if (ctx.ending === "voyage") entry = ["reactor-not-ground-heat", "离开热井自带热源", "星船离开地热后用堆热养菌，照明另耗能源。故乡的热井不能随身续杯。"];
-        if (ctx.ending === "land") entry = ["heat-well-farming-radius", "田界跟着热管走", "回归土地改围热井养菌，种植边界由保温损耗决定。地再多也不能全铺热管。"];
+        if (ctx.ending === "voyage") entry = ["reactor-not-ground-heat", "故乡暖气到此为止", "星船改用堆热养菌，灯另耗能。出发的人搬走家当，暖气得重新认祖宗。", ["暖气得重新认祖宗"]];
+        if (ctx.ending === "land") entry = ["heat-well-farming-radius", "田契量到热散为止", "热井周围养菌，热管越远损耗越多。地主摊开田契，热水只认半张。", ["热水只认半张"]];
         return news("heat-food", "能源民生", "虚构前提保住地热与菌食；额外照明必须另付能源。", entry);
       }
       case "science-lock": return news("tool-ceiling", "工场实况", "基础实验只能给旧结果，工程改良不得越过干预时的能力上限。", step({
-        1: ["stone-edge-regrinding", "新成果是磨尖了", "智子锁死后反复磨同种石刃，只比较耐用次数。磨得更亮，不算发现新原理。"],
-        2: ["standard-measures", "先把量尺对齐", "锁死后的作坊统一量尺，减少错配而不换配方。今天少返工，不等于科学突破。"],
-        3: ["repeatable-batches", "同配方先做得一样", "锁死后的工坊反复试旧配方，剔除不稳批次。好坏终于一致，上限仍在原处。"],
-        4: ["optical-calibration", "旧镜对准不见新理", "锁死后的旧镜只校准误差，越界实验仍给旧结果。看清歪了，不等于看穿上限。"],
-        5: ["insulation-retrofit", "增产来自少漏一点", "锁死后的机房加隔热层减少损耗，不改动力原理。节下来的热没有获得新学位。"],
-        6: ["electrical-tolerance", "电器只改合格率", "锁死后的电器按已知公差重配，减少故障。出厂更齐整，基础实验仍不放行。"],
-        7: ["known-model-revalidation", "模型重验不换物理", "锁死后的仪器重验旧模型，修正误差不扩展原理。曲线更平滑，上限没有松动。"],
-        8: ["existing-machine-calibration", "聪明机器也有旧上限", "锁死后的智能设备只校准已知工序，越界推算须退回实测。自信不算新实验。"],
-        9: ["existing-habitat-spares", "修舱先拆同型件", "锁死后的舱站拆同型件互补，不能造未验证的新推进器。维修成功不是获准远航。"],
-        10: ["known-substrate-budget", "旧载体只调容量", "锁死后的载体按已知散热条件分配容量，扩容须用同型件。新住户不是新物理。"]
+        1: ["stone-edge-regrinding", "突破只到斧刃为止", "智子锁死后反复磨同种石刃，耐用次数略增。新发现很薄，正好在刃上。", ["新发现很薄"]],
+        2: ["standard-measures", "祖传尺子先对答案", "锁死作坊统一量尺沿用旧方，少了错配。祖传的一尺长短，终于吵出了结果。", ["祖传的一尺长短"]],
+        3: ["repeatable-batches", "祖方进入稳定发挥", "锁死工坊反复试旧方，剔除坏批次。同一种失败，终于能做得整整齐齐。", ["同一种失败"]],
+        4: ["optical-calibration", "望远镜看清了上限", "锁死旧镜校准误差，越界实验仍出旧结果。镜片擦亮后，天花板更清楚了。", ["天花板更清楚了"]],
+        5: ["insulation-retrofit", "科学突破留给棉被", "锁死机房只加隔热层省热，旧动力不变。新成果发表在管子外面。", ["发表在管子外面"]],
+        6: ["electrical-tolerance", "合格品长得更像了", "锁死电器按已知公差重配，返修减少。流水线的未来，是更整齐的过去。", ["更整齐的过去"]],
+        7: ["known-model-revalidation", "旧曲线磨出包浆", "锁死仪器重验旧模型，只修误差。祖传曲线越擦越亮，快有电子包浆了。", ["电子包浆"]],
+        8: ["existing-machine-calibration", "AI自信撞上实测", "锁死AI只校准旧工序，越界推算退回实测。它想通了宇宙，仪器没同意。", ["仪器没同意"]],
+        9: ["existing-habitat-spares", "旧舱给旧舱续命", "锁死舱站拆同型件互补，新推进原理仍无果。修好的那艘，装着半个邻居。", ["装着半个邻居"]],
+        10: ["known-substrate-budget", "祖传算架住满新人", "锁死载体用同型件扩容，容量仍按旧散热算。新人入住，祖传代码又添家口。", ["祖传代码又添家口"]]
       }));
       case "dark-forest": {
         let entry = step({
           1: ctx.heat === "fire"
-            ? ["covered-fire", "饭做好烟不指路", "黑暗森林下炊火藏进遮蔽处，领食者走近找。饭照做，烟不负责指路。"]
-            : ["concealed-delivery", "物资不附远处可见", "黑暗森林下物资在遮蔽处交付，领货人走近核对。货已齐，远看仍没这回事。"],
-          2: ["screened-supply-corridor", "送货先围住路线", "隐匿住区沿遮蔽通道送货，搬运前先补缺口。露天捷径不在配送范围内。"],
-          4: ["concealed-port-transfer", "船先藏好再卸货", "隐匿港口先将船移入遮蔽处再卸货，岸外不发定位提示。接风没有灯会。"],
+            ? ["covered-fire", "晚饭把烟也藏起来", "炊火藏进遮蔽处，领食者走近找。饭香到了洞口，烟还在里面憋着。", ["烟还在里面憋着"]]
+            : ["concealed-delivery", "整顿饭悄悄发生", "物资藏在遮蔽处，领货人走近取。里面吃完一轮，外面仍像从没开饭。", ["外面仍像从没开饭"]],
+          2: ["screened-supply-corridor", "捷径先长出围墙", "隐匿住区补好遮蔽通道才送货。挑夫绕了一路，替自己的影子保住秘密。", ["替自己的影子保住秘密"]],
+          4: ["concealed-port-transfer", "接风没有灯会", "船藏进港内遮蔽处才卸货，岸外不亮定位灯。迎宾的人先把热情捂严。", ["先把热情捂严"]],
           6: ctx.silent || disconnected
-            ? ["screened-carrier-transfer", "资料跟人进屏蔽间", "隐匿通信改在屏蔽间交接实物，外界收不到提示。快到门口也不能先招呼。"]
-            : ["shielded-signal", "通信搬进屏蔽区", "通信在屏蔽区内传递，外部不公开定位。送到不含广而告之。"],
-          8: ["machine-emission-audit", "机器先查自己发没发光", "配送机器出厂先验外泄光，能认路还须会藏踪。智能不豁免暴露位置。"],
-          9: ["temporary-heat-storage", "散热也要找遮蔽处", "隐匿舱先存废热，再转入遮蔽处散出。藏得住一时，不等于热量消失。"],
-          10: ["concealed-compute", "副本热闹外面静默", "副本算房收住外泄光讯，活动只在遮蔽区内交接。住户再多也不挂招牌。"]
+            ? ["screened-carrier-transfer", "消息自己走进暗处", "资料实物在屏蔽间交接，门外不留提示。传得最远的，是送件人的腿。", ["送件人的腿"]]
+            : ["shielded-signal", "喜讯只在屋里响", "通信收进屏蔽区，不向外公开定位。屋里热闹翻天，天上听着全是空房。", ["天上听着全是空房"]],
+          8: ["machine-emission-audit", "聪明机器先关炫光", "配送机出厂先查外泄光，导航正常，漂亮灯带全拆。智能的第一课是别显眼。", ["别显眼"]],
+          9: ["temporary-heat-storage", "废热暂存没法销账", "隐匿舱暂存废热再找遮蔽处散出。熵在舱里住了几天，开始催房租。", ["熵在舱里住了几天"]],
+          10: ["concealed-compute", "亿万分身不挂招牌", "副本算房收住外泄光讯，活动限遮蔽区。里面住着一城自己，外面查无此人。", ["外面查无此人"]]
         });
-        if (ctx.ending === "voyage") entry = ["silent-voyage-heat-budget", "星船不发抵达喜讯", "星船逐段找遮蔽处散热，抵达后不发定位喜讯。先到的人不能开灯迎客。"];
-        if (ctx.ending === "land") entry = ["screened-farm-light", "田里有灯山外看不见", "土地住区把补光收在遮蔽农场内，收成就近交付。丰收不举办远处可见的庆典。"];
-        return news("location-secrecy", "配送须知", "可定位的外泄会招来静默，遮蔽处用能，地热菌食保底。", entry);
+        if (ctx.ending === "voyage") entry = ["silent-voyage-heat-budget", "到家也不报平安", "星船逐段遮蔽散热，抵达不发定位喜讯。全船安全到站，亲友继续惦记。", ["亲友继续惦记"]];
+        if (ctx.ending === "land") entry = ["screened-farm-light", "丰收藏在灯罩里面", "农灯藏进遮蔽农场，收成就近取。山外人看不出好年景，碗里的人知道。", ["碗里的人知道"]];
+        return news("location-secrecy", "隐居见闻", "可定位的外泄会招来静默，遮蔽处用能，地热菌食保底。", entry);
       }
       case "flat-world": return news("single-lane-freight", "通行快讯", "厚度归零，不能重叠、翻越或穿过封闭边界。", step({
-        1: ["serial-passage", "前面歇脚后面同休", "平面窄口逐人搬运，前人停下后人也停。上方已无路可借。"],
-        2: ["open-warehouse-mouth", "仓库留口才能进货", "平面粮仓留出不封死的入口，先搬走门口货再补粮。满仓不能连门也填满。"],
-        3: ["junction-clearance", "路口先清空再转弯", "平面城门交叉路口先清空再放行，出城货须等入城人过完。桥不予立项。"],
-        5: ["uncrossed-drive-trains", "传动带不能借上层", "平面工厂把交叉传动拆成独立工序，交接处轮流送料。机器多不等于多一层。"],
-        6: ["noncrossing-wiring", "电线也得让出路口", "平面电网绕开既有线路铺设，交叉处改接分段。电工不能把线从头顶甩过去。"],
-        8: ["robot-retreat-space", "机器出门先留退路", "平面机器人搬货前先留退让空地，否则相向两车一起退回。聪明也挤不穿对方。"],
-        9: ["habitat-outer-edge-expansion", "扩舱先拆外缘", "平面舱站只能沿外缘扩建，不能把通道套进封闭新舱。加一间须先让一条路。"],
-        10: ["supply-openings-before-housing", "新门比新房先验收", "平面住区先开补给缺口再入住，封闭地块不能从外喂货。新门比新房先验收。"]
+        1: ["serial-passage", "一人歇脚全队休息", "平面窄口只容逐人搬运，前人坐下歇脚，身后整支队伍获得同款假期。", ["同款假期"]],
+        2: ["open-warehouse-mouth", "粮仓留下最后一口", "平面粮仓先清门口再补粮，满仓也留缺口。粮食多到最后，得给粮食留条活路。", ["给粮食留条活路"]],
+        3: ["junction-clearance", "路口轮流拥有远方", "平面路口清空才转弯，出城货等入城人走完。两拨人的远方撞在了一处。", ["远方撞在了一处"]],
+        5: ["uncrossed-drive-trains", "流水线拆成散步线", "平面传动无法交叉，工序拆开轮流送料。一件货走遍工厂，像串了半天门。", ["像串了半天门"]],
+        6: ["noncrossing-wiring", "电线比人更绕远", "平面电线绕旧线、分段接，铺不到头顶。电走得虽快，也得认这份绕路。", ["也得认这份绕路"]],
+        8: ["robot-retreat-space", "AI学会倒着让路", "平面送货机先留退让空地，两车相逢各退一步。人工智能终于学会退步。", ["人工智能终于学会退步"]],
+        9: ["habitat-outer-edge-expansion", "新邻居挤在地图边", "平面舱沿外缘扩建，通道不能封死。买在正中央的人，离新邻居越来越远。", ["离新邻居越来越远"]],
+        10: ["supply-openings-before-housing", "户型越封闭越挨饿", "平面住宅先开补给口再入住。最有私密感的全封闭户型，连晚饭也挡在外面。", ["连晚饭也挡在外面"]]
       }));
       case "inherited-memory": {
         const entry = step({
-          1: ["material-retrial", "祖辈会做材料未必", "继承的斧技先在眼前石料上重做，手会了，材料还没答应。"],
-          2: ["watercourse-recheck", "祖田位置要再找", "祖忆里的水路须沿地重找，河道已改弯。祖辈没记错，水没承诺原地不动。"],
-          3: ["conflicting-perspectives", "两份祖忆各见一半", "两家祖忆对同次交货各见一面，争议须重验实物。祖辈人数不折算证据重量。"],
-          5: ["motor-memory-machine-safety", "旧手势先离开机器试", "祖传动作先在停机处试做，再接新工序。手指记得快，不代表机器肯等。"],
-          6: ["voltage-requalification", "祖传电工先验电压", "继承电工手法后先验眼前电压，旧接法不能直接照搬。熟悉感不负责绝缘。"],
-          8: ["machine-demonstration-scope", "祖传手艺不全交给机器", "人把祖传动作分段示范给机器，只教当前工序。不附赠整段家事。"],
-          9: ["airlock-practice-on-empty-door", "旧开门手法先试空门", "祖忆中的开门动作先在空舱门重试，误触须隔离。记得怎么开不等于该开。"],
-          10: ["parallel-inheritance-reconciliation", "家族经验不能投票成真", "多支祖忆互相矛盾时分开实做，保留失败的那份。家族开会不能修改材料性质。"]
+          1: ["material-retrial", "祖辈会做石头未必", "祖传斧技换眼前石料重做一遍，手很熟，崩掉的缺口很新。", ["崩掉的缺口很新"]],
+          2: ["watercourse-recheck", "祖先记住了旧河道", "沿祖忆重找水路，河已改弯。人继承了祖先的记性，水没继承祖先的路线。", ["水没继承祖先的路线"]],
+          3: ["conflicting-perspectives", "祖辈各站各的那边", "两家祖忆为同次交货争执，实物重验。隔了几代人，视角仍隔着一张桌。", ["视角仍隔着一张桌"]],
+          5: ["motor-memory-machine-safety", "祖传手势先停机试", "祖传动作先在停机处试，才接新工序。熟练的手伸过去，祖先没见过这齿轮。", ["祖先没见过这齿轮"]],
+          6: ["voltage-requalification", "祖传电工认新电压", "祖传电工手法先验眼前电压。手记得每个接头，电流却像个陌生亲戚。", ["陌生亲戚"]],
+          7: ["source-context-reconstruction", "经验附带停产世界", "祖忆旧招先还原当年材料再试。经验没过期，配套的世界停产了。", ["配套的世界停产了"]],
+          8: ["machine-demonstration-scope", "AI只继承工作部分", "祖传动作按工序教给AI，家事留在人脑。机器学会祖传手艺，没学会祖传恩怨。", ["没学会祖传恩怨"]],
+          9: ["airlock-practice-on-empty-door", "祖传开门先认舱门", "旧开门手法在隔离空舱重试。手指想起老家，门外已经换成真空。", ["门外已经换成真空"]],
+          10: ["parallel-inheritance-reconciliation", "祖传经验分头翻车", "矛盾祖忆分开实做，失败也留档。同一家祖传秘方，终于凑齐了反例。", ["终于凑齐了反例"]]
         });
-        if (ctx.silent) entry[2] = "祖忆词句失效，只留动作感受。" + entry[2].split("。")[0] + "。";
+        if (ctx.silent) entry[2] = "祖忆词句失效。" + entry[2];
         return news("inherited-skill", "手艺消息", "只继承祖辈成年记忆的原主视角，不随现实更新；失语时词句失效。", entry,
           { inheritance: ctx.silent ? "motor-only" : "perspective-bound" });
       }
@@ -453,183 +459,187 @@
         const arrested = h("immortality"), capped = h("thirty-years");
         let entry;
         if (arrested) entry = capped
-          ? ["arrested-with-hard-cap", "不老也须按时交接", "长生阻断十倍衰老，三十年硬上限仍到期交接。工具继续用，任期不能续。"]
-          : ["arrested-aging", "人不老工具照旧磨损", "长生阻断十倍衰老，岗位不因年老空出。工具照常磨损，先换工具。"];
+          ? ["arrested-with-hard-cap", "不老也到交班时候", "长生止住十倍衰老，三十年硬限仍交班。脸还年轻，工具已认下位主人。", ["工具已认下位主人"]]
+          : ["arrested-aging", "人没老锤子先退休", "长生止住十倍衰老，工位一直有人。锤子换了几把，师傅还是那张脸。", ["师傅还是那张脸"]];
         else if (uploaded) entry = capped
-          ? ["uploaded-with-hard-cap", "上传没换起算日", "上传避开身体衰老，三十年限额照算。换了载体，没换起算日。"]
-          : ["nonbiological-external-clock", "上传不能催交货", "上传避开身体衰老，外部生产仍走原钟。人已上传，货还在路上。"];
+          ? ["uploaded-with-hard-cap", "换壳没刷新生日", "上传避开衰老，三十年仍从原日起算。新载体刚拆封，生日已经用了多年。", ["生日已经用了多年"]]
+          : ["nonbiological-external-clock", "人已上传货仍龟速", "上传避开身体衰老，外界生产仍走原钟。思想一日千里，快递一天三站。", ["思想一日千里，快递一天三站"]];
         else {
           entry = step({
-            1: ["short-adult-apprenticeship", "人先交班活照旧慢", "身体十倍衰老，成年学徒先学能马上交接的活。石斧没有因此快磨十倍。"],
-            3: ["successor-alongside-master", "接班人开工就跟着", "十倍衰老让工匠开工便带接任者，不能等做不动才教。传授也需要原速的时间。"],
-            5: ["strength-based-task-transfer", "工位跟着体能换", "十倍衰老的工人按体能转交重活，机器照原速运转。人先磨损不算设备折旧。"],
-            7: ["short-modular-work", "长项目拆成短交付", "十倍衰老让长项目拆成可接手的小段，工具连续用。项目不能要求同一个人耐用。"],
-            8: ["assistive-not-rejuvenating", "外骨骼不报销年龄", "十倍衰老者用助力设备交活，体能复验仍要做。穿上外骨骼不等于把年龄脱掉。"],
-            9: ["habitat-procedures-before-decline", "开舱手艺提前交棒", "十倍衰老者提前转交舱务实操，接任者须独立重做。身体快老不附赠快速学会。"]
+            1: ["short-adult-apprenticeship", "斧头慢慢人匆匆", "十倍衰老的成人先学短活好交接。手上的石头仍慢慢磨，一点不赶岁数。", ["一点不赶岁数"]],
+            3: ["successor-alongside-master", "开工先带接班人", "十倍衰老让工匠一开工就带接任者。一件器物没做好，师徒已商量谁收尾。", ["一件器物没做好"]],
+            5: ["strength-based-task-transfer", "人换轻活机器不换", "十倍衰老者按体能转交重活，机器照原速转。工厂最慢变老的，竟是旧设备。", ["竟是旧设备"]],
+            7: ["short-modular-work", "项目被拆成年轮", ctx.silent
+              ? "十倍衰老把长活拆短交付，工具接着用。工件还透着新，人已换过一班。"
+              : "十倍衰老把长项目拆短交付，工具接着用。文件夹还叫新建，人已换过一班。", [ctx.silent ? "工件还透着新" : "文件夹还叫新建"]],
+            8: ["assistive-not-rejuvenating", "外骨骼年轻本人照旧", "十倍衰老者借助力设备交活，定期重验体能。外骨骼满电，生日照常累加。", ["外骨骼满电，生日照常累加"]],
+            9: ["habitat-procedures-before-decline", "舱门慢得像老朋友", "十倍衰老者早教舱务，接任者独立重做。人赶着交班，舱门还在慢慢自检。", ["舱门还在慢慢自检"]]
           });
-          if (ctx.ending === "voyage") entry = ["short-biological-watch", "老得快不算快船", "生身船员按体能提前换岗，航程不能十倍缩短。老得快不算快船。"];
-          if (ctx.ending === "land") entry = ["short-season-handover", "人换了季节还没换", "十倍衰老者把" + field + "养护分段交接，收获仍等生长周期。人换了，季节还没换。"];
-          if (capped) entry = [entry[0] + "-hard-cap", entry[1], entry[2] + "寿限仍三十年。"];
+          if (ctx.ending === "voyage") entry = ["short-biological-watch", "年龄先抵达下一站", "船员按体能早换岗，航程仍走原速。年纪跑到了前面，飞船还在后面追。", ["飞船还在后面追"]];
+          if (ctx.ending === "land") entry = ["short-season-handover", "人换了季节还没换", "十倍衰老者分段交接" + field + "养护。接任者已来，收成仍按自己的岁数长。", ["按自己的岁数长"]];
+          if (capped) entry = [entry[0] + "-hard-cap", entry[1], entry[2] + "寿限仍三十年。", entry[3]];
         }
         return news("career-duration", "用工观察", "只加速身体衰老；长生先阻断衰老，三十年硬上限不被豁免。", entry,
           !arrested && ctx.ending === "land" ? { cultivation: field } : undefined);
       }
       case "half-gravity": {
         let entry = step({
-          1: ["manual-braking-space", "提得起还得拦得住", "重力减半后搬石仍留刹停距离，重量轻了，惯性没减。接货者不按半个人准备。"],
-          2: ["bucket-swing-restraint", "提桶省力泼水照旧", "轻桶运水改用两侧稳扶，防住横摆再放手。省下提力，没有省掉泼出的水。"],
-          3: ["anchored-buildings", "房子轻了先加锚", "减重建筑加锚抵住横向推力，不能只算抬得起多大石块。风没同意减半。"],
-          5: ["traction-before-load", "轻车先试刹车", "机车减重后先试附着与制动，再定装载量。拖得动不是停得住的证明。"],
+          1: ["manual-braking-space", "石头轻了脾气没减", "重力减半，搬石仍留刹停距离。抬时像小石头，停时想起它原来多大。", ["想起它原来多大"]],
+          2: ["bucket-swing-restraint", "省下力气用来扶桶", "轻桶运水改两侧稳扶，提力省了，横摆照旧。人省了一半力，水泼得很完整。", ["水泼得很完整"]],
+          3: ["anchored-buildings", "房子轻得不太踏实", "减重建筑加锚抗横推，抬石容易，固定费劲。风吹过来，屋主又想念重量。", ["屋主又想念重量"]],
+          5: ["traction-before-load", "车好拉了也难留了", "轻机车先试附着制动再装货。搬运工省下的力，刹车工全接过去了。", ["刹车工全接过去了"]],
           6: planar
-            ? ["planar-cart-inertial-load", "平面货车不能翻倍塞人", "减重平面货车先验启停负荷，不能按重量直接塞双倍乘客。每个人的惯性都来了。"]
-            : ["lift-inertial-load", "电梯不按重量翻客流", "减重电梯先验启停负荷，不能按重量直接塞双倍乘客。每个人的惯性都来了。"],
-          8: ["robot-braking-calibration", "送货机先练停住", "配送机按货物质量重调制动，抓取可以省力，急停仍须留空间。轻拿不等于轻停。"],
-          9: ["near-earth-docking", "近地货舱先缓冲", "近地货舱对接先留缓冲行程，不用轻了的重量估算冲击。舱壁照旧怕撞。"],
-          10: ["physical-carrier-braking", "副本的搬家车仍要刹车", "副本迁居时载体搬运仍按质量制动，住户可无身体，运输设备不能无刹车。"]
+            ? ["planar-cart-inertial-load", "平面货车仍怕急停", "减重平面货车按启停负荷载人。秤只来了半份，惯性一个也没缺席。", ["惯性一个也没缺席"]]
+            : ["lift-inertial-load", "电梯不信体重秤", "减重电梯按启停负荷载人。秤只来了半份，惯性一个也没缺席。", ["惯性一个也没缺席"]],
+          8: ["robot-braking-calibration", "AI重新学会站住", "配送机按质量重调制动，抓取省力，急停留空间。它轻轻拿起，郑重其事地停下。", ["郑重其事地停下"]],
+          9: ["near-earth-docking", "货舱轻轻撞得很重", "近地货舱对接先留缓冲行程，冲击按质量算。货单写轻货，舱壁谢绝轻信。", ["舱壁谢绝轻信"]],
+          10: ["physical-carrier-braking", "灵魂搬家还带刹车", "副本搬载体仍按质量制动。住户已摆脱肉身，搬家车还在替灵魂踩刹车。", ["替灵魂踩刹车"]]
         });
-        if (ctx.ending === "voyage") entry = ["remeasure-off-earth", "省力经验尚未落地", "异星卸货先测当地重力，地球减半规则不外带。省力经验到了，此地还没验收。"];
-        if (ctx.ending === "land") entry = ["anchored-farm-tools", "农具轻了抓地也少了", "减重农具先加锚再试牵引，搬着轻不能证明耕得深。土地没有跟着松一半。"];
+        if (ctx.ending === "voyage") entry = ["remeasure-off-earth", "地球优惠到站失效", "异星卸货先测当地重力，地球减半不外带。老搬运工落地，重新认识自己的箱子。", ["重新认识自己的箱子"]];
+        if (ctx.ending === "land") entry = ["anchored-farm-tools", "轻农具还要沉住气", "减重农具加锚后试牵引，搬得轻巧，抓地不足。农人把省下的重量又请了回来。", ["把省下的重量又请了回来"]];
         return news("freight-braking", "搬运提醒", "只减地表及近地重力，质量、惯性与空气阻力不变。", entry);
       }
       case "immortality": {
-        if (h("thirty-years")) return news("housing-turnover", "住处消息", "三十年硬上限优先，长生只保留此前的不衰老。",
-          ["thirty-year-cap", "长生不附无限住期", "长生挡住衰老，挡不住三十年硬上限。住处到期交接，不能订无限住期。"]);
+        if (h("thirty-years")) return news("housing-turnover", "长生见闻", "三十年硬上限优先，长生只保留此前的不衰老。",
+          ["thirty-year-cap", "长生住客也有末期", "长生保住年轻，三十年硬上限仍须交房。皱纹没来，住期先到了。", ["皱纹没来，住期先到了"]]);
         let entry = step({
-          1: ["rotating-shelter", "人可长生住处轮用", "长生者不自然退出，公共住处改轮住。人能一直住，不能一直住这儿。"],
-          2: ["land-use-renewal", "祖先还在田须轮用", "长生村落把田地使用分期轮换，不能等祖先离世再分田。祖先也在等分田。"],
-          3: ["fixed-public-tenure", "元老不老任期要老", "长生议事者到期换席，席位不随寿命续期。资历可以很长，椅子须让出来。"],
-          5: ["workshop-use-rotation", "工坊传承不等遗产", "长生工坊把设备使用与本人寿命分开，徒弟轮到机位。传承不再等待遗产。"],
-          7: ["finite-memory-curation", "活太久也要腾记忆", "长生者挑选旧事留在外部载体，脑内只留常用部分。活过的不保证全记得。"],
-          8: ["consensual-memory-selection", "机器不能替人选忘事", "长生者让设备整理旧经历，舍弃哪段须本人试认。智能助手没有替人后悔的权限。"],
-          9: ["repair-time-rescue", "不会死也须来救", "长生舱员损伤仍要慢修，救援先移出危险处。不会死亡不等于不占救援时间。"],
-          10: ["finite-active-memory", "副本寿命不限内存有限", "长生副本轮换加载旧忆，不把全部经历同时运行。活得无穷长，内存没跟上。"]
+          1: ["rotating-shelter", "长生者拎包换洞", "长生者公共住处轮住，洞口磨光了好几轮，搬出去的还是最早那位。", ["还是最早那位"]],
+          2: ["land-use-renewal", "祖先也来等分田", "长生村落分期轮用田地，后人等分田，祖先在旁边等同一块。", ["祖先在旁边等同一块"]],
+          3: ["fixed-public-tenure", "元老站在新席后面", "长生议事者到期换席，资历留身上。坐垫换了主人，靠背还认得旧人。", ["靠背还认得旧人"]],
+          5: ["workshop-use-rotation", "师傅亲眼看传承", "长生工坊轮用设备，徒弟终于接过机位。祖师爷本人站旁边，看祖传手艺走样。", ["祖师爷本人站旁边"]],
+          7: ["finite-memory-curation", "旧事搬进外置人生", "长生者把旧忆外存，脑内留常用部分。重逢时先找备份，想你也得读盘。", ["想你也得读盘"]],
+          8: ["consensual-memory-selection", "撤回人生先做考古", "长生者让AI整理旧忆，删黑历史仍由本人确认。人生太长，连撤回都要考古。", ["连撤回都要考古"], "AI整理长生者旧忆，删黑历史须本人确认。连撤回都要考古。"],
+          9: ["repair-time-rescue", "不死的人等修很久", "长生舱员受损后先救出慢修，待修之处逐个修补。永生者终于嫌时间太多。", ["终于嫌时间太多"]],
+          10: ["external-memory-replaceable-substrate", "忒修斯还记得旧账", "长生副本外存旧忆、轮换加载，载体逐件替换。零件换完，人还在还旧账。", ["零件换完，人还在还旧账"]]
         });
-        if (ctx.ending === "voyage") entry = ["finite-voyage-berths", "乘客不老船舱照旧满", "长生船员轮住舱位，殖居先扩补给再接新人。船票不能按无限寿命折成无限座位。"];
-        if (ctx.ending === "land") entry = ["soil-rest-before-tenure", "人不老土地也要歇", "长生农人轮用田块，休耕照旧留足。本人不需退休，不代表土地同意连作到永远。"];
+        if (ctx.ending === "voyage") entry = ["finite-voyage-berths", "永生乘客轮着靠窗", "长生船员轮住舱位，殖居扩补给才接新人。余生无限，靠窗的余位没有。", ["余生无限，靠窗的余位没有"]];
+        if (ctx.ending === "land") entry = ["soil-rest-before-tenure", "田比本人先退休", "长生农人轮用田块留足休耕。农人活力依旧，土地先申请歇一季。", ["土地先申请歇一季"]];
         return news("housing-turnover", "住处消息", "不衰老不死亡，损伤慢修；记忆容量、空间与物资不会随寿命增加。", entry);
       }
-      case "no-language": return news("physical-consent", "办理须知", "文字、词语、暗号均失效，直接观察模仿不等于约定符号。", step({
-        1: ["direct-exchange", "双方带东西来", "失语后双方带实物当面重做操作，点头不算约定，站着没走也不算同意。"],
-        2: ["full-size-land-demonstration", "量田得走到田里", "失语者把量具搬到田边，双方沿真实边界走一遍。画个圈不能代替这趟路。"],
-        3: ["in-person-reenactment", "争议双方重做现场", "失语争议由双方在原物旁重演操作，旁观者只看实际结果。没人能口头保证。"],
-        5: ["hands-on-assembly", "工序接手不接暗号", "失语装配由熟手现场带做，接手者独立再做一遍。颜色和手势不另充密码。"],
-        6: ["isolated-electrical-demonstration", "通电以前先当面试", "失语电工在隔离实线上示范，接手者亲手复验。画一支箭头不能指挥送电。"],
-        8: ["machine-imitation-only", "机器跟手学不收口令", "失语者让机器直接模仿操作，再用实物检验结果。机器不会替人恢复口令。"],
-        9: ["airlock-physical-interlock", "人到舱门前才能开", "失语舱门靠当面实作核对，隔开危险部分再交接。沉默不能冒充开舱许可。"],
-        10: ["embodied-consent", "远处替身不能代同意", "失语者亲自在待用物前尝试和退出，远处替身不代授权。身体到了也仍可离开。"]
+      case "no-language": return news("physical-consent", "无声现场", "文字、词语、暗号均失效，直接观察模仿不等于约定符号。", step({
+        1: ["direct-exchange", "实物代替三寸舌", "失语双方带实物当面试做，想换斧头的人先劈木。木头成了最忙的介绍人。", ["木头成了最忙的介绍人"]],
+        2: ["full-size-land-demonstration", "量田顺便走完全田", "失语双方带量具沿真田界走一遍。小块地好商量，大块地费鞋底。", ["大块地费鞋底"]],
+        3: ["in-person-reenactment", "争执改成重做一遍", "失语争议靠原物旁重演，只看结果。双方没争出一句话，倒修好了半张桌。", ["倒修好了半张桌"]],
+        5: ["hands-on-assembly", "老师傅变活说明书", "失语装配由熟手带做，接手者独做复验，暗号无效。说明书本人也会腿酸。", ["说明书本人"]],
+        6: ["isolated-electrical-demonstration", "电路等双手想明白", "失语电工在隔离实线上示范复验。线路全接好了，还得等第二双手想明白。", ["第二双手想明白"]],
+        8: ["machine-imitation-only", "AI先当无声学徒", "失语者让机器模仿实作，再验实物。最会接话的AI，改行接师傅手里的活。", ["改行接师傅手里的活"]],
+        9: ["airlock-physical-interlock", "舱门等本人演示", "失语舱门隔开危险段，当面实作核对。赶路的人带着全套动作到场。", ["带着全套动作到场"]],
+        10: ["embodied-consent", "替身递不出一句准话", "失语者亲自在实物前尝试或退出，替身不代授权。分身遍地，本人还得跑腿。", ["分身遍地，本人还得跑腿"]]
       }));
       case "falling-moon": {
         let entry = step({
-          1: ["tidal-window", "住处好了潮还没退", "月落扰潮，安全住处全员有份，行李等潮窗。房间腾好了，路还要等海腾出来。"],
-          2: ["split-shelter-stocks", "备用粮不放同一岸", "避潮住区把备用口粮分放两岸，潮窗关闭时就地取用。过不去不等于没饭吃。"],
-          4: ["return-window-before-departure", "出海先留返程潮窗", "避潮港先留足返程窗口再放船，误期者留安全区。满载不构成叫海水让路的理由。"],
-          5: ["relocatable-workshops", "工坊能拆住区不撤", "月落沿岸工坊改用可拆工位，潮来先撤设备，人员住安全区。厂址不必忠于海岸。"],
-          7: ["local-tide-recheck", "潮表不包下次还准", "避潮道路每次开放前现场测水位，旧潮表不直接续用。海水没有定期履约的义务。"],
-          8: ["uncrewed-shelter-repair", "补墙先派机器出去", "潮窗内由机器先补避难区外壁，人留安全处复验。机器回来也要冲盐。"],
-          9: ["independent-emergency-cells", "每舱都有独立避难处", "月落住区把避难单元分段隔开，一段检修不抽空别处保障。安全不靠邻舱凑数。"],
-          10: ["protected-carrier-relocation", "上传的家也要防潮", "上传住区把载体迁入避潮单元，外部设备趁潮窗维护。身体不在，插座还在。"]
+          1: ["tidal-window", "新房等海交出道路", "月落扰潮，安全住处全员有份，行李等潮窗。房东交了房，海还没交路。", ["海还没交路"]],
+          2: ["split-shelter-stocks", "两岸都有备用晚饭", "避潮口粮分存两岸，断路时就地吃。人过不去，晚饭早就替人过来了。", ["晚饭早就替人过来了"]],
+          4: ["return-window-before-departure", "返程先向海借时间", "港口先留返程潮窗再放船，误期留安全区。满船货物，得等海腾出空闲。", ["等海腾出空闲"]],
+          5: ["relocatable-workshops", "厂址跟着工具搬", "沿岸工位改可拆，潮来撤设备，人住安全区。厂房还在原地，工作已经搬走。", ["工作已经搬走"]],
+          7: ["local-tide-recheck", "海把旧潮表撤回了", "避潮路开放前重测水位，旧潮表作废。海每次改主意，都忘了通知日历。", ["忘了通知日历"]],
+          8: ["uncrewed-shelter-repair", "机器回来先洗咸味", "机器趁潮窗补外墙，人留安全区复验。AI接了人类的班，先学会洗掉一身盐。", ["洗掉一身盐"]],
+          9: ["independent-emergency-cells", "安全舱各有小天地", "避难单元分段独立，一舱检修不借邻舱保障。邻居装修，终于只烦邻居。", ["终于只烦邻居"]],
+          10: ["protected-carrier-relocation", "灵魂搬家先防水", "上传载体迁入避潮舱，外设趁潮窗维护。灵魂摆脱了身体，仍怕插座进水。", ["仍怕插座进水"]]
         });
-        if (ctx.ending === "voyage") entry = ["tidal-launch-supply", "出发货先过潮窗", "星船补给先在地面安全区集齐，趁潮窗转运。离开地球的货仍得先走出仓库。"];
-        if (ctx.ending === "land") entry = ["safe-upland-cultivation", "耕地不能冒充避难处", "土地住区把人留在安全区，潮窗内分段养护田地。想多种一垄不批准多冒一次险。"];
-        return news("tidal-access", "住区通告", "月球缓慢下坠扰乱潮汐；可循环修复的避难区始终保障全员安全。", entry);
+        if (ctx.ending === "voyage") entry = ["tidal-launch-supply", "银河很远海岸很近", "星船补给在安全区集齐，趁潮窗转运。目的地在银河，发货先看门口水位。", ["发货先看门口水位"]];
+        if (ctx.ending === "land") entry = ["safe-upland-cultivation", "潮汐替农人定闹钟", "农人住安全区，趁潮窗分段养田。地契写着自己的名，出勤听海的。", ["出勤听海的"]];
+        return news("tidal-access", "海边来信", "月球缓慢下坠扰乱潮汐；可循环修复的避难区始终保障全员安全。", entry);
       }
       case "offline-world": {
         let entry = step({
           7: ctx.silent
-            ? ["physical-demonstration", "更新须带着样品来", "断网又失语，工具样品随人送来当面示范。新做法来得快不快，先看脚程。"]
-            : ["storage-carrier", "更新正在赶路", "断网后新资料随存储载体送来，抵达前用旧版。催得再急也要算运程。"],
+            ? ["physical-demonstration", "新手艺背着样品来", "断网失语后样品随人送来实作。手艺还没到，传手艺的人先磨破了鞋。", ["先磨破了鞋"]]
+            : ["storage-carrier", "更新正在等红灯", "断网资料随存储件运来，未到先用旧版。知识更新的瓶颈，卡在一个红灯上。", ["卡在一个红灯上"]],
           8: ctx.silent
-            ? ["offline-machine-demonstration", "两台机器见面再学", "断网又失语，单机带实物到另一台面前示范，学会后才分开。更新需要见面。"]
-            : ["offline-machine-version-handoff", "机器会合才对版本", "断网配送机回站交换存储件，版本不合先本地复验。跑得远不等于更新快。"],
+            ? ["offline-machine-demonstration", "机器见面拜个师", "断网失语，单机带实物当面示范，学会才分开。AI拜师也得带点真东西。", ["AI拜师也得带点真东西"]]
+            : ["offline-machine-version-handoff", "人工智能学会走亲戚", "断网配送机背存储件回站碰头同步知识，版本不合就地复验。人工智能重新学会走亲戚。", ["人工智能重新学会走亲戚"], "断网配送机回站交换存储件、复验版本。人工智能重新学会走亲戚。"],
           9: ctx.silent
-            ? ["habitat-demonstrator-freight", "新手艺也占舱容", "断网又失语，跨舱新工序随示范者和实物运输。空运一个点头不算交付。"]
-            : ["data-cargo-with-local-authority", "每舱先按手边资料办", "断网舱站让存储件随货运，本舱先独立处置故障。等待总部不能堵住漏气口。"],
+            ? ["habitat-demonstrator-freight", "手艺买了张货运票", "断网失语，跨舱工序随示范者和实物运输。手艺占着舱位，睡在行李旁边。", ["手艺占着舱位"]]
+            : ["data-cargo-with-local-authority", "总部回复晚于补丁", "断网舱站随货运存储件，故障本地先修。总部的好办法赶到，漏口已长出补丁。", ["漏口已长出补丁"]],
           10: ctx.silent
-            ? ["embodied-offline-migration", "搬人格得搬整台载体", "断网又失语，迁居者携运行载体亲自到场核对。没有一句口令能把本人送过去。"]
-            : ["offline-personal-carrier-migration", "迁居者随载体出门", "断网副本迁居须运输载体，途中基本运行另留能源。人格不能发一个远程附件。"]
+            ? ["embodied-offline-migration", "本人整机到货", "断网失语，迁居者带运行载体亲到场。灵魂忙着搬家，搬运者抱紧外壳。", ["灵魂忙着搬家"]]
+            : ["offline-personal-carrier-migration", "人格按件走物流", "断网副本运载体迁居，途中另留运行能源。本人正在想家，家在下一站卸货。", ["家在下一站卸货"]]
         });
         if (ctx.ending === "voyage") entry = ctx.silent
-          ? ["voyage-demonstration-cargo", "船与船碰面才教新活", "断网又失语，星船相会时带实物互做示范。远处闪几下灯不算消息。"]
-          : ["voyage-storage-mail", "星际邮袋赶不上时事", "断网星船携存储件互送，旧消息先按出发时核验。邮袋抵达不代表近况抵达。"];
+          ? ["voyage-demonstration-cargo", "两船会面交换手艺", "断网失语，星船相会带实物互做示范。两船刚学会同一招，又各奔几光年。", ["又各奔几光年"]]
+          : ["voyage-storage-mail", "热搜送成了考古", "断网星船互送存储件，消息按出发时核验。热搜抵达时，已归考古栏目。", ["已归考古栏目"]];
         if (ctx.ending === "land") entry = ctx.silent
-          ? ["farm-demonstration-visits", "教种地得走到地里", "断网又失语，邻村带农具来田里同做新活。远处比画不代替这趟路。"]
-          : ["village-storage-circuit", "村里更新随农具来", "断网村落让存储件随农具巡回，坏了就带回重送。路走通了，版本才算通。"];
+          ? ["farm-demonstration-visits", "教种地顺便走亲戚", "断网失语，邻村带农具到田里同做新活。人来一趟，新手艺沾两村泥。", ["新手艺沾两村泥"]]
+          : ["village-storage-circuit", "村口长出离线缓存", "断网村落随农具巡回存储件，坏件带回重送。最新知识进村时，带着一身土。", ["带着一身土"]];
         return news("network-delivery", "通信快讯", "单机照用，远距网络停用；文字也失效时只能带实物直接示范。", entry);
       }
       case "talking-plants": {
-        if (ctx.silent) return news("root-irrigation", "灌溉消息", "语言消失优先，植物话音不能变成暗号。",
-          ["speech-blocked", "浇水仍得蹲下看土", "植物的话无人听懂，灌溉仍须摸根土看叶色。叶色是状态，不是另造的暗号。"]);
+        if (ctx.silent) return news("root-irrigation", "草木消息", "语言消失优先，植物话音不能变成暗号。",
+          ["speech-blocked", "根部热线一起失声", "植物话音失效，人仍摸根土看叶色。根部热线停了，蹲下去的人又多了。", ["根部热线停了"]]);
         let entry = step({
-          1: ["local-root-water", "根部消息仅限本株", "植物只报自身缺水，邻地仍另查。根扎得再深，也不替邻地作证。"],
-          2: ["irrigation-by-root-reach", "修渠先逐株问", "会说话的苗逐株报渴，支渠按实际根区分水。声音大的不能代领邻株的水。"],
-          4: ["living-cargo-care", "船货会催人浇水", "船上活苗报干燥，照料者逐盆检查再浇水。船长不能替全船盆栽宣布不渴。"],
-          5: ["smoke-source-testing", "树喊难受还得找烟源", "工厂边的树报叶片不适，人须实测污染来源。树会投诉，不会替人做整厂调查。"],
-          7: ["sensors-crosscheck-plants", "植物投诉附现场实测", "灌溉者对照传感器与本株感受再调水。仪器坏了不等于植物在夸大。"],
-          8: ["living-plant-model-validation", "农机须听活株反驳", "农机用活株感受复验养护模型，预测舒适不算已经舒适。植物不签满意度保单。"],
-          9: ["closed-root-water-budget", "根的需求进舱内水账", "舱内活根报需求后重分循环水，不能各取无限份。会说渴，没有随身带来一条河。"],
-          10: ["simulated-forest-not-evidence", "模拟树林不能代活根", "上传者照料实体植物仍问活根，模拟森林的欢呼不算浇水证据。树没搬进画面。"]
+          1: ["local-root-water", "一株草只管一株渴", "植物只报自己缺水，邻地另查。人蹲下问了一圈，草还没聊完。", ["草还没聊完"]],
+          2: ["irrigation-by-root-reach", "大嗓门没多领水", "会说话的苗逐株报渴，按根区分水。那株最能说的，分到的仍是一株的份。", ["仍是一株的份"]],
+          4: ["living-cargo-care", "船货先嫌旅途干燥", "船上活苗报干燥，逐盆验后浇水。货还没到岸，旅途意见已经长了一船。", ["旅途意见已经长了一船"]],
+          5: ["smoke-source-testing", "树有委屈没有烟囱图", "厂边树报叶片不适，人去实测烟源。树知道难受，哪根烟囱仍得人找。", ["哪根烟囱仍得人找"]],
+          7: ["sensors-crosscheck-plants", "盆栽纠正了传感器", "浇水前对照传感器与本株感受。仪器显示舒适，盆栽当场表达了不同意见。", ["盆栽当场表达了不同意见"]],
+          8: ["living-plant-model-validation", "AI被盆栽打回重学", "AI用活株感受重验养护模型，预测全绿，盆栽喊渴。训练集就在窗台上反驳它。", ["训练集就在窗台上反驳它"]],
+          9: ["closed-root-water-budget", "一舱植物分一桶水", "舱内按活根需求重分循环水。大家都开了口，那桶水还是原来那桶。", ["那桶水还是原来那桶"]],
+          10: ["simulated-forest-not-evidence", "虚拟森林先别喝彩", "上传者浇水仍问实体活根。虚拟森林一片叫好，窗外那株正渴着。", ["窗外那株正渴着"]]
         });
         if (h("sun-off")) entry = step({
-          1: ["light-deficit", "说清缺光也要供能", "太阳熄灭后植物能报缺光，补光仍耗能源。需求说清了，光不会自行前来。"],
-          6: ["plant-light-metering", "先验叶片再调灯", "暗城逐株询问并实测叶片状态，按需分灯。会说话不能让灯耗电减少。"],
-          8: ["adaptive-root-light-budget", "灯跟活根需要调", "暗地农机按活根感受调补光，超出能耗就缩种植面。投诉处理不等于能源增发。"],
-          9: ["closed-light-water-allocation", "补光和水一起算", "暗舱按活根需求分水与灯，余热再回收。植物吃到光，没有让整套设备免耗能。"],
-          10: ["real-roots-compute-light-budget", "算房与植物分能源", "上传住区把实体植物补光与算房用能合算。虚拟阳光不能拿去喂活根。"]
+          1: ["light-deficit", "草木学会说缺太阳", "太阳熄灭，植物报缺光，补光仍须能源。大家听懂了，天还是原来那么黑。", ["天还是原来那么黑"]],
+          6: ["plant-light-metering", "叶片各领一份日出", "暗城逐株问感受、验叶片后分灯。每片叶子都想早起，电站只好另算。", ["每片叶子都想早起"]],
+          8: ["adaptive-root-light-budget", "种植面积跟着灯缩", "AI按活株感受调灯，能耗超额就缩种植面。菜园越种越精，空地越来越懂事。", ["空地越来越懂事"]],
+          9: ["closed-light-water-allocation", "植物的日出循环用", "暗舱按根需分水分灯，余热回收。叶片晒过的那点暖，转身又去忙别的。", ["转身又去忙别的"]],
+          10: ["real-roots-compute-light-budget", "脑子和菜分同一盏光", "算房与实体植物补光共算能源。上传者想多思考一会，菜叶先少晒一会。", ["菜叶先少晒一会"]]
         });
-        if (ctx.ending === "voyage") entry = ["ship-root-life-support", "舱里的树不能替邻舱说话", "星船逐舱问活根并实测水与光，循环系统据此调整。隔舱的树没有参会。"];
-        if (ctx.ending === "land") entry = ["root-by-root-restoration", "土地恢复逐根核验", "回归土地逐株问根再验土，枯死地块另取样。最健谈的一株不能代表整片荒地。"];
+        if (ctx.ending === "voyage") entry = ["ship-root-life-support", "树做随船环境顾问", "星船逐舱问根并实测水光，调整循环。顾问根扎在盆里，出差全靠别人抱。", ["出差全靠别人抱"]];
+        if (ctx.ending === "land") entry = ["root-by-root-restoration", "荒地恢复听不到全票", "逐株问根再验土，枯地另取样。最健谈那株聊了半天，荒地仍是一片沉默。", ["荒地仍是一片沉默"]];
         return news("root-irrigation", "灌溉消息", "植物只知自身感受，不能移动或代远处作证；水与补光仍耗资源。", entry);
       }
       case "thirty-years": {
         let entry = step({
-          1: ["adult-short-handover", "工具接班寿限不续", "三十年寿限内完成自己的活，工具留给接任者。能传下去的是斧头，不是余命。"],
-          2: ["land-contract-within-life", "田契不能比本人长", "田地养护约止于本人三十岁前，接手者重新实做。土地长久，不负责替人续约。"],
-          4: ["return-before-cap", "远行先算回程", "三十年寿限让远行先留回程时间，晚归不能延期。船可以传，人不能续。"],
-          5: ["asset-not-person-handover", "机器长租人短接", "三十年寿限下机器分段交接使用，接任者另担当期的活。机器耐用不替主人延寿。"],
-          7: ["service-not-identity-transfer", "长期服务拆成短约", "照护与工作服务都在本人三十岁前结清，接手者另立关系。不把新人当旧人续费。"],
-          8: ["nonpersonal-care-tools", "机器接活不接人格", "寿限前把照护工具交给接任者，机器只能接工序。模仿动作不算本人继续服务。"],
-          9: ["habitat-mission-cutoff", "舱务远期任务须换人", "舱务任务按三十年寿限分段，长期修复由新人重验接手。原人的授权不跟工具续命。"],
-          10: ["uploaded-clock-not-reset", "上传不送新任期", "上传与副本仍从原起点算三十年，只交接非人格资料。搬进新载体，不赠新任期。"]
+          1: ["adult-short-handover", "斧头比任期长", "三十年寿限内做完活，工具传下去。石斧越磨越顺手，学会认不同的手。", ["学会认不同的手"]],
+          2: ["land-contract-within-life", "田契长不过生日", "养田约止于本人三十岁前，后人重新实做。地没挪窝，田契换了好几张脸。", ["田契换了好几张脸"]],
+          4: ["return-before-cap", "远行先把归期装好", "三十年寿限下先留回程时间再远行。行囊还空着，归期已占了大半。", ["归期已占了大半"]],
+          5: ["asset-not-person-handover", "老机器认识新人", "三十年寿限下机器分段交给新人。开机动作代代相传，手柄越用越认生。", ["手柄越用越认生"]],
+          7: ["service-not-identity-transfer", "长期服务换了头像", "照护与工作三十岁前结清，新人另立关系。服务还在续，熟悉的头像停在上一页。", ["头像停在上一页"]],
+          8: ["nonpersonal-care-tools", "AI留下动作没留人", "寿限前照护工具交新人，AI仅接工序。它学会那套动作，做的人已经换了。", ["它学会那套动作"]],
+          9: ["habitat-mission-cutoff", "舱站修了几任人生", "舱务按三十年限分段，新人重验接手。那道老焊缝，见过几任年轻面孔。", ["那道老焊缝"]],
+          10: ["uploaded-clock-not-reset", "出厂日期骗不过寿限", "上传副本仍从原日起算三十年，只传非人格资料。机壳全新，剩余岁数照旧。", ["机壳全新，剩余岁数照旧"]]
         });
-        if (ctx.ending === "voyage") entry = ["voyage-within-life", "路远不是延期理由", "星际个人航程须在三十岁前完成，超期航线不派本人出发。路远不是延期理由。"];
-        if (ctx.ending === "land") entry = ["seed-not-person-inheritance", "留下种子不留下本人", "三十年寿限前交清田务，种子农具留给后来者。下一季发芽不算本人续寿。"];
-        return news("contract-horizon", "合约须知", "三十年硬上限优先于长生；换身体、载体或住处都不重新计时。", entry);
+        if (ctx.ending === "voyage") entry = ["voyage-within-life", "星图先折去太远那边", "个人航程要在三十岁前完成，超期不出发。星图摊得很大，能用的只剩一角。", ["能用的只剩一角"]];
+        if (ctx.ending === "land") entry = ["seed-not-person-inheritance", "种子接住下一季", "三十年寿限前交田务，种子农具留后来者。来年长出的那垄，认土不认旧主人。", ["认土不认旧主人"]];
+        return news("contract-horizon", "短生札记", "三十年硬上限优先于长生；换身体、载体或住处都不重新计时。", entry);
       }
       case "no-borders": {
         let entry = step({
-          1: ["terrain-and-private-consent", "边界撤了山还在", "迁居免查国籍，进私人住处仍须本人同意。山没搬走，别人家没变近路。"],
-          2: ["road-not-door-right", "驿路通了家门没开放", "无国界驿路共修公共路段，私家门前另征同意。走遍天下不附带走遍卧室。"],
-          4: ["port-physical-compatibility", "港口查吃水不查国籍", "无国界船队入港先验吃水与泊位，货可直运，船底不能直接穿过浅滩。"],
-          5: ["rail-gauge-transfer", "国界没了轨距还在", "无国界铁路在异轨处换装，免过关不能免换轮。列车仍认轨距。"],
-          6: ["power-interface-conversion", "电也不能直接串门", "无国界电网先匹配电压再接通，住得近不能把接口硬插进去。"],
-          8: ["robot-access-consent", "配送机不获开门特权", "无国界配送机先验实体接口，进入私宅须本人当场准入。通行便利不包括拆门。"],
-          9: ["airlock-pressure-compatibility", "免过关不免验舱压", "无国界舱站先核对气压和私域准入，再开接驳口。真空不承认通行便利。"],
-          10: ["private-memory-boundary", "意识迁居不打开别人脑门", "上传者跨区不验国籍，进入他人记忆仍须本人同意。世界无界，脑内不公用。"]
+          1: ["terrain-and-private-consent", "山没跟国界搬走", "迁居免查国籍，私宅仍问主人。大地忽然宽了许多，别人家门还是那么窄。", ["别人家门还是那么窄"]],
+          2: ["road-not-door-right", "天下可走卧室免谈", "无国界驿路共修，私门另征同意。商旅走了千里，最后几步仍被主人拦住。", ["最后几步"]],
+          4: ["port-physical-compatibility", "浅滩仍在办理拒绝", "无国界船队验吃水泊位后入港。关口撤了，浅滩照旧让大船在外面等。", ["浅滩照旧让大船在外面等"]],
+          5: ["rail-gauge-transfer", "车轮还保留老国籍", "无国界铁路遇异轨仍换装。旅客一路通行，车轮还坚持祖传尺寸。", ["祖传尺寸"]],
+          6: ["power-interface-conversion", "电压比邻居认生", "无国界电网先匹配电压再接通。邻居都混熟了，插头仍需要介绍人。", ["插头仍需要介绍人"]],
+          8: ["robot-access-consent", "AI周游到家门口", "配送机跨区后验接口，私宅等本人准入。它走遍世界，最后停在一张门垫前。", ["最后停在一张门垫前"]],
+          9: ["airlock-pressure-compatibility", "真空还坚持边界", "舱站核对气压与私域准入才接驳。人类拆掉国界，真空把门关得更严。", ["真空把门关得更严"]],
+          10: ["private-memory-boundary", "脑内还有最后一道门", "上传迁居免国籍核验，进他人记忆仍征同意。一路畅通，到旧情旧事前停住。", ["到旧情旧事前停住"]]
         });
-        if (ctx.ending === "voyage") entry = ["landing-site-consent", "星际落点不是空座", "星际迁居先验落点环境与私人场地准入，国界撤掉不等于每块地都空着。"];
-        if (ctx.ending === "land") entry = ["shared-water-private-land", "搬到田边不多一条河", "无国界农人共修水路，进田仍须使用者同意。迁居自由不增发灌溉水量。"];
-        if (ctx.silent) entry = [entry[0] + "-direct", entry[1], entry[2].split("。")[0] + "。失语须当面实作核对。"];
-        return news("migration-access", "迁居新规", "撤掉国界限制，不撤地形、工具接口和私人空间；准入不能代办。", entry);
+        if (ctx.ending === "voyage") entry = ["landing-site-consent", "星际自由停在院外", "星际落点先验环境与私人准入。飞过几光年的人，在别人院外等开门。", ["在别人院外等开门"]];
+        if (ctx.ending === "land") entry = ["shared-water-private-land", "河水没多出新户口", "无国界农人共修水路，进田问使用者。住户搬来一批，河还是原来那条。", ["河还是原来那条"]];
+        if (ctx.silent) entry = [entry[0] + "-direct", entry[1], entry[2] + "失语当面实作核对。", entry[3]];
+        return news("migration-access", "远行见闻", "撤掉国界限制，不撤地形、工具接口和私人空间；准入不能代办。", entry);
       }
       case "live-exams": {
         const canceled = h("no-exam"), hidden = h("dark-forest") || s.mechanisms.some((m) => m.id === "dark-forest");
         const channel = hidden ? "enclosed" : ctx.silent || disconnected || ctx.level < 7 ? "onsite" : "broadcast";
         const venue = channel === "enclosed" ? "遮蔽场内" : channel === "onsite" ? "现场" : "直播中";
         let entry = step({
-          1: ["hands-visible", "手要留在观众眼前", "由本人全程露出双手做成实物"],
-          3: ["spectator-separation", "围观者站到手够不着处", "旁观者退到碰不到工具的位置"],
-          5: ["machine-safety-separation", "看操作不必靠近齿轮", "观众与运转机器隔开，操作者单独交活"],
-          7: ["unbroken-process", "成品漂亮不能跳过过程", "从取料到交付连续展示，不拿成品替过程"],
-          8: ["human-machine-contribution", "谁做的活谁来展示", "人和机器分开重做，各自贡献当场核验"],
-          9: ["safe-empty-chamber", "不能拿乘客当考具", "在空舱重做修漏，不拿乘客当检验材料"],
-          10: ["single-copy-performance", "副本不能中途换考生", "同一副本全程完成，其他副本不得代手"]
+          1: ["hands-visible", "手艺藏不住双手", "双手全程做出实物。看客满腹高招，全憋在肚里。", ["全憋在肚里"]],
+          3: ["spectator-separation", "高手退到伸手不及", "观众退到够不着工具处。热心高手忽然只剩眼神。", ["只剩眼神"]],
+          5: ["machine-safety-separation", "观众与齿轮保持距离", "隔开观众与机器独做。热情止于围栏，齿轮照转。", ["热情止于围栏"]],
+          7: ["unbroken-process", "手艺没有剪辑版", "从取料到成品连续展示。漂亮成品的狼狈过程全在。", ["狼狈过程全在"]],
+          8: ["human-machine-contribution", "AI和主人分开亮相", "人与机器各自重做。机器做得越好，主人越难借光。", ["主人越难借光"]],
+          9: ["safe-empty-chamber", "空舱先当挑剔观众", "空舱重做修漏。看客很热情，压力表很冷淡。", ["压力表很冷淡"]],
+          10: ["single-copy-performance", "分身挤满观众席", "同一副本全程做完。其他自己坐旁边，干着同一份急。", ["干着同一份急"]]
         });
-        if (ctx.ending === "voyage") entry = ["ship-isolated-drill", "考场不接生命维持管", "船员在隔离演练舱操作，不接住舱实管"];
-        if (ctx.ending === "land") entry = ["farm-process-demonstration", "果实不是全部过程", "田头从养护到收获展示，不借邻田成果"];
+        if (ctx.ending === "voyage") entry = ["ship-isolated-drill", "演练舱先替真船漏", "在隔离舱操作，不接住舱实管。真船乘客安心看热闹。", ["安心看热闹"]];
+        if (ctx.ending === "land") entry = ["farm-process-demonstration", "观众跟着等收成", "田头展示养护到收获。果子没熟，观众先晒熟了。", ["观众先晒熟了"]];
+        if (ctx.ending === "land" && h("sun-off")) entry = ["farm-process-demonstration", "观众跟着等收成", "田头展示养护到收获。菌床还没长好，看客先饿了。", ["看客先饿了"]];
         return news("public-assessment", "实作消息",
           canceled ? "取消考试优先，只展实作不排录用名次，观众不得提示。" : "只核验成年人的当场实作，观众不得提示或参与评定。",
-          [entry[0], entry[1], (canceled ? "取消考试，" : "技能公考，") + venue + entry[2] + (canceled ? "，只展不评分。" : "，观众不代做。")],
-          { assessment: canceled ? "exhibition" : "exam", channel });
+          [entry[0], entry[1], (canceled ? "不评分展演，" : "技能公考，") + venue + entry[2], entry[3]],
+          { assessment: canceled ? "exhibition" : "exam", channel,
+            ...(ctx.ending === "land" ? { cultivation: field } : {}) });
       }
     }
     throw new Error("缺少规则新闻：" + id);
@@ -677,7 +687,7 @@
     return {
       groupId: "desk-" + (i + 1), topic: lead.topic, outcomeKey: outcome(facts, knobs, [mech]),
       theme: lead.theme, title: lead.title, ruleTags: group.map((p) => p.id),
-      before: lead.dormant ? "互联网尚未进入生活" : lead.before, after: lead.after, why: lead.why,
+      before: lead.dormant ? "互联网尚未进入生活" : lead.before, after: lead.after, why: lead.why, keywords: lead.keywords.slice(),
       detail: detail(facts.map((f) => f.body).concat(knobs && knobs.body, mech && mech.body)),
       conflict: facts.some((f) => f.conflict) || !!(mech && mech.conflict),
       dormant: facts.filter((f) => f.dormant).map((f) => f.id), changed: active.length > 0
@@ -689,15 +699,17 @@
     const has = (id) => active.has(id), cards = [];
     // 生活短讯只在实际日程改变时换后果，不跟着十个时代换道具。
     const workPractice = ctx.level < 8 ? null : ctx.ending === "land"
-      ? ["full-season-practice", "求职要留出一整季", "求职者先安排完整一季的实作，不能只带来收成。"]
+      ? ["full-season-practice", "面试结果还没长熟", "求职者留一整季做实作，天天去看。面试结果还没长熟。", ["面试结果还没长熟"]]
       : ctx.ending === "voyage"
-        ? ["closed-supply-practice", "上船前先试断补给", "求职者先在封闭演练处实修循环系统，不能由岸上帮忙。"]
+        ? ["closed-supply-practice", "熟人留在岸上", "求职者封闭演练修循环，熟人全在岸上。人情这回真够不着。", ["人情这回真够不着"]]
         : ctx.ending === "uploaded"
-          ? ["copy-specific-practice", "分身仍须自己动手", "新副本另做载体实修，不能拿本人的旧经历直接接活。"]
+          ? ["copy-specific-practice", "分身带着旧自信", "新副本各自练修载体，带着本人的自信，从第一次失手开始。", ["从第一次失手开始"]]
           : ctx.level >= 9
-            ? ["empty-habitat-practice", "练手舱里先不住人", "求职者先在空舱练修漏，家人不能搬进来替他证明安全。"]
-            : ["human-machine-practice", "求职要带机器搭档", "求职者带常用机器一起实修，轮到本人时不能全交给机器。"];
-    function add(topic, theme, title, before, after, why, body, ids, policyIndex, mechanismIds) {
+            ? ["empty-habitat-practice", "空舱先听自我介绍", "求职者先在空舱练修漏，家人等在外面。压力表听完了整场自我介绍。", ["压力表听完了整场自我介绍"]]
+            : s.path[2] === "8B"
+              ? ["machine-picked-nonstandard-practice", "人类应聘非标搭档", "机器掌管流水线，少量非标岗试配人类。求职者先学机器不会的那一手。", ["机器不会的那一手"]]
+              : ["human-machine-practice", "机器搭档先做得太好", "求职者带机器实修，故障轮到本人接手。刚才夸机器的话忽然有点烫嘴。", ["刚才夸机器的话"]];
+    function add(topic, theme, title, before, after, why, body, ids, policyIndex, mechanismIds, keywords) {
       const limitedWork = has("thirty-years") || (has("fast-time") && !has("immortality"));
       const household = {
         "household-compute": { basic: "reserved", extra: "wait-for-capacity" },
@@ -710,51 +722,55 @@
       const used = ids.filter(has).map((id) => Object.assign({}, active.get(id), { state: household }));
       const knobs = policy(s, policyIndex);
       const mechs = s.mechanisms.filter((m) => mechanismIds.includes(m.id)).map((m) => mechanismReport(m, era, s, ctx));
-      cards.push({ groupId: "", topic, outcomeKey: outcome(used, knobs, mechs), theme, title, before, after, why,
+      cards.push({ groupId: "", topic, outcomeKey: outcome(used, knobs, mechs), theme, title, before, after, why, keywords,
         detail: detail([body].concat(used.map((f) => f.body), knobs.body, mechs.map((m) => m.body))),
         ruleTags: used.map((f) => f.id), conflict: used.some((f) => f.conflict) || mechs.some((m) => m.conflict), dormant: [], changed: true });
     }
     if (has("free-goods") && ctx.ending === "uploaded") {
-      add("household-compute", "生活用能", "额外任务等空位", "算力按价格追加购买",
-        "常用副本保留运行份额，额外任务等算力空出。", "上传改变了生活载体，没有增加设备的实际容量。",
-        "住户的常用副本继续运行，临时任务先搁置；额外任务须让出保障基本运行的设备。",
-        ["free-goods", "four-hour"], 1, ["mars-survival", "time-dilation"]);
+      add("household-compute", "生活用能", "多想一会先等散热", "算力按价格追加购买",
+        "常用副本保留算力，额外任务等空位。今天的胡思乱想还在候补。", "上传改变了生活载体，没有增加设备的实际容量。",
+        "这户人家先保常用副本运行，临时任务等设备空出；免费运行仍占真实的能源和散热面积。",
+        ["free-goods", "four-hour"], 1, ["mars-survival", "time-dilation"], ["胡思乱想还在候补"]);
     } else if (has("free-goods") || has("sun-off")) {
       const short = has("free-goods") && has("four-hour");
-      add("household-meal", "吃饭", short ? "午后空篮回家" : "口粮与加餐分开领", "带钱就能补一顿加餐",
-        short ? "午后来领加餐的人空篮回家，基本口粮另领。" : has("sun-off") ? "家中改吃菌食，想在亮处吃饭还须留出能源。" : "家里不用再攒饭钱，加餐仍要等货。",
-        short ? "供应者工时已满，领货者不能用免费要求续做。" : "基本供应有保障，不等于额外需求即时满足。",
-        "这户人家把基本口粮与加餐分开安排，额外等候不从口粮里扣除。",
-        ["free-goods", "four-hour", "sun-off"], 1, ["simulation", "mars-survival", "time-dilation"]);
+      add("household-meal", "吃饭", short ? "口粮有份加餐随缘" : "饭钱省了饭还得等", "带钱就能补一顿加餐",
+        short ? "午后加餐领完，基本口粮另领。带来的大碗，只用上了谦虚的那一半。" : has("sun-off") ? "家中改吃菌食，灯另留能源。饭桌很暖，夹菜全凭熟悉。" : "饭钱省下了，加餐仍等来货。空碗比从前更有耐心。",
+        short ? "供应者工时已满，领货者不能用免费要求续做。" : "基本供应有保障，额外加餐仍受货源与用能约束。",
+        "一家人把基本口粮与加餐分开安排，口粮不因加餐短缺而扣除；多带的餐具只好先带回去。",
+        ["free-goods", "four-hour", "sun-off"], 1, ["simulation", "mars-survival", "time-dilation"],
+        [short ? "谦虚的那一半" : has("sun-off") ? "夹菜全凭熟悉" : "空碗比从前更有耐心"]);
     }
     if (has("falling-moon") || has("flat-world")) {
-      add("household-access", "住处", has("falling-moon") ? "行李等下一次潮窗" : "邻居搬家须让路", "家门空着就能搬行李",
-        has("falling-moon") ? "住户先留在安全区，行李等潮窗再搬。" : "邻居搬物经过门前，住户须等通道空出再出门。",
-        "有使用权不等于有通行空间，进出还受物理条件限制。",
-        "住户将搬运和出门错开，不能靠多租一块地方取消路上的阻塞。",
-        ["falling-moon", "flat-world"], 2, ["dimension", "wandering-earth"]);
+      add("household-access", "住处", has("falling-moon") ? "海先替家门留了客" : "邻居搬家全家观摩", "家门空着就能搬行李",
+        has("falling-moon") ? "人先住安全区，行李等潮窗。新家到了，本人的家当还在等海点头。" : "邻居搬物占住平面通道，全家等空隙出门，顺便认识了邻居所有家当。",
+        "有住处不等于路已畅通，搬运行李还要等物理条件允许。",
+        "住户错开搬运与出门；行李的先后次序留在真实道路上，不会因多租一间房而消失。",
+        ["falling-moon", "flat-world"], 2, ["dimension", "wandering-earth"],
+        [has("falling-moon") ? "等海点头" : "认识了邻居所有家当"]);
     }
     if (cards.length < 2 && ctx.ending === "uploaded" && has("four-hour")) {
-      add("household-copy-work", "生活工时", "本人与分身一起收工", "分身接活，本人算休息",
-        "家中所有劳动副本合计到四小时就停，不能一边休息一边让分身加班。", "副本共享本人的劳动上限，切换载体不重开一天。",
-        "家中先给各副本分配劳动时段，合计用完就停止接活；休息时段不再藏着另一个正在上班的自己。",
-        ["four-hour"], 0, []);
+      add("household-copy-work", "生活工时", "分身一起领下班", "分身接活，本人算休息",
+        "家中劳动副本合计四小时就停。复制出十个自己，凑不出第五小时。", "副本共享本人的劳动上限，切换载体不重开一天。",
+        "家中给各副本分好劳动时段，合计用完就停；复制带来十张工位，没带来十份工时额度。",
+        ["four-hour"], 0, [], ["凑不出第五小时"]);
     }
     if (cards.length < 2 && (has("no-exam") || has("thirty-years") || (has("fast-time") && !has("immortality")))) {
       const limited = has("thirty-years") || (has("fast-time") && !has("immortality"));
-      add("household-work", "工作", limited ? "交班早于工具报废" : workPractice ? workPractice[1] : "求职者带成品上门", "拿到资格就能订长期岗位",
-        limited ? "接任者提前来接手，旧工具还能继续用。" : workPractice ? workPractice[2] : "求职者带着成品来，录用仍须等岗位空出。",
+      add("household-work", "工作", limited ? "旧工具迎来新面孔" : workPractice ? workPractice[1] : "手艺到了空位没到", "拿到资格就能订长期岗位",
+        limited ? "接任者提前来接手，旧工具还能用。握顺手的那处，又要认识新手心。" : workPractice ? workPractice[2] : "求职者带成品来等空岗。手艺已经到场，位置还坐在别人身下。",
         limited ? "人的任期受限，工具寿命并没有同步缩短。" : "门槛改成实际工作，空位并没有因此增加。",
-        !limited && workPractice ? workPractice[2] + "实修时间须由本人留出，不能用别人的经历代交。" : "成年人把能交接的工具留给下一位使用者，接任不能只靠原人的经历作保。",
-        limited ? ["thirty-years", "fast-time", "immortality"] : ["no-exam", "live-exams"], 0, ["tech-burst", "science-lock"]);
+        !limited && workPractice ? workPractice[2] + "这段实修须本人留出时间，旧经历只供参照。" : limited ? "成年人提前把能接用的工具交给下一位，独立试做后接活；磨旧的握柄继续陪新人做事。" : "成年人带上自己的成品求职，做得好也得等岗位空出；来回搬运的路，比过去多了一件行李。",
+        limited ? ["thirty-years", "fast-time", "immortality"] : ["no-exam", "live-exams"], 0, ["tech-burst", "science-lock"],
+        limited ? ["又要认识新手心"] : workPractice ? workPractice[3] : ["位置还坐在别人身下"]);
     }
     if (cards.length < 2 && (has("offline-world") || (has("half-gravity") && ctx.level >= 5))) {
       const offline = has("offline-world");
-      add("household-errand", "出行", offline ? "出门顺带送资料" : "轻货也得慢停", "空手出门，资料远程送达",
-        offline ? (ctx.silent ? "出门的人顺带工具样品，收件者须等现场示范。" : "出门的人顺带存储件，收件者等人不等提示音。") : "搬家能提更多行李，抵达时仍须逐件刹稳。",
-        offline ? "断网没有取消传递需求，只把它加进了人的行程。" : "重量减半没有减少惯性，轻松提起不代表能轻松停下。",
-        "这趟出门同时占用人的时间与真实运力，不能把抵达以前的等候算成已经送达。",
-        offline ? ["offline-world"] : ["half-gravity"], 1, ["time-dilation", "suspicion"]);
+      add("household-errand", "出行", offline ? "出门顺带一份更新" : "轻行李郑重放下", "空手出门，资料远程送达",
+        offline ? (ctx.silent ? "出门顺带工具样品，到场再示范。知识装进包里，肩膀先学会了沉重。" : "出门顺带存储件，收件者等人抵达。人还在路上，消息已经坐酸了腿。") : "行李提得轻，抵达仍须逐件刹稳。搬家最隆重的仪式变成了放下。",
+        offline ? "断网后资料也占行程，单机照用，远程网络无法送达。" : "重量减半没有减少惯性，轻松提起仍须留出刹停距离。",
+        offline ? "这趟出门占用人的时间和真实运力，存储件与行李都随搬运者抵达，沿途耽搁也得一起承担。" : "搬家者省下提举力气，仍要给行李留出刹停空间；一件件稳住以后，才有地方接住下一件。",
+        offline ? ["offline-world"] : ["half-gravity"], 1, ["time-dilation", "suspicion"],
+        [offline ? (ctx.silent ? "肩膀先学会了沉重" : "消息已经坐酸了腿") : "最隆重的仪式变成了放下"]);
     }
     return cards.slice(0, 2);
   }
@@ -785,7 +801,7 @@
             ruleTags: c.ruleTags.slice(), conflict: c.conflict, dormant: c.dormant.slice(),
             groupId: c.groupId, topic: c.topic, outcomeKey: c.outcomeKey
           },
-          view: { changed: c.changed, alternate: c.after, why: c.why, detail: c.detail, chain: "", keywords: [], certainty: "假设" }
+          view: { changed: c.changed, alternate: c.after, why: c.why, detail: c.detail, chain: "", keywords: c.keywords.slice(), certainty: "假设" }
         })),
         branch: BRANCHES.find((b) => b.n === era.n) || null
       };
